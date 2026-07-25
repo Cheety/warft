@@ -8,7 +8,8 @@ the database". That is two claims, and at AP-0.1 they are in different states.
 
 ## Ruling
 
-The half of `AB-G01-5` that concerns the decision store is evidenced by a run of
+The half of `AB-G01-5` that concerns the decision store is evidenced by
+[run 30176815764](https://github.com/Cheety/warft/actions/runs/30176815764) of
 `acceptance/g01-decisions.sh`: the eleven rulings carry ruling, rationale and overturn condition;
 the ten open points each name a due work package that exists; every decision is plain text with
 cross-references that resolve to files; and `decision_ref` in `contract/schema.sql` holds nothing
