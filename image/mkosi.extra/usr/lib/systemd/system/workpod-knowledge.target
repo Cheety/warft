@@ -1,0 +1,14 @@
+# One of the four roles from SP-A02-1. Which one a node takes is the boot value `role`, read from
+# a credential by workpod-role-generator; the image is the same artifact either way (AB-A02-1).
+#
+# `knowledge` carries the knowledge layer of panel G — the index a job is given context from, and
+# the write-back path the finished job leaves its judgement candidates on. It is cut by the locality
+# group (E-03), not by the tenant.
+#
+# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
+# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
+# first services here.
+
+[Unit]
+Description=Workpod node role: knowledge
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

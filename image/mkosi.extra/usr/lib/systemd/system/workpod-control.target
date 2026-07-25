@@ -1,0 +1,14 @@
+# One of the four roles from SP-A02-1. Which one a node takes is the boot value `role`, read from
+# a credential by workpod-role-generator; the image is the same artifact either way (AB-A02-1).
+#
+# `control` is the control layer: the plane, the scheduler, both gates and the state database, which
+# E-02 rules is the only one. It is also the only role whose disk keeps something across a
+# reinstall (`/data/db`, SP-A05-1) and the only one that needs no enrollment token (SP-A04-1).
+#
+# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
+# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
+# first services here.
+
+[Unit]
+Description=Workpod node role: control
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
