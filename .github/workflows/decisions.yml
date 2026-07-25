@@ -1,0 +1,36 @@
+# AP-0.1 — the leg that checks the decision store (AB-G01-5).
+#
+# G-01 holds decisions to a standard the other two layers do not have: few, versioned, in Git rather
+# than in the database. Those are properties of the repository, so a run can check them — and until
+# one does, they are a claim about the repository rather than a fact about it.
+#
+# It runs on changes to decisions/ and to the two files the check reads across: the work packages
+# that open points are dated against, and the schema that must hold a reference and never a
+# decision.
+
+name: decisions
+
+on:
+  push:
+    paths:
+      - 'decisions/**'
+      - 'acceptance/g01-decisions.sh'
+      - 'contract/schema.sql'
+      - '02-work-packages.md'
+      - '.github/workflows/decisions.yml'
+  pull_request:
+    paths:
+      - 'decisions/**'
+      - 'acceptance/g01-decisions.sh'
+      - 'contract/schema.sql'
+      - '02-work-packages.md'
+      - '.github/workflows/decisions.yml'
+  workflow_dispatch:
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the decision store
+        run: ./acceptance/g01-decisions.sh
