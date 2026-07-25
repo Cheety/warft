@@ -1,0 +1,2 @@
+# build.sh output: two passes, their package cache and the hash lists
+image/.build/
