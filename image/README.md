@@ -115,7 +115,16 @@ without ever holding a key:
 ```
 
 400 bytes, readable, and it binds the artifacts, the SBOM and the inputs that produced them into one
-signable file. Because the build is reproducible (`AB-A03-2`), those hashes are a function of those
+signable file.
+
+The revision is the last commit touching a **build input** — `mkosi.conf`, `mkosi.conf.d/`,
+`mkosi.repart/`, `tool-version`, `build.sh` — and that allowlist is not fussiness. The seal lives in
+`image/seal/` and the certificate in `image/signing.crt`, so a revision meaning "the last commit
+touching `image/`" would be changed by the act of committing the seal: the seal would invalidate
+itself the moment it was recorded, a fixed point that can never be reached. The same argument, less
+sharply, covers this README and the three scripts — none of them can change the artifact, so none of
+them may unseal it. A new build input that is not added to the list shows up as `verify.sh` exiting
+1 rather than as nothing at all. Because the build is reproducible (`AB-A03-2`), those hashes are a function of those
 inputs — so a signature made once covers every later rebuild of the same revision, including the
 rebuild CI does to check it. The two rows hold each other up: when the build stops being
 reproducible, the seal stops verifying.
