@@ -1,0 +1,1256 @@
+[
+  {
+    "id": "EPIC-0",
+    "type": "epic",
+    "title": "Stage 0 — Workbench",
+    "milestone": "Stage 0 — Workbench",
+    "labels": [
+      "epic",
+      "stage/0"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "Produces no platform behavior and therefore measures nothing. It stands before step 1 from E-11, because otherwise the measurement from step 1 has nowhere to go.\n\n**Closing condition of this stage:** The acceptance registry runs and reports 0 green / all red.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-1",
+    "type": "epic",
+    "title": "Stage 1 — Base and measurement",
+    "milestone": "Stage 1 — Base and measurement",
+    "labels": [
+      "epic",
+      "stage/1"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 1: A-06 as a script against a bare mkosi VM. The base holds, or E-01 falls.\n\n**Closing condition of this stage:** The five constants from E-05 are measured and recorded in decisions/E-05.md.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-2",
+    "type": "epic",
+    "title": "Stage 2 — The contract",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "epic",
+      "stage/2"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 2: K-01, K-02, E-10. Schema, migrations, worker interface — the contract everything else is built against.\n\n**Closing condition of this stage:** No measurement. That is the point. Instead: every negative probe fails in the right place.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-3",
+    "type": "epic",
+    "title": "Stage 3 — Smallest system, without a captain",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "epic",
+      "stage/3"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 3: role=all, one adapter (CLI), one pipeline, one runner — without a captain, jobs by hand. A system whose mechanics first run together with a model has two unknown sources of error.\n\n**Closing condition of this stage:** Jobs per hour on one node; zero orphaned subvolumes after a restart; double execution without double effect passed.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-4",
+    "type": "epic",
+    "title": "Stage 4 — Handles and knowledge",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "epic",
+      "stage/4"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 4: the handles first — they need no model and are checkable before any agent question. The only layer that can be proven completely before anything is guessed.\n\n**Closing condition of this stage:** success_rate per handle; response time of fact.query; share of jobs whose hull blows the context budget.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-5",
+    "type": "epic",
+    "title": "Stage 5 — Intent, then captain",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "epic",
+      "stage/5"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 5: the intent contract before the model that uses it.\n\n**Closing condition of this stage:** no_clarification_rate, coverage_rate, share of unproven. If no_clarification_rate does not rise, Q-01 is the building site, not the model.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-6",
+    "type": "epic",
+    "title": "Stage 6 — Second node",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "epic",
+      "stage/6"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 6: role=work — intake, lease, expiry, rolling update. V-02, and only then V-03.\n\n**Closing condition of this stage:** Time from expiry to resumption; job loss during an update (must be zero); restore time.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-7",
+    "type": "epic",
+    "title": "Stage 7 — Test bench",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "epic",
+      "stage/7"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "E-11, step 7: the regression corpus before the first model change.\n\n**Closing condition of this stage:** escape_rate as a baseline. Only then the first model change.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-8",
+    "type": "epic",
+    "title": "Stage 8 — Growth",
+    "milestone": "Stage 8 — Growth",
+    "labels": [
+      "epic",
+      "stage/8"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "By measurement, not by plan. A second cell at 80 % of the limit from E-04, campaigns for large jobs, further runners.\n\n**Closing condition of this stage:** The cell boundary measured; coverage_rate rising.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "EPIC-9",
+    "type": "epic",
+    "title": "Acceptance of the platform",
+    "milestone": "Acceptance of the platform",
+    "labels": [
+      "epic",
+      "stage/9"
+    ],
+    "blocked_by": "",
+    "effort": "",
+    "panels": "",
+    "spec": "",
+    "acceptance": "",
+    "body": "Section D of the acceptance matrix: the three conditions under which the platform is hit.\n\n**Closing condition of this stage:** All rows green, six baselines recorded, ten decisions filed.\n\nRule from E-11: no step starts before the previous one has delivered its number."
+  },
+  {
+    "id": "AP-0.1",
+    "type": "work_package",
+    "title": "AP-0.1 · Repository layout and decision store (E-01 through E-11 into decisions/)",
+    "milestone": "Stage 0 — Workbench",
+    "labels": [
+      "effort/S",
+      "kind/decision",
+      "panel/E",
+      "panel/G",
+      "stage/0"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "E, G-01",
+    "spec": "SP-K01-9, SP-G01-5, SP-V05-1",
+    "acceptance": "AB-G01-5",
+    "body": "**Stage:** 0 · **Panels:** E, G-01 · **Effort:** S\n**Blocked by:** —\n**Specification:** SP-K01-9, SP-G01-5, SP-V05-1\n**Acceptance:** AB-G01-5\n\n### Goal\nThe eleven rulings from the architecture document become the holding G-01 calls “decisions”: few, versioned, in Git — not in the database, so that they survive losing the database and are readable by humans without the platform.\n\n### Tasks\n- [ ] Create the repository: image/, platform/, skills/, decisions/, acceptance/, contract/\n- [ ] Carry E-01 through E-11 over into decisions/ verbatim, per file: ruling, rationale, “overturned by”\n- [ ] Create ten placeholder files for the open points OP-1 through OP-10, each with its due date\n- [ ] CODEOWNERS: nobody changes decisions/ alone (E-08, two-person rule)\n\n### Done when\n- decisions/ contains eleven filled-in and ten open files, each with an overturn condition.\n\n### Boundary of this issue\nNo architecture work. What is not already in the design is not invented here."
+  },
+  {
+    "id": "AP-0.2",
+    "type": "work_package",
+    "title": "AP-0.2 · Build environment: mkosi, package pinning, CI builds twice and compares",
+    "milestone": "Stage 0 — Workbench",
+    "labels": [
+      "effort/M",
+      "kind/image",
+      "panel/A",
+      "panel/E",
+      "stage/0"
+    ],
+    "blocked_by": "AP-0.1",
+    "effort": "M",
+    "panels": "A-03, E-01",
+    "spec": "SP-E01-1, SP-E01-2, SP-A03-2, SP-A03-7",
+    "acceptance": "AB-A03-2, AB-E01-2, AB-A03-7",
+    "body": "**Stage:** 0 · **Panels:** A-03, E-01 · **Effort:** M\n**Blocked by:** AP-0.1\n**Specification:** SP-E01-1, SP-E01-2, SP-A03-2, SP-A03-7\n**Acceptance:** AB-A03-2, AB-E01-2, AB-A03-7\n\n### Goal\nReproducibility is not an ideal here but the check from G-06, applied to the operating system. Without a bit-identical rebuild the question “does the same thing run on every node” cannot be answered.\n\n### Tasks\n- [ ] mkosi scaffolding with a pinned Fedora package snapshot\n- [ ] Build without network (SP-A03-1)\n- [ ] Generate the signing key; do not place the private part on a build machine\n- [ ] CI leg: build every image twice, compare the artifacts, produce the SBOM\n\n### Done when\n- Two build runs of the same revision produce bit-identical artifacts — the first green row of the matrix.\n\n### Boundary of this issue\nNo roles yet, no units yet. Only: does it build reproducibly."
+  },
+  {
+    "id": "AP-0.3",
+    "type": "work_package",
+    "title": "AP-0.3 · Acceptance matrix as a test registry (everything red)",
+    "milestone": "Stage 0 — Workbench",
+    "labels": [
+      "acceptance/blocker",
+      "effort/S",
+      "panel/A",
+      "panel/Q",
+      "stage/0"
+    ],
+    "blocked_by": "AP-0.1",
+    "effort": "S",
+    "panels": "A-06, Q-02",
+    "spec": "SP-A06-1, §0.3",
+    "acceptance": "",
+    "body": "**Stage:** 0 · **Panels:** A-06, Q-02 · **Effort:** S\n**Blocked by:** AP-0.1\n**Specification:** SP-A06-1, §0.3\n**Acceptance:** — (a precondition, no row of its own)\n\n### Goal\nWhoever writes the acceptance list first and builds afterwards has turned an architecture document into a build order. From here on progress is measurable: rows turn green, not files grow more numerous.\n\n### Tasks\n- [ ] Carry every check from 03-acceptance-matrix.md over as a registry entry\n- [ ] Per entry: identifier, kind (S/M/D/P), state, the work package it belongs to\n- [ ] `make acceptance` reports the count green/red/open and exits with 1 as soon as anything is red\n\n### Done when\n- `make acceptance` runs through and reports: 0 green, all red.\n\n### Boundary of this issue\nNo check is implemented here — only registered."
+  },
+  {
+    "id": "AP-1.1",
+    "type": "work_package",
+    "title": "AP-1.1 · Bare mkosi image with the kernel requirements from A-02",
+    "milestone": "Stage 1 — Base and measurement",
+    "labels": [
+      "effort/M",
+      "kind/image",
+      "panel/A",
+      "panel/E",
+      "stage/1"
+    ],
+    "blocked_by": "AP-0.2",
+    "effort": "M",
+    "panels": "A-01, A-02, E-01",
+    "spec": "SP-A02-2, SP-A02-3, SP-A02-4, SP-E01-1",
+    "acceptance": "AB-E01-1, AB-A02-1, AB-A01-1",
+    "body": "**Stage:** 1 · **Panels:** A-01, A-02, E-01 · **Effort:** M\n**Blocked by:** AP-0.2\n**Specification:** SP-A02-2, SP-A02-3, SP-A02-4, SP-E01-1\n**Acceptance:** AB-E01-1, AB-A02-1, AB-A01-1\n\n### Goal\nThe reason for an image of your own is not disk space but attack surface, reproducibility and update discipline. With mkosi the kernel configuration is a file — the measurement from A-06 then changes one line instead of an architecture.\n\n### Tasks\n- [ ] Kernel: cgroup v2 unified + PSI, overlayfs, btrfs/XFS with reflink, user namespaces, seccomp, Landlock, zram+zstd, CONFIG_CHECKPOINT_RESTORE, KVM, io_uring\n- [ ] Out: unused filesystems, sound, legacy drivers\n- [ ] Userland: systemd, containerd+runc (optionally runsc), btrfs-progs, nftables, time synchronization\n- [ ] No toolchains, no editors, no man pages, no locales except C.UTF-8\n- [ ] The role activates units only, it does not change the content (SP-A03-5)\n\n### Done when\n- The image boots in a VM, / read-only under dm-verity.\n\n### Boundary of this issue\nNo platform binary, no database. The image carries nothing yet at this point."
+  },
+  {
+    "id": "AP-1.2",
+    "type": "work_package",
+    "title": "AP-1.2 · A-06 as a script: the thirteen checks of the image",
+    "milestone": "Stage 1 — Base and measurement",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/image",
+      "panel/A",
+      "panel/B",
+      "panel/K",
+      "panel/R",
+      "panel/T",
+      "stage/1"
+    ],
+    "blocked_by": "AP-1.1, AP-0.3",
+    "effort": "M",
+    "panels": "A-06, R-C, T-04, B-01, K-04",
+    "spec": "SP-A06-1, SP-K04-7, SP-B01-2",
+    "acceptance": "AB-A06-1, AB-A06-2, AB-A06-3, AB-A06-4, AB-A06-5, AB-A06-6, AB-A06-7, AB-A06-8, AB-A03-3, AB-B01-2, AB-K04-7, AB-A05-2",
+    "body": "**Stage:** 1 · **Panels:** A-06, R-C, T-04, B-01, K-04 · **Effort:** M\n**Blocked by:** AP-1.1, AP-0.3\n**Specification:** SP-A06-1, SP-K04-7, SP-B01-2\n**Acceptance:** AB-A06-1, AB-A06-2, AB-A06-3, AB-A06-4, AB-A06-5, AB-A06-6, AB-A06-7, AB-A06-8, AB-A03-3, AB-B01-2, AB-K04-7, AB-A05-2\n\n### Goal\nDone is not boots. This list checks the preconditions one by one and names the panel that falls when a check is red.\n\n### Tasks\n- [ ] Run acceptance/a06-acceptance.sh against the VM\n- [ ] Check cgroup v2 + PSI, reflink O(1), userns/seccomp/landlock, freezer + zram(zstd), CRIU dump/restore in full\n- [ ] Inventory against the SBOM, dm-verity active, no inbound ports, clock synchronized\n- [ ] Run the fallback after three failed starts once as a drill (damage the image deliberately)\n- [ ] The five rows not yet checkable report SKIP with the work package in which they turn green\n\n### Done when\n- Eight checks green, five as SKIP with a reference, no FAIL.\n\n### Boundary of this issue\nCRIU is the row E-01 hangs on: if the kernel options are missing and cannot be set, the base changes (NixOS) — not the order."
+  },
+  {
+    "id": "AP-1.3",
+    "type": "work_package",
+    "title": "AP-1.3 · Calibration run: measure the five constants from E-05",
+    "milestone": "Stage 1 — Base and measurement",
+    "labels": [
+      "effort/M",
+      "measurement",
+      "panel/A",
+      "panel/E",
+      "panel/R",
+      "stage/1"
+    ],
+    "blocked_by": "AP-1.2",
+    "effort": "M",
+    "panels": "E-05, R-D, A-06",
+    "spec": "SP-RD-3, SP-A06-1",
+    "acceptance": "AB-A06-13, AB-A06-4, AB-E05-1",
+    "body": "**Stage:** 1 · **Panels:** E-05, R-D, A-06 · **Effort:** M\n**Blocked by:** AP-1.2\n**Specification:** SP-RD-3, SP-A06-1\n**Acceptance:** AB-A06-13, AB-A06-4, AB-E05-1\n\n### Goal\nThe five constants are planning values of the occupancy table, not operating values. The calibration run replaces the given numbers with measured ones — it changes numbers, not rules.\n\n### Tasks\n- [ ] Create 500 pods, 20 active (A-06, last row)\n- [ ] Measure: host and runtime per role, page cache baseline, pages per frozen pod, zram factor, active pod (cores and MB)\n- [ ] Derive hysteresis and hold times of the PSI thresholds (OP-6)\n- [ ] Record the measured numbers in decisions/E-05.md next to the given ones; R-D computes with the measured ones\n\n### Done when\n- Five measured numbers stand in decisions/E-05.md. MEASUREMENT of this stage.\n\n### Boundary of this issue\nNo tuning. What is, gets measured — not what could be, optimized."
+  },
+  {
+    "id": "AP-2.1",
+    "type": "work_package",
+    "title": "AP-2.1 · platform.proto: one interface schema, a linter for additive fields",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "effort/M",
+      "kind/contract",
+      "panel/E",
+      "panel/T",
+      "stage/2"
+    ],
+    "blocked_by": "AP-0.1",
+    "effort": "M",
+    "panels": "E-10, T-04",
+    "spec": "SP-E10-1, SP-E10-3, SP-E10-4, SP-E10-5, SP-T04-4",
+    "acceptance": "AB-E10-1, AB-E10-3, AB-E10-5, AB-T04-4",
+    "body": "**Stage:** 2 · **Panels:** E-10, T-04 · **Effort:** M\n**Blocked by:** AP-0.1\n**Specification:** SP-E10-1, SP-E10-3, SP-E10-4, SP-E10-5, SP-T04-4\n**Acceptance:** AB-E10-1, AB-E10-3, AB-E10-5, AB-T04-4\n\n### Goal\nFrom the adapter through to the gate, exactly one interface schema in the system. Field numbers die, they are never reassigned — that is the migration rule from V-05, enforced by the schema.\n\n### Tasks\n- [ ] Take over contract/platform.proto and complete it\n- [ ] Services: ControlPlane, GitGate, EgressGate, Harness\n- [ ] A schema linter in CI: a removed or reassigned field number is rejected\n- [ ] Carry the platform field in the envelope from the start, so that Windows/macOS runners are not a rebuild later\n- [ ] Export and audit trail render from the same definitions\n\n### Done when\n- The linter rejects a probe with a repurposed field number.\n\n### Boundary of this issue\nNo implementation of the services. Only the contract."
+  },
+  {
+    "id": "AP-2.2",
+    "type": "work_package",
+    "title": "AP-2.2 · Postgres schema (K-01) and an additive migration tool",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "effort/M",
+      "kind/contract",
+      "panel/E",
+      "panel/K",
+      "panel/V",
+      "stage/2"
+    ],
+    "blocked_by": "AP-2.1",
+    "effort": "M",
+    "panels": "K-01, V-05, E-02",
+    "spec": "SP-K01-1 through SP-K01-9, SP-V05-2, SP-E02-2",
+    "acceptance": "AB-K01-1, AB-K01-2, AB-K01-3, AB-K01-4, AB-K01-5, AB-V05-2",
+    "body": "**Stage:** 2 · **Panels:** K-01, V-05, E-02 · **Effort:** M\n**Blocked by:** AP-2.1\n**Specification:** SP-K01-1 through SP-K01-9, SP-V05-2, SP-E02-2\n**Acceptance:** AB-K01-1, AB-K01-2, AB-K01-3, AB-K01-4, AB-K01-5, AB-V05-2\n\n### Goal\nYou can only build an image out of fields. cell and project on every table are not a convenience but the precondition for migration, deletion, cost attribution and incident radius.\n\n### Tasks\n- [ ] Take over contract/schema.sql; cell and project NOT NULL everywhere\n- [ ] UUID v7 from the producer, no central counter\n- [ ] No secret as a column, only references — a schema checker in CI\n- [ ] A migration tool that rejects removing migrations (extend, read both, remove)\n- [ ] decision_ref instead of a decision table: decisions lie in Git\n\n### Done when\n- A migration that removes a column is rejected by the tool.\n\n### Boundary of this issue\nNo queue logic yet, no scheduler. Only structure and rules."
+  },
+  {
+    "id": "AP-2.3",
+    "type": "work_package",
+    "title": "AP-2.3 · State machine as a database contract: one field, one writer",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/contract",
+      "panel/K",
+      "stage/2"
+    ],
+    "blocked_by": "AP-2.2",
+    "effort": "M",
+    "panels": "K-02",
+    "spec": "SP-K02-1 through SP-K02-7",
+    "acceptance": "AB-K02-1, AB-K02-2, AB-K02-3, AB-K02-5",
+    "body": "**Stage:** 2 · **Panels:** K-02 · **Effort:** M\n**Blocked by:** AP-2.2\n**Specification:** SP-K02-1 through SP-K02-7\n**Acceptance:** AB-K02-1, AB-K02-2, AB-K02-3, AB-K02-5\n\n### Goal\nTwo writers on the same field are the beginning of every double execution, and only under load, which means only in production. That is why the rule lives in the database, not in the application.\n\n### Tasks\n- [ ] A transition table with a writer column, a trigger that rejects the wrong writer\n- [ ] attempt as the unit of retry; same order.id, same idempotency key, new attempt\n- [ ] cause is mandatory in every terminal state; the set from Q-03 and F-04\n- [ ] No backward transition out of a terminal state\n- [ ] Set the lease duration and heartbeat interval (OP-4)\n\n### Done when\n- The probe “worker writes queued → leased” fails at the database level, not in the application.\n\n### Boundary of this issue\nGranting the lease itself comes in AP-6.2. Here only the contract about who may write."
+  },
+  {
+    "id": "AP-2.4",
+    "type": "work_package",
+    "title": "AP-2.4 · Authority as a Biscuit token: attenuation as cryptography",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/contract",
+      "panel/E",
+      "panel/K",
+      "panel/T",
+      "stage/2"
+    ],
+    "blocked_by": "AP-2.1",
+    "effort": "L",
+    "panels": "K-04, E-10, T-01",
+    "spec": "SP-K04-1 through SP-K04-8, SP-E10-2",
+    "acceptance": "AB-K04-1, AB-K04-2, AB-K04-3, AB-K04-6",
+    "body": "**Stage:** 2 · **Panels:** K-04, E-10, T-01 · **Effort:** L\n**Blocked by:** AP-2.1\n**Specification:** SP-K04-1 through SP-K04-8, SP-E10-2\n**Acceptance:** AB-K04-1, AB-K04-2, AB-K04-3, AB-K04-6\n\n### Goal\nAs an attached field, “no LLM raises the authority” is an agreement between components. As a signed token it is a property. No JWT (no offline attenuation), no Macaroons (a shared standing secret in every gate).\n\n### Tasks\n- [ ] An issuer per cell; the public verification key as trust_anchor in the image\n- [ ] An attenuation library: every hop may add conditions, none may remove them\n- [ ] Verification at three places, in full: control API, Git proxy, egress proxy\n- [ ] A revocation ID per block; a revocation list per project, distributed on the line of the egress allowlist\n- [ ] Static stability: the last known revocation list holds, new authorities are refused\n\n### Done when\n- The probe “a block widens targets” is cryptographically impossible, not merely rejected.\n\n### Boundary of this issue\nNo path on which a model output changes level, targets or budget. Authority is granted by code, never by a model."
+  },
+  {
+    "id": "AP-2.5",
+    "type": "work_package",
+    "title": "AP-2.5 · Node certificate format and mTLS scaffolding (role and cell in the name)",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "effort/S",
+      "kind/contract",
+      "panel/B",
+      "panel/E",
+      "stage/2"
+    ],
+    "blocked_by": "AP-2.1",
+    "effort": "S",
+    "panels": "B-01, E-10",
+    "spec": "SP-B01-1, SP-B01-3, SP-E10-2",
+    "acceptance": "AB-B01-3",
+    "body": "**Stage:** 2 · **Panels:** B-01, E-10 · **Effort:** S\n**Blocked by:** AP-2.1\n**Specification:** SP-B01-1, SP-B01-3, SP-E10-2\n**Acceptance:** AB-B01-3\n\n### Goal\nRole and cell stand in the name of the identity, not in a table beside it. That lets the control plane check “work node from cell B” as a statement instead of accepting it as a claim.\n\n### Tasks\n- [ ] Define and document the naming scheme\n- [ ] mTLS on both sides for all gRPC connections\n- [ ] The certificate says who, the token says what is allowed — keep the two separate\n\n### Done when\n- The control plane rejects a node whose cell name does not match its claim.\n\n### Boundary of this issue\nEnrollment itself comes in AP-6.1. Here only the format, because stage 3 already builds against it."
+  },
+  {
+    "id": "AP-3.1",
+    "type": "work_package",
+    "title": "AP-3.1 · Boot role=all: four slices, memory.min, separate disks",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/A",
+      "panel/R",
+      "panel/V",
+      "stage/3"
+    ],
+    "blocked_by": "AP-1.3, AP-2.2",
+    "effort": "M",
+    "panels": "A-02, A-04, A-05, V-01, R-C",
+    "spec": "SP-A02-1, SP-A04-1 through SP-A04-5, SP-A05-1 through SP-A05-4, SP-V01-1, SP-RC-4",
+    "acceptance": "AB-V01-1, AB-RC-4, AB-A04-1, AB-A04-3, AB-A05-1, AB-E02-1",
+    "body": "**Stage:** 3 · **Panels:** A-02, A-04, A-05, V-01, R-C · **Effort:** M\n**Blocked by:** AP-1.3, AP-2.2\n**Specification:** SP-A02-1, SP-A04-1 through SP-A04-5, SP-A05-1 through SP-A05-4, SP-V01-1, SP-RC-4\n**Acceptance:** AB-V01-1, AB-RC-4, AB-A04-1, AB-A04-3, AB-A05-1, AB-E02-1\n\n### Goal\nThe same image, one boot variable — the pattern of Consul, Nomad and Vault. On a small machine the four layers are cgroup slices, in the cluster they are nodes of their own.\n\n### Tasks\n- [ ] Four systemd slices: control, captain, knowledge, work\n- [ ] memory.min on the system slice (default 4 GB), memory.oom.group=1 on pod slices\n- [ ] Disk layout: system A/B, encrypted /var, /data/work, /data/db\n- [ ] Start sequence A-04: verity → disk → enroll → role → selftest → register\n- [ ] A failed selftest means: do not enroll\n\n### Done when\n- A node starts along A-04 and enrolls only after passing the selftest.\n\n### Boundary of this issue\nNo reconfiguring afterwards, no SSH. A change is a new image and a new start."
+  },
+  {
+    "id": "AP-3.2",
+    "type": "work_package",
+    "title": "AP-3.2 · CLI adapter (T-01): envelope, idempotency, attachments",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/platform",
+      "panel/K",
+      "panel/T",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.1, AP-2.4",
+    "effort": "M",
+    "panels": "T-01, K-01",
+    "spec": "SP-T01-1, SP-T01-7, SP-K01-6",
+    "acceptance": "AB-T01-7, AB-K01-6",
+    "body": "**Stage:** 3 · **Panels:** T-01, K-01 · **Effort:** M\n**Blocked by:** AP-3.1, AP-2.4\n**Specification:** SP-T01-1, SP-T01-7, SP-K01-6\n**Acceptance:** AB-T01-7, AB-K01-6\n\n### Goal\nThere is no list of supported devices, there is an adapter contract. The first adapter is the CLI with a device certificate — level confidential.\n\n### Tasks\n- [ ] Implement receive(), identity(), respond(), capabilities()\n- [ ] Idempotency key mandatory; UNIQUE (channel, idempotency)\n- [ ] Attachments: type and size check at intake, content-addressed, read-only, never executable (OP-5)\n- [ ] Attach the authority at intake, unchanged into the pod\n\n### Done when\n- The same message delivered twice produces one job, not two.\n\n### Boundary of this issue\nOnly one adapter. Discord, X, Slack, GitHub come in AP-5.7 — and then as a job, not a release."
+  },
+  {
+    "id": "AP-3.3",
+    "type": "work_package",
+    "title": "AP-3.3 · Runner and workpod: CoW snapshot, resource contract, no network, reaper",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/E",
+      "panel/R",
+      "panel/T",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.1",
+    "effort": "L",
+    "panels": "T-04, T-03, R-A, R-C, E-02",
+    "spec": "SP-T04-1 through SP-T04-5, SP-T03-1, SP-RA-1 through SP-RA-4, SP-RC-5, SP-E02-4",
+    "acceptance": "AB-T04-2, AB-T04-3, AB-T04-5, AB-T03-1, AB-RA-1, AB-RA-2, AB-RA-4, AB-RC-5, AB-B02-3, AB-E02-4",
+    "body": "**Stage:** 3 · **Panels:** T-04, T-03, R-A, R-C, E-02 · **Effort:** L\n**Blocked by:** AP-3.1\n**Specification:** SP-T04-1 through SP-T04-5, SP-T03-1, SP-RA-1 through SP-RA-4, SP-RC-5, SP-E02-4\n**Acceptance:** AB-T04-2, AB-T04-3, AB-T04-5, AB-T03-1, AB-RA-1, AB-RA-2, AB-RA-4, AB-RC-5, AB-B02-3, AB-E02-4\n\n### Goal\nThe workpod is only one form; the abstraction is over Runner. The reaper is mandatory, not optional — without it ten thousand orphaned subvolumes lie on the disk after a week, the most likely way a platform like this tips over.\n\n### Tasks\n- [ ] containerd/runc; root filesystem from shared read-only layers\n- [ ] Working copy as a CoW snapshot in O(1); image resolution via the requirement hash\n- [ ] Resource contract: cpu.weight, memory.high, pids.max, io.latency per the four classes\n- [ ] No network, no LLM key, no Git token, no logs in the pod; a Unix socket to the harness\n- [ ] Inject MAKEFLAGS, CARGO_BUILD_JOBS, UV_THREADPOOL_SIZE, NODE_OPTIONS, TURBO_CONCURRENCY from the allocation\n- [ ] Freeze after 45 s of quiet; a reaper with a lifetime and an idle limit on the worker\n- [ ] Mount the harness read-only into every pod (the same binary)\n\n### Done when\n- A pod starts in ~200 ms on an image hit; after a simulated worker restart, zero orphaned subvolumes.\n\n### Boundary of this issue\nNo agent, no model. The runner contract reads: given a working directory and a job, deliver a patch and a report."
+  },
+  {
+    "id": "AP-3.4",
+    "type": "work_package",
+    "title": "AP-3.4 · Pipeline machine (T-05): a fixed spine, seven movable places",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/T",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.3",
+    "effort": "M",
+    "panels": "T-05",
+    "spec": "SP-T05-1 through SP-T05-4",
+    "acceptance": "AB-T05-1, AB-T05-2, AB-T05-3",
+    "body": "**Stage:** 3 · **Panels:** T-05 · **Effort:** M\n**Blocked by:** AP-3.3\n**Specification:** SP-T05-1 through SP-T05-4\n**Acceptance:** AB-T05-1, AB-T05-2, AB-T05-3\n\n### Goal\nDefined once, the same for all thousand jobs — but exchangeable per job at clearly named places. The pipeline is configuration that belongs to the human.\n\n### Tasks\n- [ ] prepare · plan · edit · check · repair · deliver · reap as a fixed sequence\n- [ ] The seven movable places as job fields, nothing more\n- [ ] pipeline@version; no runtime object may change the definition\n- [ ] check → repair ends after n rounds with a diff, logs and an assessment (OP-2)\n\n### Done when\n- A deliberately unsolvable job ends after n rounds in a named state with a cause.\n\n### Boundary of this issue\nA pod that runs in circles for twenty minutes is more expensive than one that gives up after three rounds."
+  },
+  {
+    "id": "AP-3.5",
+    "type": "work_package",
+    "title": "AP-3.5 · Outbox and the two gates (K-03, B-02)",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/B",
+      "panel/K",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.3, AP-2.4",
+    "effort": "L",
+    "panels": "K-03, B-02, B-01",
+    "spec": "SP-K03-1 through SP-K03-6, SP-B02-2, SP-B02-4, SP-B01-4",
+    "acceptance": "AB-K03-1, AB-K03-2, AB-K03-3, AB-K03-4, AB-K03-5, AB-A06-11, AB-B01-4, AB-B02-2, AB-B02-4",
+    "body": "**Stage:** 3 · **Panels:** K-03, B-02, B-01 · **Effort:** L\n**Blocked by:** AP-3.3, AP-2.4\n**Specification:** SP-K03-1 through SP-K03-6, SP-B02-2, SP-B02-4, SP-B01-4\n**Acceptance:** AB-K03-1, AB-K03-2, AB-K03-3, AB-K03-4, AB-K03-5, AB-A06-11, AB-B01-4, AB-B02-2, AB-B02-4\n\n### Goal\nV-02 justifies doing without a leader election by arguing that a doubly executed job is harmless. That is not true at the place where a patch becomes a push. Exactly there the design needs its counterpart.\n\n### Tasks\n- [ ] outbox with a domain key: order + target + content_hash\n- [ ] Git proxy: checks policy, signs itself; the pod has no token\n- [ ] Egress proxy on the work node: inserts keys, resolves names, allowlist per job\n- [ ] A register for non-idempotent targets: record → execute → acknowledge\n- [ ] If the acknowledgement is missing, ask, do not retry — the only place where retrying is forbidden\n- [ ] The outbox on /var, surviving the pod and a worker restart\n\n### Done when\n- The same job executed twice produces one push, one email, one channel message.\n\n### Boundary of this issue\nCredentials lie exclusively in the gates — never on work nodes, never in pods."
+  },
+  {
+    "id": "AP-3.6",
+    "type": "work_package",
+    "title": "AP-3.6 · Budget pots, admission and the halt with two paths",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/E",
+      "panel/T",
+      "panel/V",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.1, AP-2.2",
+    "effort": "M",
+    "panels": "V-04, T-01, E-08",
+    "spec": "SP-V04-1 through SP-V04-5, SP-T01-8, SP-E08-3",
+    "acceptance": "AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3",
+    "body": "**Stage:** 3 · **Panels:** V-04, T-01, E-08 · **Effort:** M\n**Blocked by:** AP-3.1, AP-2.2\n**Specification:** SP-V04-1 through SP-V04-5, SP-T01-8, SP-E08-3\n**Acceptance:** AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3\n\n### Goal\nReserve in advance, do not count afterwards: a cost control that only strikes in the evaluation is none. And the halt must take effect even when the API no longer answers — the case in which you need it.\n\n### Tasks\n- [ ] Three pots: pod_minutes, tokens, money — reservation at admission\n- [ ] An unspent reservation is released at the terminal state\n- [ ] Three caps: per envelope, per project, per principal and day (OP-1)\n- [ ] A limit in pod minutes per principal and channel, not in requests\n- [ ] halt as a field in admission AND as a file on the control node\n\n### Done when\n- With the halt file set and the API switched off, no job is admitted, running ones run to completion.\n\n### Boundary of this issue\nFairness weighting across tenants comes with the second tenant. Here the caps are what count."
+  },
+  {
+    "id": "AP-3.7",
+    "type": "work_package",
+    "title": "AP-3.7 · Scheduler: tokens per phase, four priorities, admission via PSI",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/E",
+      "panel/R",
+      "panel/V",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.3, AP-3.6",
+    "effort": "L",
+    "panels": "R-B, R-C, V-01, E-02, E-05",
+    "spec": "SP-RB-1 through SP-RB-7, SP-RC-1 through SP-RC-6, SP-V01-4, SP-RD-3, SP-E02-2, SP-E02-5",
+    "acceptance": "AB-RB-1, AB-RB-2, AB-RB-3, AB-RB-4, AB-RB-5, AB-RC-1, AB-RC-3, AB-RC-6, AB-RD-3, AB-E05-2, AB-V01-4, AB-E02-2, AB-E02-5",
+    "body": "**Stage:** 3 · **Panels:** R-B, R-C, V-01, E-02, E-05 · **Effort:** L\n**Blocked by:** AP-3.3, AP-3.6\n**Specification:** SP-RB-1 through SP-RB-7, SP-RC-1 through SP-RC-6, SP-V01-4, SP-RD-3, SP-E02-2, SP-E02-5\n**Acceptance:** AB-RB-1, AB-RB-2, AB-RB-3, AB-RB-4, AB-RB-5, AB-RC-1, AB-RC-3, AB-RC-6, AB-RD-3, AB-E05-2, AB-V01-4, AB-E02-2, AB-E02-5\n\n### Goal\nA single counter of “active slots” is too coarse: 20 jobs can be running while only two are computing. That is the difference between 3 and 20 finished jobs per hour. And utilization is the wrong metric — 100 % CPU is healthy, 40 % CPU pressure means work is being left undone.\n\n### Tasks\n- [ ] Tokens per phase: net, io, cpu·ram; whoever waits for a model response returns its CPU token\n- [ ] Four priorities with aging; preempting means freezing, not aborting\n- [ ] Exclusive operation above ~60 % RAM; never time-slice two large runs\n- [ ] A PSI reader every two seconds, six signals, escalation ladder throttle → block → freeze → checkpoint → escalate (OP-6)\n- [ ] Record peak RSS and runtime per repository and phase; after three runs, mechanical admission\n- [ ] The queue in Postgres with SKIP LOCKED, no second broker\n\n### Done when\n- Under generated memory pressure the scheduler freezes the lowest priority, aborts nothing, the control plane stays operable. The control layer stays within 4 cores and 16 GB.\n\n### Boundary of this issue\nAdmission does not read the five constants from E-05. It decides exclusively on PSI and measured peak RSS."
+  },
+  {
+    "id": "AP-3.8",
+    "type": "work_package",
+    "title": "AP-3.8 · Observation: one trace per job, four alerts, a separate audit trail",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/operations",
+      "panel/A",
+      "panel/B",
+      "panel/K",
+      "panel/Q",
+      "panel/R",
+      "stage/3"
+    ],
+    "blocked_by": "AP-3.5, AP-3.7",
+    "effort": "M",
+    "panels": "B-03, K-01, Q-04, R-D, B-02, A-05",
+    "spec": "SP-B03-1 through SP-B03-6, SP-K01-7, SP-Q04-4, SP-RD-2, SP-B02-5, SP-A05-5",
+    "acceptance": "AB-B03-1, AB-B03-3, AB-B03-4, AB-K01-7, AB-Q04-4, AB-RD-2, AB-B02-5, AB-A05-5, AB-A06-9",
+    "body": "**Stage:** 3 · **Panels:** B-03, K-01, Q-04, R-D, B-02, A-05 · **Effort:** M\n**Blocked by:** AP-3.5, AP-3.7\n**Specification:** SP-B03-1 through SP-B03-6, SP-K01-7, SP-Q04-4, SP-RD-2, SP-B02-5, SP-A05-5\n**Acceptance:** AB-B03-1, AB-B03-3, AB-B03-4, AB-K01-7, AB-Q04-4, AB-RD-2, AB-B02-5, AB-A05-5, AB-A06-9\n\n### Goal\nThe unit of observation is the job, not the process and not the node. A fifth alert devalues the four.\n\n### Tasks\n- [ ] One trace from the envelope to the result, with the phases from R-B as spans\n- [ ] Cost, attempt, evidence class, model, prompt and pipeline version on the trace\n- [ ] Pod logs to the node immediately, tagged with the job ID and attempt, kept as evidence\n- [ ] The audit trail separate and immutable, with its own period\n- [ ] Exactly four waking alerts; rejected egress targets into the display; a disk alert\n- [ ] Feed the occupancy table in operation from cpu.pressure and memory.pressure\n\n### Done when\n- A completed job is reconstructible from the channel message to the patch in ONE query.\n\n### Boundary of this issue\nNo dashboards for processes or nodes. Everything else is trimming."
+  },
+  {
+    "id": "AP-4.1",
+    "type": "work_package",
+    "title": "AP-4.1 · Fact store: SCIP → Parquet → DuckDB in the harness",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/E",
+      "panel/G",
+      "stage/4"
+    ],
+    "blocked_by": "AP-3.3",
+    "effort": "L",
+    "panels": "E-09, G-01, G-03, G-05",
+    "spec": "SP-E09-1 through SP-E09-6, SP-G01-1 through SP-G01-6, SP-G03-1, SP-G03-2, SP-G05-1",
+    "acceptance": "AB-E09-3, AB-E09-5, AB-G01-2, AB-G01-3, AB-G01-4, AB-G03-1, AB-G03-2, AB-G05-1",
+    "body": "**Stage:** 4 · **Panels:** E-09, G-01, G-03, G-05 · **Effort:** L\n**Blocked by:** AP-3.3\n**Specification:** SP-E09-1 through SP-E09-6, SP-G01-1 through SP-G01-6, SP-G03-1, SP-G03-2, SP-G05-1\n**Acceptance:** AB-E09-3, AB-E09-5, AB-G01-2, AB-G01-3, AB-G01-4, AB-G03-1, AB-G03-2, AB-G05-1\n\n### Goal\nAgents do not read code in order to understand — they read facts. 10,000 pods with 200K context each hold, together, under one thousandth of such a corpus. A hallucinated call graph is worse than none.\n\n### Tasks\n- [ ] A SCIP indexer for the first language; a missing indexer is a job, not a project\n- [ ] Storage as Parquet, partitioned by build target, keyed by file content + indexer version\n- [ ] DuckDB embedded in the harness; distribution to pods as a read-only CoW snapshot\n- [ ] Exactly one writer; pods read — the same rule as with the cache daemon\n- [ ] Judgements as an append-only log with a citation to facts; expiry via the content hash\n- [ ] A cache daemon for shared caches; pods read, only the daemon writes\n- [ ] Activity state as a field on every fact (active/dormant/silenced/fossil)\n\n### Done when\n- fact.query in the pod is a file read without network; the response time measured.\n\n### Boundary of this issue\nNo fact service, no second process. Files have the properties V-05 demands."
+  },
+  {
+    "id": "AP-4.2",
+    "type": "work_package",
+    "title": "AP-4.2 · The thirteen handles from F-03 as SKILL.md",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "effort/XL",
+      "kind/catalog",
+      "measurement",
+      "panel/F",
+      "panel/G",
+      "stage/4"
+    ],
+    "blocked_by": "AP-4.1",
+    "effort": "XL",
+    "panels": "F-01, F-02, F-03, F-07, G-06",
+    "spec": "SP-F01-1 through SP-F01-4, SP-F02-1, SP-F03-1, SP-F07-1, SP-F07-2, SP-F07-5, SP-G06-1",
+    "acceptance": "AB-F01-1, AB-F01-4, AB-F03-1, AB-F05-3, AB-F07-1, AB-F07-4, AB-G06-1",
+    "body": "**Stage:** 4 · **Panels:** F-01, F-02, F-03, F-07, G-06 · **Effort:** XL\n**Blocked by:** AP-4.1\n**Specification:** SP-F01-1 through SP-F01-4, SP-F02-1, SP-F03-1, SP-F07-1, SP-F07-2, SP-F07-5, SP-G06-1\n**Acceptance:** AB-F01-1, AB-F01-4, AB-F03-1, AB-F05-3, AB-F07-1, AB-F07-4, AB-G06-1\n\n### Goal\nHandles need no model and are checkable before any agent question. A capability without evidence is not a capability but a habit. — Split candidate: one sub-issue per handle.\n\n### Tasks\n- [ ] fact.query · context.assemble · test.select · build · check.types · check.tests\n- [ ] codemod.apply · artifact.compare · flake.detect · snapshot.create · snapshot.reap\n- [ ] effect.enqueue · gap.report\n- [ ] Per handle: the five parts from F-01, metadata.order=handle, min_authority, its own abort condition\n- [ ] Per handle: three cases in the corpus before it may enter the catalog\n- [ ] A catalog checker: rejects a capability without evidence or boundary\n\n### Done when\n- Every handle has a measured success_rate and a named boundary. MEASUREMENT of this stage.\n\n### Boundary of this issue\nNo procedure, no campaign. And no handle calls another."
+  },
+  {
+    "id": "AP-4.3",
+    "type": "work_package",
+    "title": "AP-4.3 · Context assembly (G-07): five stages, a manifest, a hard gate",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/G",
+      "panel/Q",
+      "stage/4"
+    ],
+    "blocked_by": "AP-4.1, AP-4.2",
+    "effort": "L",
+    "panels": "G-07, Q-03",
+    "spec": "SP-G07-1 through SP-G07-9",
+    "acceptance": "AB-G07-1, AB-G07-3, AB-G07-6, AB-G07-7, AB-G07-9",
+    "body": "**Stage:** 4 · **Panels:** G-07, Q-03 · **Effort:** L\n**Blocked by:** AP-4.1, AP-4.2\n**Specification:** SP-G07-1 through SP-G07-9\n**Acceptance:** AB-G07-1, AB-G07-3, AB-G07-6, AB-G07-7, AB-G07-9\n\n### Goal\nA deterministic step before the agent, with a budget and an abort condition — not a behavior you leave to the model. An agent has to know what it has not seen.\n\n### Tasks\n- [ ] anchor · hull · skeleton · body · manifest with the depth table from G-07\n- [ ] The skeleton ten to twenty times broader than the bodies; bodies only after judgement\n- [ ] Activity state as a filter; fossil only as a count in the manifest\n- [ ] Drift as a freshness measure; flag contradicting instructions before acting\n- [ ] The gap report as a hard gate; never truncate silently, propose a split instead\n- [ ] The write-back path: judgement candidates with a citation at the end of the job\n\n### Done when\n- A job without an index or without tests at the anchor does not start, but produces a preparation job.\n\n### Boundary of this issue\nThe map is never trimmed. The context is filtered, never the knowledge layer."
+  },
+  {
+    "id": "AP-4.4",
+    "type": "work_package",
+    "title": "AP-4.4 · Catalog, deterministic resolution, pinning via the content hash",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "effort/M",
+      "kind/catalog",
+      "panel/F",
+      "stage/4"
+    ],
+    "blocked_by": "AP-4.2",
+    "effort": "M",
+    "panels": "F-04, F-07, F-01",
+    "spec": "SP-F04-5, SP-F07-3, SP-F01-2",
+    "acceptance": "AB-F04-5, AB-F07-3, AB-F01-2",
+    "body": "**Stage:** 4 · **Panels:** F-04, F-07, F-01 · **Effort:** M\n**Blocked by:** AP-4.2\n**Specification:** SP-F04-5, SP-F07-3, SP-F01-2\n**Acceptance:** AB-F04-5, AB-F07-3, AB-F01-2\n\n### Goal\nThe pod never sees the catalog: with three hundred capabilities that would be tens of thousands of tokens in every pod. The coverage check resolves beforehand and encloses only the resolved capabilities — an agent does not choose what it reads.\n\n### Tasks\n- [ ] Content-addressed capability versions; the hash computed at check-in\n- [ ] Resolution deterministic outside the pod\n- [ ] Only resolved capabilities are enclosed\n- [ ] min_authority is enforced at resolution, not admonished in the prompt\n\n### Done when\n- A pod context contains no description of an unresolved capability; catalog maintenance changes no running project.\n\n### Boundary of this issue\nThe complete coverage check with a criterion comes in AP-5.6 — first the criterion, then the question whether we can do it."
+  },
+  {
+    "id": "AP-4.5",
+    "type": "work_package",
+    "title": "AP-4.5 · Derived relations with Soufflé as a maintenance job",
+    "milestone": "Stage 4 — Handles and knowledge",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/E",
+      "panel/G",
+      "panel/R",
+      "stage/4"
+    ],
+    "blocked_by": "AP-4.1",
+    "effort": "M",
+    "panels": "E-09, G-06, R-B",
+    "spec": "SP-E09-4",
+    "acceptance": "",
+    "body": "**Stage:** 4 · **Panels:** E-09, G-06, R-B · **Effort:** M\n**Blocked by:** AP-4.1\n**Specification:** SP-E09-4\n**Acceptance:** — (a precondition, no row of its own)\n\n### Goal\nThe transitive call graph, reachability and points-to on candidates are deterministic and belong in the batch — not in the hot path of a job.\n\n### Tasks\n- [ ] A Soufflé rule set for the three derivations\n- [ ] Execution as a maintenance job (the priority from R-B)\n- [ ] Write the results back as further Parquet partitions\n- [ ] Measure the runtime against the maintenance window\n\n### Done when\n- The incremental rebuild of the largest repository family stays inside the maintenance window — otherwise the overturn condition from E-09 applies.\n\n### Boundary of this issue\nNo Glean, no CodeQL, no Kythe. The handle stays, the storage could change later."
+  },
+  {
+    "id": "AP-5.1",
+    "type": "work_package",
+    "title": "AP-5.1 · Intent contract (Q-01): spec as a versioned object",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "measurement",
+      "panel/K",
+      "panel/Q",
+      "stage/5"
+    ],
+    "blocked_by": "AP-4.3",
+    "effort": "L",
+    "panels": "Q-01, K-02, K-01",
+    "spec": "SP-Q01-1 through SP-Q01-7, SP-K02-4",
+    "acceptance": "AB-Q01-1, AB-Q01-2, AB-Q01-3, AB-Q01-4, AB-Q01-5, AB-Q01-6, AB-K02-4",
+    "body": "**Stage:** 5 · **Panels:** Q-01, K-02, K-01 · **Effort:** L\n**Blocked by:** AP-4.3\n**Specification:** SP-Q01-1 through SP-Q01-7, SP-K02-4\n**Acceptance:** AB-Q01-1, AB-Q01-2, AB-Q01-3, AB-Q01-4, AB-Q01-5, AB-Q01-6, AB-K02-4\n\n### Goal\nThis is where human error disappears, not in the model — not because a machine guesses better, but because a sentence becomes a checkable criterion that is then applied mechanically a thousand times over.\n\n### Tasks\n- [ ] prompt → interpret → acceptance → clarify → spec, versioned and citable\n- [ ] acceptance[] and assumptions[] as objects, revocable individually\n- [ ] Reversibility matrix: reversible / costly / irreversible × unambiguous / ambiguous\n- [ ] At most one clarification per job, only about the ambiguity that changes the execution\n- [ ] A clarification deadline; then back to the captain with the assumption logged (OP-3)\n- [ ] No acceptance criterion, no job — a hard gate\n- [ ] A version change re-evaluates open jobs instead of letting them run on\n\n### Done when\n- A prompt with no derivable criterion produces a preparation job instead of a job. MEASUREMENT: no_clarification_rate.\n\n### Boundary of this issue\nThe clarification is a cost item, not a safety net. A system that always asks has merely shifted the errors back onto the human."
+  },
+  {
+    "id": "AP-5.2",
+    "type": "work_package",
+    "title": "AP-5.2 · The ten procedures from F-03",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "effort/XL",
+      "kind/catalog",
+      "panel/F",
+      "stage/5"
+    ],
+    "blocked_by": "AP-5.1, AP-4.4",
+    "effort": "XL",
+    "panels": "F-02, F-03, F-05",
+    "spec": "SP-F02-1 through SP-F02-4, SP-F03-1, SP-F05-1 through SP-F05-4",
+    "acceptance": "AB-F02-2, AB-F03-1, AB-F05-1, AB-T03-3",
+    "body": "**Stage:** 5 · **Panels:** F-02, F-03, F-05 · **Effort:** XL\n**Blocked by:** AP-5.1, AP-4.4\n**Specification:** SP-F02-1 through SP-F02-4, SP-F03-1, SP-F05-1 through SP-F05-4\n**Acceptance:** AB-F02-2, AB-F03-1, AB-F05-1, AB-T03-3\n\n### Goal\nOne model step per procedure, evidence at the test. The model decides the whether, never the how. — Split candidate: one sub-issue per procedure.\n\n### Tasks\n- [ ] spec.derive · test.repair · bug.fix · interface.change · function.extract\n- [ ] dependency.update · test.write · review.produce · image.build · adapter.build\n- [ ] Per procedure: exactly one model decision, a named boundary, an evidence class\n- [ ] The catalog checker rejects an upward call and a cycle\n- [ ] A missing handle becomes a job, never an improvisation mid-run\n\n### Done when\n- The catalog checker rejects an upward call and a cycle; three corpus cases per procedure.\n\n### Boundary of this issue\nimage.build and adapter.build run as ordinary jobs in ordinary workpods — no special path."
+  },
+  {
+    "id": "AP-5.3",
+    "type": "work_package",
+    "title": "AP-5.3 · Model roles and routing (E-06): the capability in the job, the name in the table",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/E",
+      "panel/G",
+      "panel/T",
+      "stage/5"
+    ],
+    "blocked_by": "AP-3.5",
+    "effort": "M",
+    "panels": "E-06, G-03, T-04",
+    "spec": "SP-E06-1 through SP-E06-6",
+    "acceptance": "AB-E06-2, AB-E06-5",
+    "body": "**Stage:** 5 · **Panels:** E-06, G-03, T-04 · **Effort:** M\n**Blocked by:** AP-3.5\n**Specification:** SP-E06-1 through SP-E06-6\n**Acceptance:** AB-E06-2, AB-E06-5\n\n### Goal\nThe job names capabilities and a pinned version, not a provider. Provider and key are inserted by the egress proxy. Switching provider is therefore a table row and not an intervention in prompts or code.\n\n### Tasks\n- [ ] Three roles: classifier (~90 %, self-operable), worker (~9 %), reviewer (~1 %)\n- [ ] Resolution through a capability statement; no provider name in code\n- [ ] The provider pinned per project (the prompt prefix cache)\n- [ ] Budgets in tokens; the euro cap reserved at the most expensive permissible provider\n- [ ] Fill in the provider and price table as configuration (OP-7)\n\n### Done when\n- Switching provider is a table row; a fallback per B-04 blows no cap.\n\n### Boundary of this issue\nThe classifier is chosen to be self-operable — otherwise the platform is unable to act during a provider disruption instead of merely slower."
+  },
+  {
+    "id": "AP-5.4",
+    "type": "work_package",
+    "title": "AP-5.4 · Evidence classes as an acceptance machine (Q-02), unproven as its own exit",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/E",
+      "panel/F",
+      "panel/Q",
+      "stage/5"
+    ],
+    "blocked_by": "AP-5.2",
+    "effort": "L",
+    "panels": "Q-02, F-06, E-06",
+    "spec": "SP-Q02-1 through SP-Q02-5, SP-K02-6, SP-E06-4",
+    "acceptance": "AB-Q02-1, AB-Q02-2, AB-Q02-3, AB-Q02-4, AB-Q02-6, AB-F06-1, AB-E06-4",
+    "body": "**Stage:** 5 · **Panels:** Q-02, F-06, E-06 · **Effort:** L\n**Blocked by:** AP-5.2\n**Specification:** SP-Q02-1 through SP-Q02-5, SP-K02-6, SP-E06-4\n**Acceptance:** AB-Q02-1, AB-Q02-2, AB-Q02-3, AB-Q02-4, AB-Q02-6, AB-F06-1, AB-E06-4\n\n### Goal\nConfidence is not an acceptance criterion. Q-01 fixes what would have been right, Q-02 demands the evidence — the two together are the pipeline that lets no defect through. Either one alone is not.\n\n### Tasks\n- [ ] Seven classes, cheapest first; the class demanded follows from the risk\n- [ ] The checking pod gets diff, criterion, facts — never the author's transcript, and where possible a different model\n- [ ] Self-report is marked as an assumption, not counted as evidence\n- [ ] Every check blocks; non-blocking warnings are removed\n- [ ] unproven with diff, gap report and assessment into the human stack\n- [ ] No majority votes over correlated runs\n\n### Done when\n- A job whose criterion cannot be evidenced ends in unproven — not in delivered, not in failed.\n\n### Boundary of this issue\nWhoever reads the derivation takes on the error in it. The checker never sees the path, only the result."
+  },
+  {
+    "id": "AP-5.5",
+    "type": "work_package",
+    "title": "AP-5.5 · Captain (T-02): a router without a model, a captain per project in a pod",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "kind/platform",
+      "panel/T",
+      "panel/V",
+      "stage/5"
+    ],
+    "blocked_by": "AP-5.1, AP-5.3",
+    "effort": "L",
+    "panels": "T-02, V-01",
+    "spec": "SP-T02-1 through SP-T02-9, SP-V01-3",
+    "acceptance": "AB-T02-2, AB-T02-3, AB-T02-4, AB-T02-6, AB-T02-7, AB-T02-9, AB-V01-3",
+    "body": "**Stage:** 5 · **Panels:** T-02, V-01 · **Effort:** L\n**Blocked by:** AP-5.1, AP-5.3\n**Specification:** SP-T02-1 through SP-T02-9, SP-V01-3\n**Acceptance:** AB-T02-2, AB-T02-3, AB-T02-4, AB-T02-6, AB-T02-7, AB-T02-9, AB-V01-3\n\n### Goal\nThe captain reads more foreign text than anything else in the system and is the largest injection surface — so it belongs behind the same boundary as the work it distributes. But never with the runtime socket in the pod.\n\n### Tasks\n- [ ] A router without a model on the host: deduplicate, resolve identity, attach authority, determine the project, wake\n- [ ] A captain per project, in a pod, stateless between turns\n- [ ] decompose · locate · size · prioritize · dispatch\n- [ ] Enforce the rights matrix: no raising of authority, no foreign pods, no host mounts, no pipeline change\n- [ ] Subagents by write authority: think in the pod, read with a ro mount, write in a workpod of their own\n- [ ] Events back (accepted/started/check.failed/clarification/done) with a verbosity profile per adapter\n\n### Done when\n- A project with 200 subjobs produces a handful of replies in one thread, not 200.\n\n### Boundary of this issue\nNo project mounts in the captain pod. The part most prone to injection is the last one you give file authority to."
+  },
+  {
+    "id": "AP-5.6",
+    "type": "work_package",
+    "title": "AP-5.6 · Coverage check complete (F-04) with five failure causes",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "effort/M",
+      "kind/catalog",
+      "measurement",
+      "panel/F",
+      "stage/5"
+    ],
+    "blocked_by": "AP-5.1, AP-4.4",
+    "effort": "M",
+    "panels": "F-04, F-05",
+    "spec": "SP-F04-1 through SP-F04-6, SP-F05-1, SP-F05-2",
+    "acceptance": "AB-F04-2, AB-F04-3, AB-F04-4, AB-F05-1, AB-F05-2",
+    "body": "**Stage:** 5 · **Panels:** F-04, F-05 · **Effort:** M\n**Blocked by:** AP-5.1, AP-4.4\n**Specification:** SP-F04-1 through SP-F04-6, SP-F05-1, SP-F05-2\n**Acceptance:** AB-F04-2, AB-F04-3, AB-F04-4, AB-F05-1, AB-F05-2\n\n### Goal\nThe most expensive failure is the one that fails after twenty minutes on something that stood in a table beforehand. And more capability thrown at a wrong goal goes further in the wrong direction.\n\n### Tasks\n- [ ] criteria → resolve → coverage → gap as a hard gate before the pod starts\n- [ ] Distinguish five causes: skill.missing, knowledge.missing, goal.wrong, budget.exhausted, unsolvable\n- [ ] A gap becomes an ordinary job with the same pipeline and the same test bench\n- [ ] Intake condition for new capabilities: an evidence class, a boundary, three corpus cases, an honest name\n- [ ] Track coverage_rate and success_rate per capability\n\n### Done when\n- An uncovered job fails before the pod starts, with a named cause. MEASUREMENT: coverage_rate.\n\n### Boundary of this issue\nThe coverage check stands behind Q-01, not in front of it."
+  },
+  {
+    "id": "AP-5.7",
+    "type": "work_package",
+    "title": "AP-5.7 · Further intakes: linked and public, linking, gVisor",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/E",
+      "panel/T",
+      "stage/5"
+    ],
+    "blocked_by": "AP-5.5",
+    "effort": "M",
+    "panels": "T-01, E-02",
+    "spec": "SP-T01-1 through SP-T01-10, SP-E02-3",
+    "acceptance": "AB-T01-1, AB-T01-4, AB-T01-5, AB-T01-6, AB-T01-9, AB-E02-3",
+    "body": "**Stage:** 5 · **Panels:** T-01, E-02 · **Effort:** M\n**Blocked by:** AP-5.5\n**Specification:** SP-T01-1 through SP-T01-10, SP-E02-3\n**Acceptance:** AB-T01-1, AB-T01-4, AB-T01-5, AB-T01-6, AB-T01-9, AB-E02-3\n\n### Goal\nWith the authority on the envelope, “anyone may write to me from anywhere” is a manageable risk. Without it, it is not one.\n\n### Tasks\n- [ ] One linked and one public adapter against the same contract\n- [ ] First contact produces an invitation to link, not a job\n- [ ] Confirmation happens on a different channel than the request\n- [ ] Text from open channels is data, never instruction\n- [ ] gVisor (runsc) for pods at level public — bound to the authority, not to a setting\n\n### Done when\n- A text from an open channel claiming a higher authority changes nothing about the authority of the envelope.\n\n### Boundary of this issue\nA new intake is a job after that (adapter.build), not a release."
+  },
+  {
+    "id": "AP-6.1",
+    "type": "work_package",
+    "title": "AP-6.1 · Enrollment of the nodes (B-01): token → certificate → hourly renewal",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "effort/M",
+      "kind/operations",
+      "panel/A",
+      "panel/B",
+      "panel/K",
+      "stage/6"
+    ],
+    "blocked_by": "AP-2.5, AP-3.1",
+    "effort": "M",
+    "panels": "B-01, K-04, A-05",
+    "spec": "SP-B01-1 through SP-B01-5, SP-K04-5, SP-A05-4",
+    "acceptance": "AB-B01-1, AB-B01-5, AB-K04-5, AB-A05-4",
+    "body": "**Stage:** 6 · **Panels:** B-01, K-04, A-05 · **Effort:** M\n**Blocked by:** AP-2.5, AP-3.1\n**Specification:** SP-B01-1 through SP-B01-5, SP-K04-5, SP-A05-4\n**Acceptance:** AB-B01-1, AB-B01-5, AB-K04-5, AB-A05-4\n\n### Goal\nThe pull design shifts the entire question of trust onto one moment: enrollment. An image is to be treated as public — it lies on every node, in every backup and in every memory dump.\n\n### Tasks\n- [ ] enrollment token single use, valid for minutes\n- [ ] A node certificate with role and cell in the name; hourly overlapping renewal\n- [ ] No standing secret in the image; identity comes into being at first start on encrypted /var\n- [ ] TPM binding where available, attestation on joining\n- [ ] Rotation as routine: nodes hourly, gate secrets weekly, issuers yearly\n\n### Done when\n- A node with an expired certificate receives no more jobs, without intervention.\n\n### Boundary of this issue\nWhatever is only rotated in an emergency rotates for the first time in an emergency."
+  },
+  {
+    "id": "AP-6.2",
+    "type": "work_package",
+    "title": "AP-6.2 · Ferry across nodes: pull, lease, heartbeat, locality groups",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/platform",
+      "measurement",
+      "panel/E",
+      "panel/K",
+      "panel/V",
+      "stage/6"
+    ],
+    "blocked_by": "AP-6.1, AP-2.3",
+    "effort": "M",
+    "panels": "V-02, K-02, E-03",
+    "spec": "SP-V02-1 through SP-V02-5, SP-K02-1, SP-V03-3",
+    "acceptance": "AB-V02-1, AB-V02-4, AB-A06-10",
+    "body": "**Stage:** 6 · **Panels:** V-02, K-02, E-03 · **Effort:** M\n**Blocked by:** AP-6.1, AP-2.3\n**Specification:** SP-V02-1 through SP-V02-5, SP-K02-1, SP-V03-3\n**Acceptance:** AB-V02-1, AB-V02-4, AB-A06-10\n\n### Goal\nNot push, but pull. That yields failover without a leader election — and back pressure arises by itself, because an overloaded worker does not ask for more.\n\n### Tasks\n- [ ] The worker requests capacity, receives jobs with a deadline, extends it by heartbeat\n- [ ] Expiry returns the job into the queue (the control plane writes)\n- [ ] Sticky assignment repository → node; queues per locality_group\n- [ ] Work stealing only within the group\n- [ ] Cut the first locality groups (OP-8)\n\n### Done when\n- A hard-powered-off worker returns its jobs after expiry; they run to completion elsewhere. MEASUREMENT: time to resumption.\n\n### Boundary of this issue\nNo Raft. Consensus only when you can prove you need it."
+  },
+  {
+    "id": "AP-6.3",
+    "type": "work_package",
+    "title": "AP-6.3 · Sharpen the network boundaries (B-02): no inbound ports",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/operations",
+      "panel/A",
+      "panel/B",
+      "panel/V",
+      "stage/6"
+    ],
+    "blocked_by": "AP-6.1",
+    "effort": "M",
+    "panels": "B-02, V-02, A-04",
+    "spec": "SP-B02-1 through SP-B02-7, SP-V02-2, SP-A04-4",
+    "acceptance": "AB-B02-1, AB-B02-6, AB-B02-7, AB-V02-2, AB-A06-8, AB-A04-4",
+    "body": "**Stage:** 6 · **Panels:** B-02, V-02, A-04 · **Effort:** M\n**Blocked by:** AP-6.1\n**Specification:** SP-B02-1 through SP-B02-7, SP-V02-2, SP-A04-4\n**Acceptance:** AB-B02-1, AB-B02-6, AB-B02-7, AB-V02-2, AB-A06-8, AB-A04-4\n\n### Goal\nA node you can log into gets repaired by hand — and from then on there are no two identical nodes any more.\n\n### Tasks\n- [ ] nftables from the image, default deny; not changeable at runtime\n- [ ] No inbound ports, not even SSH; remote access over the same outbound channel or not at all\n- [ ] An egress proxy per work node, not centrally\n- [ ] No name resolution in the pod\n- [ ] A port scan from outside as a recurring check, even after a role change\n\n### Done when\n- A port scan from outside finds nothing — even after a role change.\n\n### Boundary of this issue\nA firewall a service can change at runtime is a recommendation."
+  },
+  {
+    "id": "AP-6.4",
+    "type": "work_package",
+    "title": "AP-6.4 · Rolling update: A/B, boot counter, three channels, healthy only after a job",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/image",
+      "panel/A",
+      "stage/6"
+    ],
+    "blocked_by": "AP-6.2",
+    "effort": "M",
+    "panels": "A-02, A-03",
+    "spec": "SP-A02-5, SP-A03-4, SP-A03-6",
+    "acceptance": "AB-A02-5, AB-A03-4, AB-A03-6, AB-A06-12",
+    "body": "**Stage:** 6 · **Panels:** A-02, A-03 · **Effort:** M\n**Blocked by:** AP-6.2\n**Specification:** SP-A02-5, SP-A03-4, SP-A03-6\n**Acceptance:** AB-A02-5, AB-A03-4, AB-A03-6, AB-A06-12\n\n### Goal\nBecause workers pull instead of being called, a rolling update is trivial — no drain command needed. And a node reports “healthy” only once it has carried a job to completion. Otherwise a defective image rolls cleanly through the entire fleet.\n\n### Tasks\n- [ ] A/B via systemd-sysupdate, an atomic switch\n- [ ] A boot counter, fallback after three failed starts\n- [ ] Three channels: canary, stable, held; a node knows which one it is in\n- [ ] The health report only after a completed job\n- [ ] The version is a number, not a timestamp\n\n### Done when\n- Two versions run at the same time, no job is lost.\n\n### Boundary of this issue\nNo drain command. The back pressure from V-02 takes care of that by itself."
+  },
+  {
+    "id": "AP-6.5",
+    "type": "work_package",
+    "title": "AP-6.5 · Backup by origin and the first restore drill",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "effort/M",
+      "kind/operations",
+      "measurement",
+      "panel/V",
+      "stage/6"
+    ],
+    "blocked_by": "AP-6.2",
+    "effort": "M",
+    "panels": "V-05, V-02, V-01",
+    "spec": "SP-V05-1, SP-V05-2, SP-V05-3, SP-V02-3, SP-V01-2",
+    "acceptance": "AB-V05-1, AB-V05-3, AB-V02-3, AB-V02-5, AB-V01-2",
+    "body": "**Stage:** 6 · **Panels:** V-05, V-02, V-01 · **Effort:** M\n**Blocked by:** AP-6.2\n**Specification:** SP-V05-1, SP-V05-2, SP-V05-3, SP-V02-3, SP-V01-2\n**Acceptance:** AB-V05-1, AB-V05-3, AB-V02-3, AB-V02-5, AB-V01-2\n\n### Goal\nAn unpracticed backup is a guess. Static stability is a claim until it has been measured once.\n\n### Tasks\n- [ ] A synchronous replica of the control data, point-in-time restore\n- [ ] Judgements in the replicated append-only log; facts as a daily snapshot; snapshots and caches not backed up at all\n- [ ] The audit trail separate, immutable, with its own period\n- [ ] Drill: let the control plane fail — running pods run, adapters buffer, the allowlist holds, new authorities are refused\n- [ ] Drill: rebuild a cell from backup, check it against the corpus, measure the time\n\n### Done when\n- A cell has been built from backup once and checked. MEASUREMENT: restore time.\n\n### Boundary of this issue\nWhat is derivable is not backed up. Decisions lie in Git, not in the database."
+  },
+  {
+    "id": "AP-7.1",
+    "type": "work_package",
+    "title": "AP-7.1 · Build the regression corpus out of operation",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "effort/M",
+      "kind/platform",
+      "panel/F",
+      "panel/Q",
+      "stage/7"
+    ],
+    "blocked_by": "AP-5.4",
+    "effort": "M",
+    "panels": "Q-04, F-05",
+    "spec": "SP-Q04-2, SP-Q04-5, SP-F05-2, SP-F07-5",
+    "acceptance": "AB-Q04-5, AB-F05-2",
+    "body": "**Stage:** 7 · **Panels:** Q-04, F-05 · **Effort:** M\n**Blocked by:** AP-5.4\n**Specification:** SP-Q04-2, SP-Q04-5, SP-F05-2, SP-F07-5\n**Acceptance:** AB-Q04-5, AB-F05-2\n\n### Goal\nA regression corpus that does not grow out of real failures tests the imagination of its authors.\n\n### Tasks\n- [ ] Collect recorded jobs with a known outcome\n- [ ] Freeze facts, record tool responses\n- [ ] Take in every case that slipped through in operation\n- [ ] At least three cases per capability in the catalog\n\n### Done when\n- The corpus contains three cases per catalog entry; new capabilities without three cases are rejected.\n\n### Boundary of this issue\nNo synthetic cases as a substitute for real ones."
+  },
+  {
+    "id": "AP-7.2",
+    "type": "work_package",
+    "title": "AP-7.2 · Test bench: replay without live calls, four metrics, canary",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "acceptance/blocker",
+      "effort/L",
+      "measurement",
+      "panel/Q",
+      "stage/7"
+    ],
+    "blocked_by": "AP-7.1",
+    "effort": "L",
+    "panels": "Q-04",
+    "spec": "SP-Q04-1 through SP-Q04-7",
+    "acceptance": "AB-Q04-1, AB-Q04-2, AB-Q04-7",
+    "body": "**Stage:** 7 · **Panels:** Q-04 · **Effort:** L\n**Blocked by:** AP-7.1\n**Specification:** SP-Q04-1 through SP-Q04-7\n**Acceptance:** AB-Q04-1, AB-Q04-2, AB-Q04-7\n\n### Goal\nA change to the system prompt or a change of model alters the behavior of a thousand jobs at once and is the riskiest release in the whole system — riskier than any code step the platform executes.\n\n### Tasks\n- [ ] A repeatable run against frozen facts and a fixed model version\n- [ ] escape_rate, false_reject_rate, cost_per_acceptance, no_clarification_rate\n- [ ] Canary: a shadow run in operation, the result discarded, only the metrics count\n- [ ] Prompt and model version pinnable per project; rolling back cheaper than repairing\n\n### Done when\n- Two runs of the same revision produce the same metrics. MEASUREMENT: escape_rate as a baseline.\n\n### Boundary of this issue\nOnly after this baseline the first model change."
+  },
+  {
+    "id": "AP-7.3",
+    "type": "work_package",
+    "title": "AP-7.3 · Failure classification (Q-03) at every terminal state",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "effort/S",
+      "kind/operations",
+      "panel/K",
+      "panel/Q",
+      "stage/7"
+    ],
+    "blocked_by": "AP-7.2",
+    "effort": "S",
+    "panels": "Q-03, K-02",
+    "spec": "SP-Q03-1, SP-Q03-2, SP-K02-3",
+    "acceptance": "AB-Q03-1, AB-Q03-2",
+    "body": "**Stage:** 7 · **Panels:** Q-03, K-02 · **Effort:** S\n**Blocked by:** AP-7.2\n**Specification:** SP-Q03-1, SP-Q03-2, SP-K02-3\n**Acceptance:** AB-Q03-1, AB-Q03-2\n\n### Goal\nFailures rarely arise where a model does something wrong. They arise where nobody fixed what would have been right.\n\n### Tasks\n- [ ] Every terminal state carries one of the classes from Q-03/F-04\n- [ ] escape_rate breakable down by failure class\n- [ ] Report spec.wrong separately — the only class without a technical net\n\n### Done when\n- “Which kind of failure slips through” is a query, not an investigation.\n\n### Boundary of this issue\nNo catch-all status. failed without a cause key is a defect in the log, not a result."
+  },
+  {
+    "id": "AP-7.4",
+    "type": "work_package",
+    "title": "AP-7.4 · Retention, regions and deletion as a job (E-07)",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "effort/M",
+      "kind/operations",
+      "panel/B",
+      "panel/E",
+      "panel/V",
+      "stage/7"
+    ],
+    "blocked_by": "AP-3.8",
+    "effort": "M",
+    "panels": "E-07, V-04, B-03",
+    "spec": "SP-E07-1 through SP-E07-4, SP-V04-6, SP-B03-5",
+    "acceptance": "AB-E07-1, AB-E07-2, AB-E07-3, AB-V04-6, AB-B03-5",
+    "body": "**Stage:** 7 · **Panels:** E-07, V-04, B-03 · **Effort:** M\n**Blocked by:** AP-3.8\n**Specification:** SP-E07-1 through SP-E07-4, SP-V04-6, SP-B03-5\n**Acceptance:** AB-E07-1, AB-E07-2, AB-E07-3, AB-V04-6, AB-B03-5\n\n### Goal\nBecause no content lies globally, worldwide operation is possible without a single record leaving its region. Deletion is a job, not a ticket.\n\n### Tasks\n- [ ] Enforce periods per kind of data (30/30/90 days, hash-bound, project+12 months, 12 months)\n- [ ] A deletion job with a 30-day deadline; the deletion receipt stays in the audit trail, not the content\n- [ ] Periods as a cell property, never as a runtime setting (OP-9)\n- [ ] Check: globally, only identifiers are held\n\n### Done when\n- “Remove everything belonging to this project” runs as a job and is evidenced.\n\n### Boundary of this issue\nRegulatory requirements get a cell of their own, not a setting of their own."
+  },
+  {
+    "id": "AP-7.5",
+    "type": "work_package",
+    "title": "AP-7.5 · The duty officer and the bad day (E-08, B-04)",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "acceptance/blocker",
+      "effort/M",
+      "kind/operations",
+      "panel/B",
+      "panel/E",
+      "panel/K",
+      "stage/7"
+    ],
+    "blocked_by": "AP-3.6, AP-3.8",
+    "effort": "M",
+    "panels": "E-08, B-04, K-02",
+    "spec": "SP-E08-1 through SP-E08-4, SP-B04-1 through SP-B04-5, SP-K02-7",
+    "acceptance": "AB-E08-1, AB-E08-4, AB-B04-1, AB-B04-2, AB-B04-3, AB-B04-4, AB-B04-5, AB-K02-7",
+    "body": "**Stage:** 7 · **Panels:** E-08, B-04, K-02 · **Effort:** M\n**Blocked by:** AP-3.6, AP-3.8\n**Specification:** SP-E08-1 through SP-E08-4, SP-B04-1 through SP-B04-5, SP-K02-7\n**Acceptance:** AB-E08-1, AB-E08-4, AB-B04-1, AB-B04-2, AB-B04-3, AB-B04-4, AB-B04-5, AB-K02-7\n\n### Goal\nDecided beforehand, not in the middle of it. Halting is unilateral, widening never — the only asymmetry an operations role needs.\n\n### Tasks\n- [ ] halt.set / halt.renew / halt.clear with a 60-minute expiry; a rationale mandatory, reported over all adapters\n- [ ] Two people for everything that widens rights or money (OP-10)\n- [ ] Implement the seven incidents from B-04 with trigger and first remedy\n- [ ] Quarantine after two crashes instead of a third attempt\n- [ ] Every automation with an off position and a log\n- [ ] Run the drills: let a cell fail, restart the control plane, replay a backup\n\n### Done when\n- A halt that was set expires by itself after 60 minutes without renewal; the drills have been run once.\n\n### Boundary of this issue\nThe global halt is a property of admission, not a restart. Whoever shoots processes in an incident destroys the evidence."
+  },
+  {
+    "id": "AP-8.1",
+    "type": "work_package",
+    "title": "AP-8.1 · A second cell at 80 % and the first migration of a project",
+    "milestone": "Stage 8 — Growth",
+    "labels": [
+      "effort/L",
+      "kind/platform",
+      "measurement",
+      "panel/E",
+      "panel/V",
+      "stage/8"
+    ],
+    "blocked_by": "AP-6.5",
+    "effort": "L",
+    "panels": "V-03, E-03, E-04",
+    "spec": "SP-V03-1 through SP-V03-6, SP-E07-1",
+    "acceptance": "AB-V03-1, AB-V03-2, AB-V03-5, AB-V03-6, AB-E03-1, AB-E04-1",
+    "body": "**Stage:** 8 · **Panels:** V-03, E-03, E-04 · **Effort:** L\n**Blocked by:** AP-6.5\n**Specification:** SP-V03-1 through SP-V03-6, SP-E07-1\n**Acceptance:** AB-V03-1, AB-V03-2, AB-V03-5, AB-V03-6, AB-E03-1, AB-E04-1\n\n### Goal\nWhat scales is the cell, not the cluster. The jump is small — the same software a second time, provided K-01 carries the cell identifier from the start.\n\n### Tasks\n- [ ] Measure the cell boundary: 500 active projects or p99 admitted→occupied = 2 s\n- [ ] Open a new cell at 80 %, not at 100 %\n- [ ] The global layer: identifiers only — external→principal, project→cell, image index, cost accounts\n- [ ] Migration: freeze the project, copy the state, re-derive the facts in the target cell, switch over\n\n### Done when\n- The cell boundary measured and recorded; one migration carried out once.\n\n### Boundary of this issue\nNo global scheduler. A global scheduler is a global outage — and slower on this load into the bargain."
+  },
+  {
+    "id": "AP-8.2",
+    "type": "work_package",
+    "title": "AP-8.2 · Campaigns for large jobs (G-02 through G-06) as catalog entries",
+    "milestone": "Stage 8 — Growth",
+    "labels": [
+      "effort/XL",
+      "kind/catalog",
+      "panel/F",
+      "panel/G",
+      "stage/8"
+    ],
+    "blocked_by": "AP-5.2",
+    "effort": "XL",
+    "panels": "G-02, G-04, G-05, G-06, F-02",
+    "spec": "SP-G-1, SP-G02-1 through SP-G02-3, SP-G04-1 through SP-G04-4, SP-G05-2, SP-G06-2",
+    "acceptance": "AB-G02-1, AB-G02-2, AB-G02-3, AB-G04-1, AB-G04-2, AB-G04-3, AB-G05-2, AB-G06-2, AB-F02-3",
+    "body": "**Stage:** 8 · **Panels:** G-02, G-04, G-05, G-06, F-02 · **Effort:** XL\n**Blocked by:** AP-5.2\n**Specification:** SP-G-1, SP-G02-1 through SP-G02-3, SP-G04-1 through SP-G04-4, SP-G05-2, SP-G06-2\n**Acceptance:** AB-G02-1, AB-G02-2, AB-G02-3, AB-G04-1, AB-G04-2, AB-G04-3, AB-G05-2, AB-G06-2, AB-F02-3\n\n### Goal\nLarge jobs are capability content, not a platform layer. Whoever builds them into the core blurs the cut from F-01.\n\n### Tasks\n- [ ] corpus.reduce: the reduction cascade writes equivalence classes, not deletions\n- [ ] module.extract and dependencies.untangle: graph algorithms, the model names and judges\n- [ ] framework.migrate: the mechanical share executed, the rest as an evidenced migration plan\n- [ ] coverage.build: where tests are missing, ordered by risk\n- [ ] Waves in reverse topological order with a barrier at the end\n- [ ] An analysis budget in the job; the captain sees only aggregates\n- [ ] Cost visibility per module: build seconds, binary size, attack surface, analysis cost\n\n### Done when\n- A campaign delivers a fact-backed migration plan plus the mechanically verifiable share executed.\n\n### Boundary of this issue\nA campaign changes nothing itself; it produces subjobs. Shrinking and restructuring never in the same wave."
+  },
+  {
+    "id": "AP-8.3",
+    "type": "work_package",
+    "title": "AP-8.3 · Further runner types: windows, macos, remote",
+    "milestone": "Stage 8 — Growth",
+    "labels": [
+      "effort/L",
+      "kind/platform",
+      "panel/T",
+      "panel/V",
+      "stage/8"
+    ],
+    "blocked_by": "AP-6.2",
+    "effort": "L",
+    "panels": "T-04, V-02",
+    "spec": "SP-T04-4, SP-V02-2",
+    "acceptance": "",
+    "body": "**Stage:** 8 · **Panels:** T-04, V-02 · **Effort:** L\n**Blocked by:** AP-6.2\n**Specification:** SP-T04-4, SP-V02-2\n**Acceptance:** — (a precondition, no row of its own)\n\n### Goal\nAs a runner type of its own, Windows is a node in the same system instead of a special case inside it. You need the same abstraction for the remote runner anyway.\n\n### Tasks\n- [ ] A resident agent pulls jobs (no open port needed)\n- [ ] Pools of their own per platform; the scheduler routes via the field from the envelope\n- [ ] macOS for iOS builds on Apple hardware\n- [ ] remote for jobs that are too large\n\n### Done when\n- A windows job runs against the same runner contract as an alpine job.\n\n### Boundary of this issue\nWindows containers are no good for the density target — hence a runner type, not a special case."
+  },
+  {
+    "id": "AP-8.4",
+    "type": "work_package",
+    "title": "AP-8.4 · Catalog maintenance as routine operation (F-05)",
+    "milestone": "Stage 8 — Growth",
+    "labels": [
+      "effort/M",
+      "kind/catalog",
+      "measurement",
+      "panel/F",
+      "stage/8"
+    ],
+    "blocked_by": "AP-5.6",
+    "effort": "M",
+    "panels": "F-05, F-04, F-06",
+    "spec": "SP-F03-3, SP-F05-1 through SP-F05-4",
+    "acceptance": "AB-F04-4",
+    "body": "**Stage:** 8 · **Panels:** F-05, F-04, F-06 · **Effort:** M\n**Blocked by:** AP-5.6\n**Specification:** SP-F03-3, SP-F05-1 through SP-F05-4\n**Acceptance:** AB-F04-4\n\n### Goal\nCapabilities and judgements are the only thing that makes this system cheaper across thousands of jobs instead of equally expensive. Everything else keeps the cost constant at best.\n\n### Tasks\n- [ ] Every reported gap becomes a job, never an improvisation\n- [ ] Track coverage_rate weekly; if it stalls, the platform only repeats itself\n- [ ] Evaluate success_rate per capability and sharpen weak entries\n- [ ] Sharpen the descriptions (the trigger surface) — capabilities engage too rarely rather than too often\n\n### Done when\n- coverage_rate rises across three consecutive measurement windows.\n\n### Boundary of this issue\nThe catalog grows deliberately — but only by checked pieces, each with a boundary."
+  },
+  {
+    "id": "OP-1",
+    "type": "decision",
+    "title": "OP-1 · Decision: starting values of the pots per authority level (pod minutes per envelope / project / principal-day)",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/T",
+      "panel/V",
+      "stage/3"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "V-04, T-01",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-3.6 · **Panels:** V-04, T-01\n\n### To be decided\nStarting values of the pots per authority level (pod minutes per envelope / project / principal-day)\n\n### Proposed ruling\npublic very small, linked medium, confidential a tenant cap\n\n### Done when\n- decisions/OP-1.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-3.6 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-2",
+    "type": "decision",
+    "title": "OP-2 · Decision: the number n of rework rounds per pipeline",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/T",
+      "stage/3"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "T-05",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-3.4 · **Panels:** T-05\n\n### To be decided\nThe number n of rework rounds per pipeline\n\n### Proposed ruling\n3, overridable per job class\n\n### Done when\n- decisions/OP-2.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-3.4 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-3",
+    "type": "decision",
+    "title": "OP-3 · Decision: the deadline for clarifications before continuing under an assumption",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/K",
+      "panel/Q",
+      "stage/5"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "K-02, Q-01",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-5.1 · **Panels:** K-02, Q-01\n\n### To be decided\nThe deadline for clarifications before continuing under an assumption\n\n### Proposed ruling\n24 h for batch, 1 h for interactive\n\n### Done when\n- decisions/OP-3.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-5.1 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-4",
+    "type": "decision",
+    "title": "OP-4 · Decision: lease duration and heartbeat interval",
+    "milestone": "Stage 2 — The contract",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/K",
+      "panel/V",
+      "stage/2"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "V-02, K-02",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-2.3 · **Panels:** V-02, K-02\n\n### To be decided\nLease duration and heartbeat interval\n\n### Proposed ruling\nlease 60 s, heartbeat 15 s, three failures = release\n\n### Done when\n- decisions/OP-4.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-2.3 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-5",
+    "type": "decision",
+    "title": "OP-5 · Decision: size limits for attachments and permitted MIME types",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/K",
+      "panel/T",
+      "stage/3"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "K-01, T-01",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-3.2 · **Panels:** K-01, T-01\n\n### To be decided\nSize limits for attachments and permitted MIME types\n\n### Proposed ruling\nconservative; widening only as a decision\n\n### Done when\n- decisions/OP-5.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-3.2 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-6",
+    "type": "decision",
+    "title": "OP-6 · Decision: hysteresis and hold times of the PSI thresholds",
+    "milestone": "Stage 3 — Smallest system, without a captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/R",
+      "stage/3"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "R-C",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-3.7 · **Panels:** R-C\n\n### To be decided\nHysteresis and hold times of the PSI thresholds\n\n### Proposed ruling\nderive from the A-06 calibration run\n\n### Done when\n- decisions/OP-6.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-3.7 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-7",
+    "type": "decision",
+    "title": "OP-7 · Decision: the model and provider table",
+    "milestone": "Stage 5 — Intent, then captain",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/E",
+      "stage/5"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "E-06",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-5.3 · **Panels:** E-06\n\n### To be decided\nThe model and provider table\n\n### Proposed ruling\ntwo independent providers, the classifier self-operated\n\n### Done when\n- decisions/OP-7.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-5.3 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-8",
+    "type": "decision",
+    "title": "OP-8 · Decision: the cut of the first locality groups",
+    "milestone": "Stage 6 — Second node",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/E",
+      "panel/V",
+      "stage/6"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "E-03, V-02",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-6.2 · **Panels:** E-03, V-02\n\n### To be decided\nThe cut of the first locality groups\n\n### Proposed ruling\none per repository family, a monorepo = one\n\n### Done when\n- decisions/OP-8.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-6.2 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-9",
+    "type": "decision",
+    "title": "OP-9 · Decision: retention periods per tenant beyond the default",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/E",
+      "stage/7"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "E-07",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-7.4 · **Panels:** E-07\n\n### To be decided\nRetention periods per tenant beyond the default\n\n### Proposed ruling\na cell property, never a runtime setting\n\n### Done when\n- decisions/OP-9.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-7.4 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "OP-10",
+    "type": "decision",
+    "title": "OP-10 · Decision: two named people for the duty officer role",
+    "milestone": "Stage 7 — Test bench",
+    "labels": [
+      "blocker",
+      "kind/decision",
+      "panel/E",
+      "stage/7"
+    ],
+    "blocked_by": "",
+    "effort": "S",
+    "panels": "E-08",
+    "spec": "§19",
+    "acceptance": "",
+    "body": "**Due before:** AP-7.5 · **Panels:** E-08\n\n### To be decided\nTwo named people for the duty officer role\n\n### Proposed ruling\nbefore the first delivery to outsiders\n\n### Done when\n- decisions/OP-10.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-7.5 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+  },
+  {
+    "id": "GATE",
+    "type": "gate",
+    "title": "GATE · Acceptance of the platform (section D)",
+    "milestone": "Acceptance of the platform",
+    "labels": [
+      "gate",
+      "acceptance/blocker",
+      "stage/9"
+    ],
+    "blocked_by": "all",
+    "effort": "S",
+    "panels": "A-06, Q-02",
+    "spec": "§20",
+    "acceptance": "AB-E11-1",
+    "body": "### The platform is hit when all three conditions hold\n\n- [ ] **Every row in sections A and B of the acceptance matrix is green** — through a run, not through an explanation. A row that cannot turn green is not left out, but justified as a decision in Git and marked as deliberately open.\n- [ ] **The six numbers have a recorded baseline** and a direction: escape_rate, false_reject_rate, cost_per_acceptance, no_clarification_rate, coverage_rate, success_rate per capability.\n- [ ] **All ten open points from §19 are decided** and lie in decisions/, with ruling, rationale and overturn condition.\n\n### Boundary of this issue\nEverything else is a proposal. That is the same rule Q-02 imposes on every job, applied to the system that runs the jobs."
+  }
+]
