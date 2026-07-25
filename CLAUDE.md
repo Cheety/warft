@@ -4,6 +4,9 @@ Derived from *Architecture overview, revision 2 (July 2026)*, 57 panels. This re
 architecture document turned into a build order: a normative specification, a build order in stages,
 and an acceptance matrix that decides whether the platform was hit.
 
+## Commit Messages
+Do not add a `Co-Authored-By` trailer, a `Claude-Session` line, or any Claude / Claude Code session link (e.g. `claude.ai` / `claude.com` URLs) to commit messages.
+
 ## Rule 1 — English, everywhere
 
 **Everything in this repository is written in English.** Names, prose, comments, commit messages,
