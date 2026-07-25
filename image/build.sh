@@ -114,6 +114,24 @@ while read -r f; do
   printf '    %-28s %s of %s bytes differ, first at %s\n' "$f" "$ndiff" "$size" "$first" >&2
 done < <(cd "$A" && find . -type f | sort)
 echo >&2
+
+# A byte offset does not identify a cause; a path does. When a differing artifact is an erofs
+# filesystem, unpack both and name the files inside that differ. Skipped without complaint when
+# fsck.erofs is absent or the artifact is not erofs — this is diagnosis, not a second check.
+if command -v fsck.erofs >/dev/null 2>&1; then
+  while read -r f; do
+    [ -f "$B/$f" ] || continue
+    cmp -s "$A/$f" "$B/$f" && continue
+    xa="$WORK/unpacked1"; xb="$WORK/unpacked2"
+    rm -rf "$xa" "$xb"; mkdir -p "$xa" "$xb"
+    fsck.erofs "--extract=$xa" "$A/$f" >/dev/null 2>&1 || continue
+    fsck.erofs "--extract=$xb" "$B/$f" >/dev/null 2>&1 || continue
+    echo "  inside $f:" >&2
+    { diff -qr "$xa" "$xb" 2>&1 | sed "s|$WORK/unpacked1|pass1|;s|$WORK/unpacked2|pass2|;s/^/    /" \
+      | head -30; } >&2 || true
+    echo >&2
+  done < <(cd "$A" && find . -type f | sort)
+fi
 echo "AB-A03-2 stays red. A build that is not reproducible cannot answer whether the same thing" >&2
 echo "runs on every node (SP-A03-2, SP-E01-2)." >&2
 exit 1
