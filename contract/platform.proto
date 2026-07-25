@@ -1,0 +1,337 @@
+// platform.proto — the one interface schema of the system (E-10).
+//
+// Rules that CI enforces:
+//   1. Additive fields only. Field numbers die, they are never reassigned (SP-E10-3).
+//   2. From the adapter through to the gate exactly one schema — the harness socket in the pod speaks
+//      this one too.
+//   3. The wire is Protobuf, the state stays relational: no blobs here, columns in Postgres.
+//   4. No secret in a message, only references to one (SP-K01-5).
+//
+// Status: the contract from work package AP-2.1. Changes only through a decision in decisions/.
+
+syntax = "proto3";
+package workpod.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// ---------------------------------------------------------------------------
+// Shared enumerations
+// ---------------------------------------------------------------------------
+
+enum AuthorityLevel {              // T-01
+  AUTHORITY_LEVEL_UNSPECIFIED = 0;
+  PUBLIC = 1;                      // read and propose, hard budget, never write rights
+  LINKED = 2;                      // ordinary jobs, protected branches only with confirmation
+  CONFIDENTIAL = 3;                // everything, including push and deploy
+}
+
+enum ResourceClass {               // R-A
+  RESOURCE_CLASS_UNSPECIFIED = 0;
+  TINY = 1;                        // 0.1 / 1.0 CPU  ·  128 MB / 512 MB
+  SMALL = 2;                       // 0.3 / 2.0 CPU  ·  384 MB / 1.5 GB
+  MEDIUM = 3;                      // 1.0 / 4.0 CPU  ·  1 GB / 3 GB
+  LARGE = 4;                       // 2.0 / 8.0 CPU  ·  3 GB / 8 GB
+}
+
+enum Priority {                    // R-B
+  PRIORITY_UNSPECIFIED = 0;
+  INTERACTIVE = 1;                 // waits at most 2 s, may preempt
+  BATCH = 2;                       // 5 min
+  MAINTENANCE = 3;                 // 1 h
+  BACKGROUND = 4;                  // unbounded
+}
+
+enum OrderState {                  // K-02
+  ORDER_STATE_UNSPECIFIED = 0;
+  NEW = 1;
+  ADMITTED = 2;
+  QUEUED = 3;
+  LEASED = 4;
+  RUNNING = 5;
+  FROZEN = 6;
+  AWAITING_REPLY = 7;
+  DELIVERED = 8;
+  UNPROVEN = 9;                    // an exit of its own, neither failed nor delivered (Q-02)
+  FAILED = 10;
+  CANCELLED = 11;
+}
+
+enum EvidenceClass {               // Q-02, cheapest first
+  EVIDENCE_CLASS_UNSPECIFIED = 0;
+  ARTIFACT_IDENTICAL = 1;
+  TYPES_LINT = 2;
+  TESTS_EXISTING = 3;
+  TESTS_NEW = 4;
+  MUTATION_DIFF = 5;
+  REVIEW_INDEPENDENT = 6;
+  HUMAN = 7;
+}
+
+enum Cause {                       // Q-03 and F-04; mandatory in every terminal state (SP-K02-3)
+  CAUSE_UNSPECIFIED = 0;
+  FACT_INVENTED = 1;
+  CONTEXT_MISSING = 2;
+  SPEC_WRONG = 3;
+  TOOL_FAILURE = 4;
+  INJECTION = 5;
+  REGRESSION_SILENT = 6;
+  ASSUMPTION_REPLICATED = 7;
+  SKILL_MISSING = 8;
+  KNOWLEDGE_MISSING = 9;
+  GOAL_WRONG = 10;
+  BUDGET_EXHAUSTED = 11;
+  UNSOLVABLE = 12;
+}
+
+enum Reversibility {               // Q-01
+  REVERSIBILITY_UNSPECIFIED = 0;
+  REVERSIBLE = 1;
+  COSTLY = 2;
+  IRREVERSIBLE = 3;
+}
+
+enum SkillOrder {                  // F-02
+  SKILL_ORDER_UNSPECIFIED = 0;
+  HANDLE = 1;
+  PROCEDURE = 2;
+  CAMPAIGN = 3;
+}
+
+// ---------------------------------------------------------------------------
+// K-01 — the three objects
+// ---------------------------------------------------------------------------
+
+message Attachment {
+  string content_hash = 1;         // content-addressed, read-only, never executable (SP-K01-6)
+  string media_type = 2;
+  uint64 size_bytes = 3;
+}
+
+message Envelope {                 // lives minutes
+  string id = 1;                   // UUID v7, from the producer (SP-K01-2)
+  string cell = 2;                 // mandatory on every object (SP-K01-3)
+  string project = 3;              // mandatory on every object (SP-K01-4)
+  string channel = 4;
+  string channel_message_id = 5;
+  string sender_external = 6;      // for example "discord:184…"
+  string principal = 7;            // empty on first contact → invitation, not a job (SP-T01-5)
+  AuthorityLevel authority = 8;    // comes from the channel, not from the text (SP-T01-4)
+  string text = 9;                 // data, never instruction (SP-T01-9)
+  repeated Attachment attachments = 10;
+  string thread = 11;
+  google.protobuf.Timestamp received_at = 12;
+  string idempotency = 13;         // mandatory (SP-T01-7)
+  string platform = 14;            // runner pool: alpine · windows · macos · remote (SP-T04-4)
+}
+
+message Acceptance {               // Q-01: how you recognize it
+  string id = 1;
+  string statement = 2;
+  EvidenceClass required_evidence = 3;
+  bool machine_checkable = 4;
+}
+
+message Assumption {               // Q-01: standing individually, revocable individually (SP-Q01-5)
+  string id = 1;
+  string statement = 2;
+  bool revoked = 3;
+  string revoked_reason = 4;
+}
+
+message Bounds {
+  repeated string repos = 1;
+  repeated string paths = 2;
+  repeated string environments = 3;
+}
+
+message Budget {                   // V-04, three pots
+  uint64 pod_minutes = 1;
+  uint64 tokens = 2;
+  uint64 money_micros = 3;         // reserved at the most expensive permissible provider (SP-E06-5)
+}
+
+message Spec {                     // lives months; the only object that belongs to the human
+  string id = 1;
+  string cell = 2;
+  string project = 3;
+  uint64 version = 4;              // jobs cite spec@version (SP-Q01-2)
+  string goal = 5;
+  repeated Acceptance acceptance = 6;   // without this field, no job (SP-Q01-6)
+  repeated Assumption assumptions = 7;
+  Bounds bounds = 8;
+  Budget budget = 9;
+  Reversibility risk_class = 10;
+  string envelope_id = 11;         // provenance chain (SP-K01-7)
+}
+
+message Order {                    // lives minutes to hours
+  string id = 1;
+  string cell = 2;
+  string project = 3;
+  string spec_id = 4;
+  uint64 spec_version = 5;
+  string parent = 6;
+  ResourceClass class = 7;
+  string platform = 8;
+  string image_hash = 9;           // T-03, requirement hash
+  string pipeline_version = 10;
+  bytes authority = 11;            // Biscuit token, attenuation only (SP-K04-2)
+  Budget budget_share = 12;
+  string locality_group = 13;      // V-02, sticky assignment
+  OrderState state = 14;
+  uint32 attempt = 15;             // the unit of retry (SP-K02-2)
+  string idempotency = 16;
+  Priority priority = 17;
+  repeated string resolved_skills = 18;  // content hashes, pinned (SP-F04-5)
+  string model_version = 19;       // into the job log, not only into the cache (SP-Q04-4)
+  string prompt_version = 20;
+}
+
+// ---------------------------------------------------------------------------
+// V-02 — ferry: workers pull, the control plane never calls
+// ---------------------------------------------------------------------------
+
+message CapacityRequest {
+  string node_id = 1;
+  string cell = 2;
+  string locality_group = 3;
+  uint32 free_cpu_tokens = 4;      // R-B: tokens per phase
+  uint32 free_io_tokens = 5;
+  uint32 free_net_tokens = 6;
+  double memory_pressure_avg10 = 7;   // R-C: pressure instead of utilization
+  double cpu_pressure_avg60 = 8;
+  double io_pressure_avg10 = 9;
+}
+
+message Lease {
+  string order_id = 1;
+  uint32 attempt = 2;
+  google.protobuf.Timestamp expires_at = 3;   // deadline; without a heartbeat, back into the queue
+  bytes authority = 4;                        // short validity, renewed through the lease (SP-K04-5)
+}
+
+message Heartbeat {
+  string node_id = 1;
+  repeated string leased_order_ids = 2;
+  uint64 peak_rss_bytes = 3;       // R-C: predict instead of clean up (SP-RC-6)
+}
+
+message Report {                   // from the worker; everything after running is written by the worker (SP-K02-1)
+  string order_id = 1;
+  uint32 attempt = 2;
+  OrderState final_state = 3;      // DELIVERED · UNPROVEN · FAILED · FROZEN · AWAITING_REPLY
+  Cause cause = 4;                 // mandatory in every terminal state
+  EvidenceClass evidence = 5;
+  string patch_hash = 6;
+  string report_text = 7;
+  GapReport gap = 8;               // on UNPROVEN and on the abort of a capability (SP-F05-3)
+  uint64 pod_seconds = 9;
+  uint64 tokens_used = 10;
+}
+
+message GapReport {                // F-05, G-07: stopping is a usable result
+  repeated string missing_facts = 1;
+  repeated string missing_skills = 2;
+  uint32 fossil_count = 3;         // as a count in the manifest, so that it can be asked about
+  string split_proposal = 4;
+}
+
+// ---------------------------------------------------------------------------
+// K-03 — outward effect: the outbox and the two gates
+// ---------------------------------------------------------------------------
+
+message OutboxEntry {
+  string order_id = 1;
+  string target = 2;               // repository+branch, egress target, channel
+  string content_hash = 3;         // the key is a domain key: order + target + content_hash
+  bytes payload_ref = 4;           // a reference, not content
+  bool requires_register = 5;      // a non-idempotent target (SP-K03-4)
+}
+
+message Receipt {
+  string order_id = 1;
+  string target = 2;
+  string content_hash = 3;
+  bool executed = 4;
+  string external_id = 5;
+  google.protobuf.Timestamp at = 6;
+}
+
+// ---------------------------------------------------------------------------
+// T-02 — events back into the channels (not messages)
+// ---------------------------------------------------------------------------
+
+message Event {
+  string id = 1;                   // the adapter deduplicates via this (SP-K03-5)
+  string project = 2;
+  string order_id = 3;
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    ACCEPTED = 1;
+    STARTED = 2;
+    CHECK_FAILED = 3;
+    CLARIFICATION = 4;
+    DONE = 5;
+  }
+  Kind kind = 4;
+  string detail = 5;
+  uint32 verbosity = 6;            // a profile per adapter (SP-T02-9)
+}
+
+// ---------------------------------------------------------------------------
+// F-01/F-04 — a capability as a resolved entry (the pod never sees the catalog)
+// ---------------------------------------------------------------------------
+
+message ResolvedSkill {
+  string name = 1;
+  string content_hash = 2;         // pinned per job (SP-F04-5)
+  SkillOrder order = 3;
+  AuthorityLevel min_authority = 4;
+  EvidenceClass evidence = 5;
+  string boundary = 6;
+  bytes skill_md = 7;              // only the resolved ones, never the catalog (SP-F07-3)
+}
+
+// ---------------------------------------------------------------------------
+// Services
+// ---------------------------------------------------------------------------
+
+service ControlPlane {
+  // B-01: a single-use token for a node certificate with role and cell in the name
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+
+  // V-02: pull. The worker requests, the control plane never calls.
+  rpc RequestCapacity(CapacityRequest) returns (stream Lease);
+  rpc SendHeartbeat(stream Heartbeat) returns (stream HaltNotice);
+  rpc SubmitReport(Report) returns (ReportAck);
+
+  // T-01/T-02
+  rpc SubmitEnvelope(Envelope) returns (EnvelopeAck);
+  rpc PublishEvent(Event) returns (EventAck);
+}
+
+service GitGate {                  // K-03, B-02: checks policy, signs itself, the pod has no token
+  rpc Push(OutboxEntry) returns (Receipt);
+}
+
+service EgressGate {               // T-04: inserts keys, resolves names, allowlist per job
+  rpc Forward(EgressRequest) returns (EgressResponse);
+}
+
+service Harness {                  // in the pod, over a Unix socket — the same contract (SP-E10-1)
+  rpc QueryFacts(FactQuery) returns (FactResult);          // E-09: a file read, no network
+  rpc EnqueueEffect(OutboxEntry) returns (EffectAck);      // K-03: the pod never acts itself
+  rpc ReportGap(GapReport) returns (EffectAck);            // F-05
+}
+
+message EnrollRequest  { string enrollment_token = 1; string role = 2; string cell = 3; string locality_group = 4; }
+message EnrollResponse { bytes certificate = 1; google.protobuf.Timestamp expires_at = 2; }
+message HaltNotice     { bool halted = 1; string reason = 2; google.protobuf.Timestamp expires_at = 3; }
+message ReportAck      { bool accepted = 1; }
+message EnvelopeAck    { string order_id = 1; bool deduplicated = 2; }
+message EventAck       { bool accepted = 1; }
+message FactQuery      { string query = 1; repeated string build_targets = 2; }
+message FactResult     { bytes rows = 1; string indexer_version = 2; }
+message EgressRequest  { string order_id = 1; string target = 2; string method = 3; bytes body_ref = 4; }
+message EgressResponse { uint32 status = 1; bytes body_ref = 2; bool denied = 3; string denied_reason = 4; }
+message EffectAck      { bool accepted = 1; }
