@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify help
+.PHONY: acceptance acceptance-sync image verify image-acceptance help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -16,6 +16,7 @@ help:
 	@echo
 	@echo "make image            build the image twice and compare — AB-A03-2 (AP-0.2)"
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
+	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1 (AP-1.1)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -35,3 +36,10 @@ image:
 # a build.
 verify:
 	@image/verify.sh
+
+# AP-1.1: the two rows that need a machine rather than an artifact. They boot the image built by
+# `make image` — E-11's "A-06 as a script against a bare mkosi VM", and the door AP-1.2 walks
+# through with a06-acceptance.sh.
+image-acceptance:
+	@acceptance/e01-kernel.sh
+	@acceptance/a02-roles.sh
