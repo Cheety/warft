@@ -15,12 +15,19 @@ build.sh                    builds twice, second pass offline, compares — this
 
 ## What makes a rebuild identical
 
-Two mechanisms, and neither is optional:
+Three mechanisms, and none is optional:
 
 | Mechanism | Where | Without it |
 |---|---|---|
 | `Snapshot=` pins the package set to one koji repository id | `mkosi.conf.d/10-snapshot.conf` | a rebuild resolves whatever is current; "does the same thing run on every node" is unanswerable |
 | `SOURCE_DATE_EPOCH` clamps modification times to the commit being built | `build.sh` | the artifact depends on the day it was built |
+| the mkosi version is pinned and checked before either pass | `mkosi.version`, enforced in `build.sh` | the build tool floats; a newer mkosi can lay out the same packages differently, and the comparison then says nothing |
+
+The third one was not in the first draft. Fedora 43 ships mkosi 25.3, which has no `Snapshot=` at
+all, so the first CI run failed with `Unknown setting Snapshot`. Pinning the packages while leaving
+the tool to the distribution was half a pin; the tool is an input to the artifact like any other.
+CI therefore takes mkosi from its own repository at the pinned tag and installs the distribution
+package only for its dependencies.
 
 The second pass runs with `--cache-only=always`, so the package manager cannot reach the network
 (SP-A03-1). That is not a detail: if pass 2 could still fetch, an identical result would only mean

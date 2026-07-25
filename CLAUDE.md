@@ -7,6 +7,17 @@ and an acceptance matrix that decides whether the platform was hit.
 ## Commit Messages
 Do not add a `Co-Authored-By` trailer, a `Claude-Session` line, or any Claude / Claude Code session link (e.g. `claude.ai` / `claude.com` URLs) to commit messages.
 
+## Code comments
+The code itself should express what it does, but comments are necessary for business logic, complex algorithms, workarounds for bugs, unidiomatic implementations. Write comments at the same time you write or refactor the code.
+
+Follow these best practices to ensure your comments add value:
+- Explain Intent and Context: Describe the high-level reasoning behind a decision, especially if the implementatio seems counter-intuitive.
+- Document Workarounds: If you are writing a fix for an obscure bug, server error, or third-party limitation, explain why that specific code exists so it isn't "accidentally" refactored later.
+- Avoid Redundancy: Do not explain simple steps like // Increment i.
+- Don't Comment Bad Code: If a block is too complicated, refactor it into smaller, readable functions first.
+
+Docstrings are explicitely desired and not considered "comments" in the sense of this policy.
+
 ## Rule 1 — English, everywhere
 
 **Everything in this repository is written in English.** Names, prose, comments, commit messages,
