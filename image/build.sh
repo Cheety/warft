@@ -96,6 +96,20 @@ fi
 echo "  artifacts differ:" >&2
 sed -n '3,40p' "$WORK/diff.txt" >&2
 echo >&2
+
+# "They differ" is not actionable for a 198M blob. How *much* differs says what kind of problem it
+# is: a handful of bytes is metadata that was not seeded, megabytes is layout or ordering.
+echo "  where:" >&2
+( cd "$A" && find . -type f | sort ) | while read -r f; do
+  [ -f "$B/$f" ] || { printf '    %-28s only in pass 1\n' "$f" >&2; continue; }
+  if ! cmp -s "$A/$f" "$B/$f"; then
+    size=$(stat -c%s "$A/$f")
+    first=$(cmp "$A/$f" "$B/$f" 2>/dev/null | sed 's/.*differ: //')
+    ndiff=$(cmp -l "$A/$f" "$B/$f" 2>/dev/null | wc -l)
+    printf '    %-28s %s of %s bytes differ, first at %s\n' "$f" "$ndiff" "$size" "$first" >&2
+  fi
+done
+echo >&2
 echo "AB-A03-2 stays red. A build that is not reproducible cannot answer whether the same thing" >&2
 echo "runs on every node (SP-A03-2, SP-E01-2)." >&2
 exit 1
