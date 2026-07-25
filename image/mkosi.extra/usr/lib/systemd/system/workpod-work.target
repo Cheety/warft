@@ -1,0 +1,14 @@
+# One of the four roles from SP-A02-1. Which one a node takes is the boot value `role`, read from
+# a credential by workpod-role-generator; the image is the same artifact either way (AB-A02-1).
+#
+# `work` runs the pods. It is the role that scales — SP-A02-1's "scaling means: add nodes with
+# role = work" — and the one SP-A02-5 updates without a drain command: the worker stops pulling,
+# runs its open leases to completion, restarts and enrolls again.
+#
+# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
+# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
+# first services here.
+
+[Unit]
+Description=Workpod node role: work
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

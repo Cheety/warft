@@ -65,7 +65,11 @@ fi
 # What remains is the list below, and it is deliberately an allowlist. A new build input that is not
 # added here is a seal that stops noticing changes — so the failure mode of forgetting is visible
 # (the artifact changes, the hashes stop matching, verify.sh exits 1) rather than silent.
-INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart tool-version build.sh)
+#
+# mkosi.extra/ is on the list because its contents are copied into the image verbatim — the role
+# generator and the four role targets from AP-1.1 live there. kernel-requirements.conf is not: it is
+# what the image is checked against, and a check cannot change what it checks.
+INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart mkosi.extra tool-version build.sh)
 
 REVISION="$(git -C "$HERE" log -1 --pretty=%H -- "${INPUTS[@]}" 2>/dev/null || true)"
 # An uncommitted change is a different image than any commit describes, and no seal can honestly

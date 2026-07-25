@@ -1,0 +1,45 @@
+#!/bin/bash
+# workpod-role-generator — turns the `role` boot value into activated units (SP-A02-1, SP-A03-5).
+#
+# SP-A04-1 hands a node exactly five values from outside at its first start, `role` among them, and
+# E-01 rules that they arrive as credentials. This generator is the whole of the step SP-A04-2 calls
+# `role (activate units)`: read the credential, want the target of that role, do nothing else.
+#
+# It writes one symlink into the generator directory, which lives under /run. That is what SP-A03-5
+# demands — "the role may not change the content, only the activated units" — and here it is not
+# merely a convention that could be broken by a later, sloppier unit: /usr is read-only under
+# dm-verity, so a role that tried to change the image would fail against the kernel rather than
+# against a rule. AB-A02-1 probes both halves, the symlink and the refused write.
+#
+# systemd passes three directories; $1 is the normal one, which is where a `.wants/` symlink belongs.
+
+set -eu
+
+DEST="${1:?systemd passes the generator output directory as the first argument}"
+
+# $CREDENTIALS_DIRECTORY is set for generators since systemd v254. The fallback is where the
+# manager places system credentials anyway, and it keeps this readable on an older manager.
+CREDENTIALS="${CREDENTIALS_DIRECTORY:-/run/credentials/@system}"
+ROLE_FILE="$CREDENTIALS/workpod.role"
+
+# No role is not an error. A node that was handed nothing to be has nothing to activate, and saying
+# so beats inventing a default — a node that silently becomes a control plane is worse than a node
+# that does nothing.
+if [ ! -r "$ROLE_FILE" ]; then
+    echo "workpod: no workpod.role credential — no role units activated" >&2
+    exit 0
+fi
+
+ROLE="$(tr -d '[:space:]' < "$ROLE_FILE")"
+
+case "$ROLE" in
+    all | control | knowledge | work) ;;
+    *)
+        echo "workpod: role '$ROLE' is none of all, control, knowledge, work — no role units activated" >&2
+        exit 1
+        ;;
+esac
+
+mkdir -p "$DEST/multi-user.target.wants"
+ln -sf "/usr/lib/systemd/system/workpod-$ROLE.target" \
+       "$DEST/multi-user.target.wants/workpod-$ROLE.target"
