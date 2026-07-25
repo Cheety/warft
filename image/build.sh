@@ -50,8 +50,18 @@ if [ "$HAVE" != "$WANT" ]; then
   exit 1
 fi
 
+# The image's revision is the last commit that touched image/, not the repository's HEAD. Taken from
+# HEAD, a commit to a document moved SOURCE_DATE_EPOCH and with it every artifact hash — which would
+# unseal the image (AB-A03-7) on commits that cannot have changed it.
+REVISION="$(git -C "$HERE" log -1 --pretty=%H -- . 2>/dev/null || true)"
+# An uncommitted change is a different image than any commit describes, and no seal can honestly
+# match it. Saying so here beats a verification failure nobody can explain.
+if [ -n "$REVISION" ] && [ -n "$(git -C "$HERE" status --porcelain -- . 2>/dev/null)" ]; then
+  REVISION="$REVISION-dirty"
+fi
+
 if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
-  SOURCE_DATE_EPOCH="$(git -C "$HERE" log -1 --pretty=%ct 2>/dev/null || true)"
+  SOURCE_DATE_EPOCH="$(git -C "$HERE" log -1 --pretty=%ct -- . 2>/dev/null || true)"
   [ -n "$SOURCE_DATE_EPOCH" ] || { echo "no commit to take SOURCE_DATE_EPOCH from; set it" >&2; exit 1; }
 fi
 export SOURCE_DATE_EPOCH
@@ -59,9 +69,12 @@ export SOURCE_DATE_EPOCH
 rm -rf "$A" "$B"
 mkdir -p "$A" "$B" "$CACHE" "$BUILDCACHE"
 
+PIN="$(grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | cut -d= -f2-)"
+
 echo "== pin"
-grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | sed 's/^/  /'
+echo "  LocalMirror=$PIN"
 echo "  SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
+echo "  revision=${REVISION:-unknown}"
 
 # Two distinct caches, and mkosi wants both configured before it will accept CacheOnly=always
 # (it checks config.cache_dir, not the package cache):
@@ -92,9 +105,29 @@ fi
 
 if diff -u "$WORK/pass1.sha256" "$WORK/pass2.sha256" > "$WORK/diff.txt"; then
   echo "  $n artifacts, bit-identical across both passes"
+
+  # The seal record: what image/seal.sh signs and image/verify.sh checks (AB-A03-7). It is written
+  # only after the comparison succeeded, because sealing an image that is not reproducible would
+  # seal one of two possible results. Above the hashes stand the inputs that produced them, so the
+  # signature binds artifacts, SBOM and build inputs in one file a person can read.
+  #
+  # The comment lines are part of what is signed. Keep them byte-stable: verify.sh compares a freshly
+  # written record against the sealed one, so a reworded header reads as a changed image.
+  { echo "# workpod image seal — SP-A03-7, AB-A03-7"
+    echo "# revision: ${REVISION:-unknown}"
+    echo "# source-date-epoch: $SOURCE_DATE_EPOCH"
+    echo "# pin: $PIN"
+    echo "# mkosi: $WANT"
+    cat "$WORK/pass1.sha256"
+  } > "$WORK/image.seal"
+
   echo
   echo "AB-A03-2 green through this run. Record it:"
   echo "  acceptance/registry.py  (set AB-A03-2 to green with this run as its evidence)"
+  echo
+  echo "Seal record written to $WORK/image.seal — AB-A03-7 continues from there:"
+  echo "  image/verify.sh   is this build the sealed one? (needs no key)"
+  echo "  image/seal.sh     sign this record (needs the key; not on a build machine)"
   exit 0
 fi
 
