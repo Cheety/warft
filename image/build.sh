@@ -28,7 +28,19 @@ B="$WORK/pass2"
 
 if ! command -v mkosi >/dev/null 2>&1; then
   echo "mkosi is not installed. It is the one build dependency of this repository (E-01)." >&2
-  echo "  Fedora:  dnf install mkosi        Other:  pip install mkosi" >&2
+  echo "  git clone --branch v$(cat "$HERE/mkosi.version") https://github.com/systemd/mkosi" >&2
+  echo "  and put its bin/ on PATH" >&2
+  exit 1
+fi
+
+# The build tool is an input to the artifact. Pinning the packages while leaving mkosi floating
+# would be half a pin: a newer mkosi can lay out the same packages differently and the comparison
+# would then say nothing. Fedora 43 ships 25.3, which has no Snapshot= at all.
+WANT="$(cat "$HERE/mkosi.version")"
+HAVE="$(mkosi --version 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)*' | head -1)"
+if [ "$HAVE" != "$WANT" ]; then
+  echo "mkosi $WANT is pinned in image/mkosi.version, but mkosi $HAVE is on PATH." >&2
+  echo "Two builds made with different tools prove nothing about reproducibility (SP-A03-2)." >&2
   exit 1
 fi
 
