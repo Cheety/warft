@@ -22,7 +22,8 @@ becomes a checkable criterion.
 ```
 01–04*.md    specification, work packages, acceptance matrix, issues
 contract/    platform.proto (E-10) · schema.sql (K-01, K-02)
-acceptance/  a06-acceptance.sh — thirteen checks, written before the image
+acceptance/  registry.py · registry.tsv — the 212 checks and their state (AP-0.3)
+             a06-acceptance.sh — thirteen checks, written before the image
 skills/      SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/     issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
 decisions/   empty until AP-0.1: eleven rulings E-01…E-11, ten open points OP-1…OP-10
