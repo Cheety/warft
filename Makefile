@@ -8,11 +8,13 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync help
+.PHONY: acceptance acceptance-sync image help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
 	@echo "make acceptance-sync  take new checks over from 03-acceptance-matrix.md into the registry"
+	@echo
+	@echo "make image            build the image twice and compare — AB-A03-2 (AP-0.2)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -22,3 +24,7 @@ acceptance:
 
 acceptance-sync:
 	@acceptance/registry.py sync
+
+# AP-0.2: reproducibility is a property of a run, not of a configuration file.
+image:
+	@image/build.sh

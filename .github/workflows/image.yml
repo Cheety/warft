@@ -1,0 +1,56 @@
+# AP-0.2 — the CI leg that builds every image twice and compares the artifacts.
+#
+# This workflow is the only place where AB-A03-2 can turn green: reproducibility is a property of a
+# run, not of a configuration file. It fails the build when the two passes differ, so the row cannot
+# quietly go unnoticed.
+#
+# It runs in a Fedora container because mkosi builds Fedora images with Fedora's own package
+# tooling, and E-01 rules that the security pipeline stays with Fedora.
+
+name: image
+
+on:
+  push:
+    paths: ['image/**', '.github/workflows/image.yml']
+  pull_request:
+    paths: ['image/**', '.github/workflows/image.yml']
+  workflow_dispatch:
+
+jobs:
+  reproducible:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43
+      # mkosi assembles a disk image: it needs loop devices and mount, which the default container
+      # profile denies.
+      options: --privileged
+    steps:
+      - name: Install the build environment
+        run: dnf -y install --setopt=install_weak_deps=False mkosi git-core systemd-udev
+
+      - uses: actions/checkout@v4
+
+      - name: Trust the checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build twice and compare
+        run: ./image/build.sh
+
+      - name: Collect the SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: image/.build/pass1/*.manifest
+          if-no-files-found: error
+
+      - name: Collect the artifact hashes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hashes
+          path: |
+            image/.build/pass1.sha256
+            image/.build/pass2.sha256
+            image/.build/diff.txt
+          if-no-files-found: warn
