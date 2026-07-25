@@ -93,25 +93,37 @@ fi
 chmod 0644 "$CREDS/workpod.check"
 
 CONSOLE="$WORK/console.log"
+SERIAL="$WORK/serial.log"
 echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
+[ -c /dev/kvm ] && echo "   /dev/kvm present" >&2 || echo "   no /dev/kvm — emulated, slower" >&2
 
 # --console=native puts the guest console straight on stdio; the other modes need
 # systemd-pty-forward and a terminal, which a build agent has no business requiring.
 # --firmware=uefi rather than the default, which prefers secure boot: systemd-stub only accepts a
 # command line appended at runtime when secure boot is off, and that command line is how the check
 # is started at all.
+#
+# The serial port is the second half of the same question. mkosi puts the guest console on a virtio
+# console and tells the kernel about it by appending to the command line at runtime; if any part of
+# that chain does not hold, the machine runs and says nothing, which is what run 19 spent ten
+# minutes doing. The serial line is wired by the firmware, named in the image's own command line,
+# and carries the kernel's log whether or not anything else worked.
 timeout --foreground "$TIMEOUT" \
   mkosi --directory "$HERE" --output-directory "$OUTPUT" \
         --ephemeral=yes --console=native --firmware=uefi \
         --credential "$CREDS" \
         --kernel-command-line-extra \
           "systemd.run=\"/bin/bash /run/credentials/@system/workpod.check\" systemd.run_success_action=poweroff systemd.run_failure_action=poweroff" \
-        vm > "$CONSOLE" 2>&1
+        vm -- -serial "file:$SERIAL" > "$CONSOLE" 2>&1
 rc=$?
 
 # A serial console leaves carriage returns behind; stripping them makes the log grep and read like
 # a log rather than like a terminal recording.
 tr -d '\r' < "$CONSOLE" >&2
+if [ -s "$SERIAL" ]; then
+  echo "== serial (the kernel's log; the check itself speaks on the console above)" >&2
+  tr -d '\r' < "$SERIAL" | tail -120 >&2
+fi
 
 if [ "$rc" = 124 ]; then
   echo "vm.sh: the guest did not finish within ${TIMEOUT}s" >&2
