@@ -136,6 +136,17 @@ Labels are `stage/0`…`stage/9` · `panel/T`…`panel/E` · `effort/S|M|L|XL` �
 
 A milestone closes when its measurement exists — **not when its issues are closed**.
 
+## The working copy lies on a Windows filesystem
+
+`core.fileMode` is `false` here, so `chmod +x` changes the file but not the Git index, and a script
+committed that way arrives at 100644 on a fresh clone — where it fails with "Permission denied".
+`make acceptance` and the image CI leg both hit this once. After adding any script:
+
+```
+git update-index --chmod=+x <path>
+git ls-files -s <path>          # expect 100755
+```
+
 ## When working here
 
 - **Do not invent architecture.** What is not already in the specification is not decided here. A gap
