@@ -4,7 +4,7 @@
 # This is the acceptance of the build environment, not a convenience wrapper. It is written the way
 # A-06 writes acceptance: the run decides, not the explanation.
 #
-#   pass 1   network allowed; resolves the pinned snapshot and fills the package cache
+#   pass 1   network allowed; resolves the pinned package set and fills the package cache
 #   pass 2   --cache-only=always, so the package manager cannot reach the network at all
 #            (SP-A03-1: "build (mkosi, without network)")
 #   compare  every artifact of pass 1 against pass 2, byte for byte
@@ -23,6 +23,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="${WORK:-$HERE/.build}"
 CACHE="$WORK/pkgcache"
+BUILDCACHE="$WORK/buildcache"
 A="$WORK/pass1"
 B="$WORK/pass2"
 
@@ -51,17 +52,25 @@ fi
 export SOURCE_DATE_EPOCH
 
 rm -rf "$A" "$B"
-mkdir -p "$A" "$B" "$CACHE"
+mkdir -p "$A" "$B" "$CACHE" "$BUILDCACHE"
 
 echo "== pin"
 grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | sed 's/^/  /'
 echo "  SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
 
+# Two distinct caches, and mkosi wants both configured before it will accept CacheOnly=always
+# (it checks config.cache_dir, not the package cache):
+#   --package-cache-dir  the downloaded RPMs. Shared on purpose — it is what lets pass 2 be offline.
+#   --cache-directory    the build cache. Incremental=no in mkosi.conf, so nothing of the built
+#                        image is cached here; sharing it cannot let pass 2 reuse pass 1's result
+#                        and trivially "prove" reproducibility.
 echo "== pass 1 (network allowed, fills the package cache)"
-mkosi --directory "$HERE" --output-directory "$A" --package-cache-dir "$CACHE" build
+mkosi --directory "$HERE" --output-directory "$A" \
+      --package-cache-dir "$CACHE" --cache-directory "$BUILDCACHE" build
 
 echo "== pass 2 (--cache-only=always, no network)"
-mkosi --directory "$HERE" --output-directory "$B" --package-cache-dir "$CACHE" \
+mkosi --directory "$HERE" --output-directory "$B" \
+      --package-cache-dir "$CACHE" --cache-directory "$BUILDCACHE" \
       --cache-only=always build
 
 echo "== compare"
