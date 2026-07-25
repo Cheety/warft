@@ -1,0 +1,8 @@
+# workpod image seal — SP-A03-7, AB-A03-7
+# revision: b5f4fb0638a77933b65881ff856c8531aa09ac9f
+# source-date-epoch: 1785014396
+# pin: https://dl.fedoraproject.org/pub/fedora/linux/releases/43/Everything/x86_64/os
+# mkosi: 26
+e100cd3e3ae60d55b50fe5a12a54d1a99dc4dcbb1c753ccdc410ccaf987214ed  ./workpod.manifest
+cd6c1044ff66b552bee78cb24f9a92f47075a2f2ef327324d414fd65a1b8fd2e  ./workpod.raw
+a873784b68463a5e2a25a19233bbb763e9b6f5a04ac8c5961c3a08b968db6ac7  ./workpod.root-x86-64.raw
