@@ -1,0 +1,2977 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workpod-Plattform — Architekturübersicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --zink:#E3E7E4; --karton:#F3F5F3; --karton2:#EAEEEB;
+  --tinte:#182119; --grau:#6E7A72; --linie:#C6CEC8; --linie2:#D8DED9;
+  --signal:#B5451E; --signal-bg:#F6E6DE;
+  --kalt:#2A5F6E; --kalt-bg:#DEEAED;
+  --disp:'Archivo',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --zink:#161A17; --karton:#1E2320; --karton2:#252B27;
+    --tinte:#E5E9E5; --grau:#98A39C; --linie:#333B36; --linie2:#2A312D;
+    --signal:#E4835A; --signal-bg:#3A2419;
+    --kalt:#6FB3C2; --kalt-bg:#16302F;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--zink); color:var(--tinte);
+  font-family:var(--body); font-size:15px; line-height:1.65; font-weight:400;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px 80px}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+
+/* ---------- Kopf ---------- */
+.kopf{padding:64px 0 40px;border-bottom:1px solid var(--linie)}
+.marke{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--grau);display:flex;gap:14px;align-items:center;margin-bottom:26px
+}
+.marke::after{content:"";flex:1;height:1px;background:var(--linie)}
+.kopf h1{
+  font-family:var(--disp);font-weight:700;font-size:clamp(34px,6vw,60px);
+  line-height:1.02;letter-spacing:-.025em;margin:0 0 20px;max-width:15ch
+}
+.kopf p{max-width:62ch;color:var(--grau);font-size:16.5px;margin:0}
+.kopf p strong{color:var(--tinte);font-weight:500}
+
+/* ---------- These: drei Zustände ---------- */
+.these{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linie);
+  border:1px solid var(--linie);margin:44px 0 0}
+.zust{background:var(--karton);padding:20px 18px 18px}
+.zust__l{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--grau)}
+.zust__n{font-family:var(--disp);font-weight:600;font-size:clamp(22px,3.4vw,31px);letter-spacing:-.02em;margin:8px 0 2px}
+.zust__u{font-size:13px;color:var(--grau);line-height:1.45}
+.zust--kalt .zust__n{color:var(--kalt)}
+.zust--heiss .zust__n{color:var(--signal)}
+@media(max-width:640px){.these{grid-template-columns:1fr}}
+
+/* ---------- Tafeln ---------- */
+.tafel{border:1px solid var(--linie);background:var(--karton);margin-top:26px}
+.tafel__kopf{
+  display:flex;align-items:baseline;gap:14px;padding:12px 18px;
+  border-bottom:1px solid var(--linie);background:var(--karton2);flex-wrap:wrap
+}
+.tafel__nr{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--signal);font-weight:500}
+.tafel__t{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:-.01em;margin:0}
+.tafel__sub{font-size:13px;color:var(--grau);margin-left:auto}
+.neu{
+  font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--signal);border:1px solid var(--signal);border-radius:2px;
+  padding:1px 5px 0;line-height:1.7;align-self:center
+}
+.tafel__k{padding:22px 18px 24px}
+.tafel__k > p{margin:0 0 14px;max-width:68ch}
+.tafel__k > p:last-child{margin-bottom:0}
+.abschnitt{
+  font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--grau);margin:56px 0 -6px;display:flex;gap:14px;align-items:center
+}
+.abschnitt::after{content:"";flex:1;height:1px;background:var(--linie)}
+
+/* ---------- Bausteine ---------- */
+.kette{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:4px 0 18px}
+.knoten{
+  flex:1 1 130px;min-width:120px;border:1px solid var(--linie);background:var(--zink);
+  padding:11px 12px;border-radius:3px
+}
+.knoten b{display:block;font-weight:500;font-size:13.5px;letter-spacing:-.005em}
+.knoten span{display:block;font-size:12px;color:var(--grau);line-height:1.4;margin-top:3px}
+.knoten--sig{border-color:var(--signal);background:var(--signal-bg)}
+.knoten--sig b{color:var(--signal)}
+.knoten--kalt{border-color:var(--kalt);background:var(--kalt-bg)}
+.knoten--kalt b{color:var(--kalt)}
+.pfeil{display:flex;align-items:center;color:var(--grau);font-family:var(--mono);font-size:15px;flex:0 0 auto}
+@media(max-width:640px){.pfeil{display:none}}
+
+.gitter2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:720px){.gitter2{grid-template-columns:1fr}}
+
+.merk{
+  border-left:2px solid var(--signal);padding:2px 0 2px 14px;margin:16px 0 0;
+  font-size:14px;color:var(--grau);max-width:66ch
+}
+.merk b{color:var(--tinte);font-weight:500}
+
+ul.liste{margin:0;padding:0;list-style:none}
+ul.liste li{
+  position:relative;padding-left:20px;margin-bottom:8px;font-size:14px;max-width:66ch;line-height:1.55
+}
+ul.liste li::before{
+  content:"—";position:absolute;left:0;top:0;color:var(--grau);font-family:var(--mono);font-size:12px
+}
+ul.liste li b{font-weight:500}
+code{font-family:var(--mono);font-size:12.5px;background:var(--karton2);
+  border:1px solid var(--linie2);padding:1px 5px;border-radius:2px}
+
+.tab{width:100%;border-collapse:collapse;font-size:13.5px}
+.tab th{
+  text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--grau);font-weight:400;
+  padding:0 10px 8px 0;border-bottom:1px solid var(--linie);white-space:nowrap
+}
+.tab td{padding:9px 10px 9px 0;border-bottom:1px solid var(--linie2);vertical-align:top}
+.tab td:first-child{font-weight:500;white-space:nowrap}
+.tab .m{font-family:var(--mono);font-size:12.5px;color:var(--grau);white-space:nowrap}
+.tabhuelle{overflow-x:auto;margin:0 -18px;padding:0 18px}
+
+.zwei-spalten{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border:1px solid var(--linie);border-radius:3px;overflow:hidden}
+.sp{padding:14px 15px}
+.sp:first-child{border-right:1px solid var(--linie);background:var(--zink)}
+.mini-h{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--grau);margin:0 0 10px;font-weight:400
+}
+.sp h4{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--grau);margin:0 0 10px;font-weight:400
+}
+.sp ol{margin:0;padding-left:20px;font-size:13.5px;line-height:1.6}
+.sp ol li{margin-bottom:5px}
+.sp ol li::marker{font-family:var(--mono);font-size:11px;color:var(--grau)}
+@media(max-width:720px){
+  .zwei-spalten{grid-template-columns:1fr}
+  .sp:first-child{border-right:0;border-bottom:1px solid var(--linie)}
+}
+
+/* ---------- Belegungstafel ---------- */
+.board{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0}
+@media(max-width:800px){.board{grid-template-columns:1fr}}
+.regler{padding:20px 18px;background:var(--zink);border-right:1px solid var(--linie)}
+@media(max-width:800px){.regler{border-right:0;border-bottom:1px solid var(--linie)}}
+.regler h4{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--grau);margin:0 0 16px;font-weight:400
+}
+.feld{margin-bottom:17px}
+.feld__l{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-bottom:5px;gap:8px}
+.feld__l span:last-child{font-family:var(--mono);font-size:12px;color:var(--signal);font-weight:500;white-space:nowrap}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--linie);
+  border-radius:2px;outline:none;margin:6px 0 0;cursor:pointer
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--karton);border:2px solid var(--signal);cursor:pointer
+}
+input[type=range]::-moz-range-thumb{
+  width:15px;height:15px;border-radius:50%;background:var(--karton);
+  border:2px solid var(--signal);cursor:pointer
+}
+.tafelseite{padding:20px 18px}
+.ampel{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;background:var(--linie);
+  border:1px solid var(--linie);margin-bottom:18px}
+.kpi{background:var(--karton);padding:11px 12px}
+.kpi__l{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--grau)}
+.kpi__v{font-family:var(--disp);font-weight:600;font-size:23px;letter-spacing:-.02em;margin-top:3px;line-height:1.1}
+.kpi--heiss .kpi__v{color:var(--signal)}
+.kpi--kalt .kpi__v{color:var(--kalt)}
+
+#raster{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:14px;min-height:60px}
+.z{width:9px;height:9px;border-radius:1px;background:var(--linie);border:1px solid transparent}
+.z--aktiv{background:var(--signal);border-color:var(--signal)}
+.z--warte{background:transparent;border:1px solid var(--signal)}
+.z--frost{background:var(--kalt-bg);border:1px solid var(--kalt)}
+@media (prefers-reduced-motion:no-preference){
+  .z{transition:background-color .25s ease,border-color .25s ease}
+}
+.legende{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--grau);align-items:center}
+.legende i{display:inline-block;width:9px;height:9px;border-radius:1px;margin-right:6px;vertical-align:-1px}
+.hinweis{font-family:var(--mono);font-size:11.5px;color:var(--grau);margin-top:14px;line-height:1.5}
+.hinweis b{color:var(--signal);font-weight:500}
+
+/* ---------- Fuß ---------- */
+.fuss{margin-top:56px;padding-top:22px;border-top:1px solid var(--linie);
+  font-size:13px;color:var(--grau);max-width:66ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="kopf">
+  <div class="marke">Architekturübersicht · Fassung 2 · Juli 2026</div>
+  <h1>Ein Server, tausend Arbeitsplätze</h1>
+  <p>Ein <strong>Captain</strong> nimmt Aufgaben in natürlicher Sprache entgegen, zerlegt sie und
+  verteilt sie an kurzlebige, isolierte <strong>Workpods</strong>. Jedes Gerät ist nur eine Fassade
+  vor derselben API. Steuerung, Wissen und Arbeit sind dabei getrennte Ebenen — auf einer kleinen Maschine
+  als cgroup-Slices, im Cluster als eigene Knoten (Abschnitt V). Der Entwurf hängt an einer einzigen
+  Unterscheidung, die auch der Scheduler macht:</p>
+
+  <p style="max-width:62ch;color:var(--grau);font-size:14px;margin:18px 0 0">
+  Diese Fassung schließt die Lücken zwischen Entwurf und Abbild: <strong>Q</strong> macht aus einem Satz
+  ein prüfbares Kriterium, <strong>F</strong> baut den Fähigkeitskatalog, ohne den ein Pod das Kriterium
+  nicht erreicht, <strong>K</strong> gibt den Objekten Felder und Zustände, <strong>V-03</strong>
+  bis <strong>V-05</strong> und <strong>B</strong> beschreiben Zellen, Mandanten, Identität und Betrieb,
+  <strong>A-03</strong> bis <strong>A-06</strong> den Bau und die Abnahme des Abbilds selbst.
+  <strong>E-01</strong> bis <strong>E-11</strong> treffen die elf Entscheidungen, die danach noch offen
+  waren — jede mit der Bedingung, die sie umstößt. Neue Tafeln sind markiert.</p>
+
+  <p style="max-width:62ch;color:var(--grau);font-size:13.5px;margin:12px 0 0">
+  <strong>Zur Sprache:</strong> alles, was einen Namen im System trägt — Felder, Zustände, Ereignisse,
+  Stufen, Klassen, Schritte, Rollen, Fähigkeiten — steht englisch und ist damit unverändert in Code und
+  Konfiguration übernehmbar. Erklärt wird auf Deutsch. Die Belegungstafel R-D bleibt durchgehend deutsch:
+  sie ist ein Instrument, kein Vertrag.</p>
+
+  <div class="these">
+    <div class="zust">
+      <div class="zust__l">allocated</div>
+      <div class="zust__n">~40 MB</div>
+      <div class="zust__u">Liegt nur auf Platte. Copy-on-Write-Snapshot, kostet die tatsächliche Differenz.</div>
+    </div>
+    <div class="zust zust--kalt">
+      <div class="zust__l">frozen</div>
+      <div class="zust__n">~24 MB</div>
+      <div class="zust__u">Prozesse leben, cgroup-freezer greift, Seiten liegen komprimiert in zram.</div>
+    </div>
+    <div class="zust zust--heiss">
+      <div class="zust__l">active</div>
+      <div class="zust__n">0,3–2 GB</div>
+      <div class="zust__u">Baut, testet, ruft Werkzeuge auf. Nur hier entstehen echte Kosten.</div>
+    </div>
+  </div>
+</header>
+
+<div class="abschnitt">Der Weg eines Auftrags</div>
+
+<!-- T-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">T-01</span>
+    <h2 class="tafel__t">Eingang</h2>
+    <span class="tafel__sub">jeder Kanal, derselbe Vertrag</span>
+  </div>
+  <div class="tafel__k">
+    <p>Es gibt keine Liste unterst&#252;tzter Ger&#228;te. Es gibt einen Adapter-Vertrag &#8212; wer ihn
+    erf&#252;llt, ist ein Eingang. Ein Auftrag kann aus einer Discord-Nachricht kommen, aus einer
+    X-Direktnachricht, aus einer E-Mail, aus einem GitHub-Kommentar oder aus einem Terminal.</p>
+    <div class="kette">
+      <div class="knoten"><b>Discord</b><span>Nachricht, Thread, Slash</span></div>
+      <div class="knoten"><b>X</b><span>DM oder Erw&#228;hnung</span></div>
+      <div class="knoten"><b>Slack, Teams</b><span>Kanal oder DM</span></div>
+      <div class="knoten"><b>Email, SMS</b><span>asynchron, mit Anhang</span></div>
+      <div class="knoten"><b>GitHub</b><span>Issue, Kommentar, Label</span></div>
+      <div class="knoten"><b>CLI, App, MCP</b><span>direkt, mit Zertifikat</span></div>
+    </div>
+    <h4 class="mini-h" style="margin-top:22px">Ein Adapter kann vier Dinge</h4>
+    <ul class="liste">
+      <li><code>receive()</code> &#8212; formt ein Plattform-Ereignis in einen einheitlichen Umschlag:
+      Kanal, Nachrichten-ID, Absender, Text, Anh&#228;nge, Thread-Bezug, Zeit</li>
+      <li><code>identity()</code> &#8212; liefert nur die externe Kennung, etwa <code>discord:184&#8230;</code></li>
+      <li><code>respond()</code> &#8212; rendert Plattform-Ereignisse in die Sprache des Kanals</li>
+      <li><code>capabilities()</code> &#8212; deklariert Threads, Anh&#228;nge, Kn&#246;pfe, Zeichenlimit</li>
+    </ul>
+    <p style="margin-top:14px">Ab dem Captain wei&#223; niemand mehr, woher ein Auftrag kam. Und weil ein
+    Adapter selbst nur ein kleiner Workload ist, kann ein Agent einen fehlenden Kanal nachbauen &#8212;
+    ein neuer Eingang ist ein Auftrag, kein Release.</p>
+
+    <h4 class="mini-h" style="margin-top:26px">Die Vollmacht kommt vom Kanal, nicht vom Text</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Stufe</th><th>Beispiele</th><th>Was daraus entstehen darf</th></tr></thead>
+        <tbody>
+          <tr><td>confidential</td><td>CLI mit Ger&#228;tezertifikat, MCP, eigene App</td><td>alles, einschlie&#223;lich Push und Deploy</td></tr>
+          <tr><td>linked</td><td>Discord-DM, X-DM, Slack-DM eines verkn&#252;pften Kontos</td><td>normale Auftr&#228;ge; gesch&#252;tzte Branches nur mit Best&#228;tigung</td></tr>
+          <tr><td>public</td><td>offener Discord-Kanal, X-Erw&#228;hnung, geteilter Link</td><td>lesen und vorschlagen, hartes Budget, nie Schreibrechte</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Erstkontakt erzeugt keinen Auftrag</b>, sondern eine Einladung zur Verkn&#252;pfung, die
+      &#252;ber einen vertraulichen Kanal best&#228;tigt wird. Nie automatisch zuordnen.</li>
+      <li><b>Best&#228;tigt wird auf einem anderen Kanal als angefragt.</b> Deploy aus der Discord-DM
+      wird in der App best&#228;tigt &#8212; kostet fast nichts, neutralisiert Konto&#252;bernahmen.</li>
+      <li><b>Ein Umschlag braucht einen Idempotenz-Schl&#252;ssel.</b> Chat-Plattformen stellen erneut zu;
+      ohne Schl&#252;ssel startet ein Retry drei Pods.</li>
+      <li><b>Begrenzt wird in Pod-Minuten</b>, nicht in Anfragen &#8212; je Prinzipal und je Kanal.</li>
+    </ul>
+    <div class="merk"><b>Text aus offenen Kan&#228;len ist Daten, nie Anweisung.</b> Die Vollmacht wird
+    beim Eingang an den Umschlag geheftet und wandert unver&#228;ndert bis in den Pod. Kein LLM auf dem
+    Weg kann sie erh&#246;hen &#8212; auch dann nicht, wenn genau das im Text steht. Mit dieser Eigenschaft
+    ist &#8222;jeder darf mich von &#252;berall anschreiben&#8220; ein beherrschbares Risiko. Ohne sie ist es keins.</div>
+  </div>
+</section>
+
+<!-- T-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">T-02</span>
+    <h2 class="tafel__t">Captain</h2>
+    <span class="tafel__sub">disponiert, führt nichts aus</span>
+  </div>
+  <div class="tafel__k">
+    <p>Eingabe: <code>„Ich überarbeite das Checkout-UX in shop-web."</code> Daraus entstehen Aufträge —
+    der Captain schreibt keinen Code und startet keine Container selbst.</p>
+    <div class="kette">
+      <div class="knoten"><b>1 · decompose</b><span>in unabhängige Teilaufträge</span></div>
+      <div class="knoten"><b>2 · locate</b><span>Repo, Branch, Umgebung</span></div>
+      <div class="knoten"><b>3 · size</b><span>Klasse, Zeit- und Analysebudget</span></div>
+      <div class="knoten"><b>4 · prioritize</b><span>interaktiv oder Stapel</span></div>
+      <div class="knoten"><b>5 · dispatch</b><span>an den Scheduler</span></div>
+    </div>
+
+    <h4 class="mini-h" style="margin-top:24px">Er läuft selbst in einem Pod</h4>
+    <p>Der Captain liest mehr fremden Text als alles andere im System — Discord, Erwähnungen, E-Mails.
+    Er ist die größte Injektionsfläche, also gehört er hinter dieselbe Grenze wie die Arbeit, die er verteilt.
+    <b>Aber niemals mit dem containerd- oder Docker-Socket im Pod:</b> wer den Runtime-Socket hat, mountet
+    sich <code>/</code> des Hosts in einen neuen Container und ist in drei Zeilen root. Der Captain bekommt
+    dieselbe API wie alle anderen, nur mit höherer Vollmachtsstufe.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Der Captain darf</th><th>Der Captain darf nicht</th></tr></thead>
+        <tbody>
+          <tr><td style="white-space:normal;font-weight:400">Aufträge erzeugen, bis zur Vollmacht seines Umschlags</td><td>Vollmacht über die des Umschlags hinaus vergeben</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">Status, Einfrieren, Abbrechen im eigenen Vorhaben</td><td>Pods fremder Vorhaben oder Prinzipale sehen</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">Ergebnisse lesen: Patches, Logs, Berichte</td><td>Beliebige Host-Pfade mounten</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">Rückfragen über die Adapter stellen</td><td>Die Pipeline-Definition ändern</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:16px"><b>Die letzte Zeile trägt am meisten.</b> Die Pipeline ist
+    Konfiguration, die dem Menschen gehört, kein Laufzeitobjekt des Captains. Ein injizierter Captain darf
+    nicht sagen können „überspring die Prüfungen".</div>
+
+    <h4 class="mini-h" style="margin-top:26px">Subagenten: Pod pro Schreibhoheit, nicht pro Agent</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Was der Subagent tut</th><th>Wo er läuft</th><th>Kosten</th></tr></thead>
+        <tbody>
+          <tr><td>Nur denken: planen, routen, zusammenfassen</td><td class="m">Prozess im Captain-Pod</td><td class="m">~0</td></tr>
+          <tr><td>Lesen: Code sichten, Abhängigkeiten prüfen</td><td class="m">Prozess, Mount read-only</td><td class="m">~0</td></tr>
+          <tr><td>Schreiben oder Code ausführen</td><td class="m">eigener Workpod</td><td class="m">30 MB + 200 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:16px">
+      <li><b>Ein Captain je Vorhaben</b>, nicht einer global. Der Radius eines Vorfalls ist damit ein
+      Vorhaben, und ein vergifteter Discord-Kontext leckt nicht in eine CLI-Sitzung.</li>
+      <li><b>Zustandslos zwischen den Zügen.</b> Der Verlauf liegt in der Datenbank; der Pod wird geweckt,
+      handelt, verschwindet. 200 ruhende Vorhaben kosten damit null statt 4 GB.</li>
+      <li><b>Ein kleiner Router ohne Modell bleibt auf dem Host:</b> deduplizieren, Identität auflösen,
+      Vollmacht anheften, Vorhaben bestimmen, Captain wecken. <b>Autorität vergibt Code, nie ein Modell</b> —
+      sobald ein LLM über Rechte entscheidet, ist die Vollmachtskette nur noch eine Empfehlung.</li>
+      <li><b>Keine Projekt-Mounts im Captain-Pod.</b> Er liest Ergebnisse über die API. Der
+      injektionsanfälligste Teil ist der letzte, dem man Dateihoheit gibt.</li>
+    </ul>
+    <p style="margin-top:14px">Zurück fließen keine Nachrichten, sondern Ereignisse — <code>accepted</code>,
+    <code>started</code>, <code>check.failed</code>, <code>clarification</code>, <code>done</code>.
+    Jeder Adapter rendert sie in seinem Idiom, mit eigenem Ausführlichkeitsprofil: ein Vorhaben mit 200
+    Teilaufträgen darf in einem X-Thread nicht 200 Antworten erzeugen. Ein Thread entspricht einem Vorhaben —
+    eine Antwort darin bearbeitet es weiter.</p>
+  </div>
+</section>
+
+<!-- T-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">T-03</span>
+    <h2 class="tafel__t">Image-Auflösung</h2>
+    <span class="tafel__sub">Treffer oder Neubau</span>
+  </div>
+  <div class="tafel__k">
+    <p>Der Auftrag beschreibt seine Anforderungen: Sprache und Version, Systempakete, Testrunner,
+    Browser-Engine. Daraus wird ein Hash gebildet und im Image-Index nachgeschlagen.</p>
+    <div class="kette">
+      <div class="knoten"><b>requirement hash</b><span>node 24 · pnpm · playwright</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>hit</b><span>Pod startet in ~200 ms</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>miss</b><span>Bau-Auftrag wird erzeugt</span></div>
+    </div>
+    <p>Beim Fehlschlag schreibt ein Bau-Agent per LLM eine Image-Spezifikation, baut sie, lässt einen
+    Rauchtest darüber laufen und veröffentlicht sie erst dann im Index. Ab diesem Moment ist es für
+    alle weiteren Aufträge ein Treffer.</p>
+    <div class="merk"><b>Kein Sonderweg:</b> Der Image-Bau ist selbst ein normaler Auftrag in einem
+    normalen Workpod. Er unterliegt derselben Pipeline, denselben Limits und derselben Isolation
+    wie die Arbeit, für die er gebraucht wird.</div>
+  </div>
+</section>
+
+<!-- T-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">T-04</span>
+    <h2 class="tafel__t">Der Workpod</h2>
+    <span class="tafel__sub">Container + Arbeitskopie + Agent</span>
+  </div>
+  <div class="tafel__k">
+    <div class="gitter2">
+      <div>
+        <h4 class="mini-h">Was drin ist</h4>
+        <ul class="liste">
+          <li><b>Wurzeldateisystem</b> aus geteilten Read-only-Layern — tausend Pods teilen sich einen Page Cache</li>
+          <li><b>Arbeitskopie</b> als CoW-Snapshot des Golden-Repos, in O(1) erzeugt</li>
+          <li><b>Ein Agent</b> mit dem Auftrag, dem Kontext und dem Nachbesserungsbudget</li>
+          <li><b>Ein Ressourcenvertrag</b> aus <code>cpu.weight</code>, <code>memory.high</code>, <code>pids.max</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="mini-h">Was nicht drin ist</h4>
+        <ul class="liste">
+          <li><b>Kein Netzwerk.</b> Der einzige Weg nach draußen ist ein Unix-Socket zum Egress-Proxy</li>
+          <li><b>Kein LLM-Schlüssel.</b> Den setzt der Proxy beim Durchreichen ein</li>
+          <li><b>Kein Git-Token.</b> Gepusht wird gegen den Git-Proxy, der die Policy prüft und selbst signiert</li>
+          <li><b>Keine Logs.</b> Alles läuft sofort zum Host, damit der Pod jederzeit wegfallen kann</li>
+        </ul>
+      </div>
+    </div>
+    <div class="kette" style="margin-top:20px">
+      <div class="knoten"><b>created</b><span>Snapshot steht</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>active</b><span>Agent arbeitet</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>frozen</b><span>nach 45 s Ruhe</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>checkpointed</b><span>Dump auf Platte</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>reaped</b><span>Patch raus, Pod weg</span></div>
+    </div>
+    <h4 class="mini-h" style="margin-top:24px">Der Workpod ist nur eine Ausprägung</h4>
+    <p>Abstrahiert wird nicht auf <em>Workpod</em>, sondern auf <b>Runner</b>. Der Vertrag ist
+    betriebssystem-neutral: <em>gegeben ein Arbeitsverzeichnis und ein Auftrag, liefere einen Patch und
+    einen Bericht.</em> Der Umschlag trägt ein Feld <code>platform</code>, der Scheduler kennt mehrere Pools.</p>
+    <div class="kette">
+      <div class="knoten"><b>alpine</b><span>der Normalfall, hohe Dichte</span></div>
+      <div class="knoten"><b>windows</b><span>residenter Agent zieht Aufträge</span></div>
+      <div class="knoten"><b>macos</b><span>iOS-Builds auf Apple-Hardware</span></div>
+      <div class="knoten"><b>remote</b><span>wenn ein Auftrag zu groß ist</span></div>
+    </div>
+    <p>Windows-Container taugen nicht für das Dichteziel — Server Core liegt bei mehreren hundert MB,
+    startet in Sekunden und verlangt Kernel-Versionsgleichheit. Als eigener Runner-Typ ist Windows ein
+    Knoten im selben System statt ein Sonderfall darin. Dieselbe Abstraktion brauchst du ohnehin für den
+    entfernten Runner, also baust du sie einmal und bekommst beides.</p>
+    <div class="merk"><b>Der Reaper ist Pflicht, nicht Kür.</b> Jeder Pod hat eine Lebensdauer und ein
+    Leerlauf-Limit. Ohne beides sind nach einer Woche zehntausend verwaiste Subvolumes auf der Platte —
+    das ist der wahrscheinlichste Weg, wie so eine Plattform kippt.</div>
+  </div>
+</section>
+
+<!-- T-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">T-05</span>
+    <h2 class="tafel__t">Die Pipeline</h2>
+    <span class="tafel__sub">feste Wirbelsäule, bewegliche Gelenke</span>
+  </div>
+  <div class="tafel__k">
+    <p>Einmal definiert, für alle tausend Aufträge gleich — aber an klar benannten Stellen pro Auftrag
+    austauschbar. Links steht, was nie variiert. Rechts, was der Captain je Auftrag festlegt.</p>
+    <div class="zwei-spalten">
+      <div class="sp">
+        <h4>Immer gleich</h4>
+        <ol>
+          <li>prepare — Snapshot, Abhängigkeiten aus dem Cache</li>
+          <li>plan — Agent schreibt einen Plan, bevor er etwas ändert</li>
+          <li>edit — Bearbeitung im Arbeitsverzeichnis</li>
+          <li>check — Bauen, Tests, Linter, Typprüfung</li>
+          <li>repair — Fehler zurück an den Agenten</li>
+          <li>deliver — Patch und Bericht an den Host</li>
+          <li>reap — Subvolume löschen</li>
+        </ol>
+      </div>
+      <div class="sp">
+        <h4>Pro Auftrag beweglich</h4>
+        <ol>
+          <li>Welches Image, welche Toolchain</li>
+          <li>Ob überhaupt ein Plan verlangt wird</li>
+          <li>Welche Pfade der Agent anfassen darf</li>
+          <li>Welche Prüfungen laufen und welche blockieren</li>
+          <li>Wie viele Nachbesserungsrunden erlaubt sind</li>
+          <li>Abnahmekriterium: grüner Lauf, Review, oder Mensch</li>
+          <li>Ob der Snapshot bei Fehlschlag erhalten bleibt</li>
+        </ol>
+      </div>
+    </div>
+    <div class="merk"><b>Die Schleife hat ein Ende.</b> <code>check</code> → <code>repair</code> läuft maximal <code>n</code> Runden.
+    Danach scheitert der Pod nicht still, sondern meldet sich mit Diff, Logs und der eigenen Einschätzung
+    beim Captain zurück. Ein Pod, der zwanzig Minuten im Kreis läuft, ist teurer als einer, der nach drei
+    Runden aufgibt.</div>
+  </div>
+</section>
+
+<div class="abschnitt">Absicht und Abnahme</div>
+
+<!-- Q-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">Q-01</span>
+    <h2 class="tafel__t">Der Absichtsvertrag</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">zwischen Eingang und Captain fehlte ein Objekt</span>
+  </div>
+  <div class="tafel__k">
+    <p>T-01 liefert einen Umschlag, T-02 zerlegt ihn in Aufträge. Dazwischen entsteht bisher nichts, das
+    man festhalten, versionieren oder prüfen könnte — und damit ist „fertig&#8220; am Ende das, was der Agent
+    dafür hält. Der Mensch übergibt Intention und bekommt Interpretation zurück, ohne die Differenz zu sehen.</p>
+    <div class="kette">
+      <div class="knoten"><b>1 · prompt</b><span>ein Satz, unterspezifiziert</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>2 · interpret</b><span>Ziel, Grenzen, Annahmen</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>3 · acceptance</b><span>woran man es erkennt</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>4 · clarify</b><span>nur wenn sie etwas ändert</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>5 · spec</b><span>versioniert, zitierbar</span></div>
+    </div>
+    <p>Die Spezifikation ist das einzige Objekt der Plattform, das dem Menschen gehört. Aufträge sind
+    Ableitungen daraus und zitieren die Version, gegen die sie erzeugt wurden. Ändert sich die Absicht,
+    ändert sich die Version — und alle offenen Aufträge der alten Version werden neu bewertet statt still
+    weiterzulaufen.</p>
+
+    <h4 class="mini-h" style="margin-top:26px">Wann gefragt wird: Umkehrbarkeit vor Zuversicht</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Wirkung</th><th>Deutung eindeutig</th><th>Deutung mehrdeutig</th></tr></thead>
+        <tbody>
+          <tr><td>reversible<div class="m">Branch, Sandbox, Bericht</div></td><td style="white-space:normal">ausführen</td><td style="white-space:normal">ausführen, Annahme protokollieren</td></tr>
+          <tr><td>costly<div class="m">Merge, Migration, Umbau</div></td><td style="white-space:normal">ausführen, Nachweisklasse anheben</td><td style="white-space:normal">genau einmal rückfragen</td></tr>
+          <tr><td>irreversible<div class="m">Deploy, Löschung, Nachricht nach außen, Geld</div></td><td style="white-space:normal">Bestätigung auf anderem Kanal (T-01)</td><td style="white-space:normal">nicht ohne Menschen, kein Automatismus</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Die Rückfrage ist ein Kostenposten, kein Sicherheitsnetz.</b> Ein System, das immer fragt,
+      hat die Fehler nur zurückverlagert — auf den Menschen, der sie vermeiden sollte. Gefragt wird
+      höchstens einmal je Auftrag, und nur zu der Unklarheit, die die Ausführung tatsächlich ändert.</li>
+      <li><b>Annahmen sind Objekte, keine Prosa.</b> Jede Annahme steht einzeln, ist einzeln widerrufbar,
+      und ein Widerruf entwertet genau die Aufträge, die auf ihr ruhen — dieselbe Mechanik wie Fakt und
+      Urteil in G-01.</li>
+      <li><b>Ohne Abnahmekriterium kein Auftrag.</b> Fehlt es und lässt es sich nicht ableiten, ist das ein
+      Befund und erzeugt einen Vorbereitungsauftrag — hartes Tor, wie der Lückenbericht in G-07.</li>
+      <li><b>Die Spezifikation überlebt den Auftrag.</b> Umschläge leben Minuten, Aufträge Stunden,
+      Spezifikationen Monate. Der Wiedereinstieg in ein ruhendes Vorhaben ist damit eine Abfrage, keine
+      Rekonstruktion aus Chatverlauf.</li>
+    </ul>
+    <div class="merk"><b>Hier verschwindet der menschliche Fehler, nicht im Modell.</b> Nicht weil eine
+    Maschine besser rät, sondern weil aus einem Satz ein prüfbares Kriterium wird, das danach tausendfach
+    mechanisch angewandt wird — gleich beim ersten und beim tausendsten Auftrag, ohne Ermüdung und ohne
+    Auslegungsdrift.</div>
+  </div>
+</section>
+
+<!-- Q-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">Q-02</span>
+    <h2 class="tafel__t">Beweislast</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">Zuversicht ist kein Abnahmekriterium</span>
+  </div>
+  <div class="tafel__k">
+    <p>T-05 kennt „grüner Lauf, Review, oder Mensch&#8220;. Das ist zu grob für eine Plattform, deren
+    Versprechen Fehlerfreiheit ist. Abgenommen wird gegen <b>Evidenzklassen</b> — billigste zuerst,
+    verlangte Klasse ergibt sich aus dem Risiko, nicht aus der Größe des Diffs.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Klasse</th><th>Beweist</th><th>Kosten</th><th>Verlangt bei</th></tr></thead>
+        <tbody>
+          <tr><td>artifact.identical<div class="m">bitgleich</div></td><td style="white-space:normal">Verhalten unverändert (G-06)</td><td class="m">fast null</td><td>mechanische Umformung</td></tr>
+          <tr><td>types.lint<div class="m">Typen, Schema, Linter</div></td><td style="white-space:normal">innere Konsistenz</td><td class="m">Sekunden</td><td>immer, ausnahmslos</td></tr>
+          <tr><td>tests.existing<div class="m">Bestandstests grün</div></td><td style="white-space:normal">keine Regression im abgedeckten Teil</td><td class="m">Minuten</td><td>immer, wo es Tests gibt</td></tr>
+          <tr><td>tests.new<div class="m">Test am Kriterium</div></td><td style="white-space:normal">das Kriterium aus Q-01 ist erfüllt</td><td class="m">Minuten</td><td>jede Verhaltensänderung</td></tr>
+          <tr><td>mutation.diff<div class="m">Mutation, Differenztest</div></td><td style="white-space:normal">die Tests prüfen wirklich etwas</td><td class="m">teuer</td><td>Zahlungs-, Rechte-, Datenpfade</td></tr>
+          <tr><td>review.independent<div class="m">unabhängiger Prüfpod</div></td><td style="white-space:normal">zweite Meinung ohne Ansteckung</td><td class="m">mittel</td><td>alles Irreversible</td></tr>
+          <tr><td>human<div class="m">Mensch</div></td><td style="white-space:normal">Angemessenheit, nicht Korrektheit</td><td class="m">teuerste</td><td>Entscheidungen (G-01)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Prüfer sieht nie den Weg, nur das Ergebnis.</b> Ein Prüfpod bekommt Diff, Kriterium und
+      Fakten — nicht den Verlauf des Autors, nicht dessen Begründung, nach Möglichkeit ein anderes Modell.
+      Wer die Herleitung liest, übernimmt den Fehler darin.</li>
+      <li><b>Selbstauskunft zählt nicht.</b> „Ich habe alle Aufrufer aktualisiert&#8220; ist keine Evidenz;
+      die Abfrage im Faktenlager ist eine. Jede Behauptung eines Agenten wird entweder mechanisch belegt
+      oder als Annahme markiert.</li>
+      <li><b>Jede Prüfung blockiert, oder sie wird entfernt.</b> Nichtblockierende Warnungen sind Rauschen,
+      und Rauschen erzieht dazu, rote Zeichen zu übersehen — bei tausend Aufträgen am Tag innerhalb einer
+      Woche.</li>
+      <li><b><code>unproven</code> ist ein eigener Ausgang</b>, nicht <code>failed</code> und erst recht nicht
+      <code>delivered</code>. Ein Pod, der sein Kriterium nicht belegen kann, liefert Diff, Lückenbericht und
+      Einschätzung — und wandert in den Stapel, den ein Mensch tatsächlich ansieht.</li>
+      <li><b>Wiederholung ist keine Prüfung.</b> Dreimal dasselbe Modell mit demselben Kontext liefert
+      dreimal denselben blinden Fleck. Mehrheitsentscheid über korrelierte Läufe ist teuer und beweist nichts.</li>
+    </ul>
+    <div class="merk"><b>Fehler entstehen selten dort, wo ein Modell etwas falsch macht.</b> Sie entstehen
+    dort, wo niemand festgelegt hat, was richtig gewesen wäre. Q-01 legt es fest, Q-02 verlangt den Beleg —
+    beides zusammen ist die Pipeline, die keine Fehler durchlässt. Eins davon allein ist keine.</div>
+  </div>
+</section>
+
+<!-- Q-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">Q-03</span>
+    <h2 class="tafel__t">Fehlerarten</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">jede Klasse braucht ihr eigenes Netz</span>
+  </div>
+  <div class="tafel__k">
+    <p>Die verbreitetste Fehlannahme beim Bau solcher Systeme ist, dass ein besseres Modell oder mehr Tests
+    alles fangen. Sie fangen zwei von sieben Klassen. Die anderen fünf haben je einen eigenen Mechanismus,
+    und der steht bereits in diesem Dokument — er muss nur benannt sein.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Fehlerart</th><th>Fängt ihn</th><th>Fängt ihn nicht</th></tr></thead>
+        <tbody>
+          <tr><td>fact.invented<div class="m">API, Feld, Aufrufer existiert nicht</div></td><td style="white-space:normal">Fakten aus Ableitung statt aus Modellwissen (G-01), Compiler</td><td style="white-space:normal">mehr Tests, größeres Modell</td></tr>
+          <tr><td>context.missing<div class="m">den entscheidenden Aufrufer nie gesehen</div></td><td style="white-space:normal">Lückenbericht und hartes Tor (G-07), Faktenabfrage statt Lektüre</td><td style="white-space:normal">größeres Kontextfenster</td></tr>
+          <tr><td>spec.wrong<div class="m">falsches Ziel, sauber umgesetzt</div></td><td style="white-space:normal">Absichtsvertrag mit Abnahmekriterium (Q-01)</td><td style="white-space:normal">jede technische Prüfung, ausnahmslos</td></tr>
+          <tr><td>tool.failure<div class="m">Patch passt nicht, Test flackert</div></td><td style="white-space:normal">Wiederholung mit Isolierung, Flackererkennung, Versuchszähler (K-02)</td><td style="white-space:normal">Modellwechsel</td></tr>
+          <tr><td>injection<div class="m">Anweisung im gelesenen Material</div></td><td style="white-space:normal">Vollmachtskette als Token (K-04), Tore prüfen an der Wirkung</td><td style="white-space:normal">Prompt-Härtung allein</td></tr>
+          <tr><td>regression.silent<div class="m">Modell- oder Prompt-Wechsel</div></td><td style="white-space:normal">Regressionskorpus mit Durchschlupfrate (Q-04)</td><td style="white-space:normal">Stichproben im Betrieb</td></tr>
+          <tr><td>assumption.replicated<div class="m">tausend Pods irren gleich</div></td><td style="white-space:normal">Urteile mit Zitat, Widersprüche markiert statt aufgelöst (G-01)</td><td style="white-space:normal">Einzelreview, Stichprobe</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:18px"><b>Die dritte Zeile ist die teuerste.</b> Fehlspezifikation
+    ist die einzige Klasse, gegen die kein technischer Mechanismus in diesem Dokument hilft — sie wird
+    ausschließlich vorne verhindert, in Q-01, oder gar nicht. Und sie ist zugleich die Klasse, die bei
+    „der Mensch gibt nur noch die Absicht&#8220; naturgemäß häufiger wird.</div>
+  </div>
+</section>
+
+<!-- Q-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">Q-04</span>
+    <h2 class="tafel__t">Prüfstand</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">Prompt und Modell sind Auslieferungen</span>
+  </div>
+  <div class="tafel__k">
+    <p>Eine Änderung am Systemprompt, ein Modellwechsel, eine neue Kontextmontage: jede davon verändert das
+    Verhalten von tausend Aufträgen gleichzeitig und ist damit die riskanteste Auslieferung im ganzen System —
+    riskanter als jeder Codeschritt, den die Plattform ausführt. Sie durchläuft dasselbe Tor.</p>
+    <div class="kette">
+      <div class="knoten"><b>corpus</b><span>aufgezeichnete Aufträge, bekannter Ausgang</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>replay</b><span>fixierte Fakten, fixierte Werkzeugantworten</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>compare</b><span>vier Kennzahlen, ein Urteil</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>canary</b><span>Schattenlauf im Betrieb</span></div>
+    </div>
+    <div class="tabhuelle" style="margin-top:6px">
+      <table class="tab">
+        <thead><tr><th>Kennzahl</th><th>Misst</th><th>Reagiert auf</th></tr></thead>
+        <tbody>
+          <tr><td>escape_rate<div class="m">Durchschlupf</div></td><td style="white-space:normal">fehlerhaft, aber abgenommen</td><td style="white-space:normal">Evidenzklassen (Q-02) — die einzige Zahl, die das Qualitätsversprechen prüft</td></tr>
+          <tr><td>false_reject_rate<div class="m">Fehlalarm</div></td><td style="white-space:normal">korrekt, aber abgelehnt</td><td style="white-space:normal">zu strenge Tore; treibt die Kosten, nicht die Fehler</td></tr>
+          <tr><td>cost_per_acceptance<div class="m">Kosten je Abnahme</div></td><td style="white-space:normal">Token und Pod-Minuten bis zum Beleg</td><td style="white-space:normal">Modellrouting (G-03), Kontextbreite (G-07)</td></tr>
+          <tr><td>no_clarification_rate<div class="m">ohne Rückfrage</div></td><td style="white-space:normal">wie viel Absicht wirklich genügt</td><td style="white-space:normal">Q-01 — steigt er nicht, skaliert die Plattform nicht</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Wiederholbar heißt: keine Live-Aufrufe.</b> Der Korpus läuft gegen eingefrorene Fakten,
+      aufgezeichnete Werkzeugantworten und eine feste Modellversion. Sonst misst man Netzwetter.</li>
+      <li><b>Modell-, Prompt- und Pipelineversion stehen im Auftragsprotokoll</b>, nicht nur im Cache-Schlüssel
+      (G-03). Ohne sie ist ein Vorfall drei Wochen später nicht rekonstruierbar — und Rekonstruierbarkeit
+      ist die halbe Aufklärung.</li>
+      <li><b>Der Korpus wächst aus dem Betrieb.</b> Jeder Fall, der durchgeschlüpft ist, wird aufgenommen.
+      Ein Regressionskorpus, der nicht aus echten Fehlern wächst, testet die Fantasie seiner Autoren.</li>
+      <li><b>Kanarie vergleicht auf denselben Aufträgen.</b> Neue Version läuft im Schatten mit, Ergebnis
+      wird verworfen, nur die Kennzahlen zählen. Bei einer Flotte dieser Größe kostet das Prozente und
+      ersetzt Meinung durch Messung.</li>
+      <li><b>Zurückrollen muss billiger sein als reparieren.</b> Prompt- und Modellversion sind je Vorhaben
+      festnagelbar; ein laufendes Vorhaben wechselt die Generation nicht mitten im Lauf.</li>
+    </ul>
+    <div class="merk"><b>Ohne Durchschlupfrate ist „sehr hohe Qualität&#8220; eine Behauptung.</b> Mit ihr ist
+    es eine Zahl, die fällt oder steigt, die man je Fehlerklasse aufschlüsseln kann und gegen die sich jede
+    Änderung an diesem System messen lässt — einschließlich der Änderungen, die dieses Dokument vorschlägt.</div>
+  </div>
+</section>
+
+<div class="abschnitt">Fähigkeiten</div>
+
+<!-- F-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-01</span>
+    <h2 class="tafel__t">Was eine Fähigkeit ist</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">fünf Teile, und zwei fehlen den meisten Katalogen</span>
+  </div>
+  <div class="tafel__k">
+    <p>Eine Fähigkeit ist kein Prompt-Baustein und kein Werkzeug. Sie ist ein versioniertes Objekt wie ein
+    Image (T-03) oder eine Pipeline (T-05), inhaltsadressiert, je Auftrag festgenagelt — und sie besteht
+    aus fünf Teilen, von denen keiner fehlen darf.</p>
+    <div class="kette">
+      <div class="knoten"><b>description</b><span>wofür ich da bin, und wann nicht</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>precondition</b><span>was wahr sein muss, bevor ich anfange</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>procedure</b><span>welche Schritte, und wo genau ein Modell</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>evidence</b><span>welche Evidenzklasse ich liefere</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>boundary</b><span>was ich nicht kann, und was ich dann tue</span></div>
+    </div>
+    <div class="tabhuelle" style="margin-top:6px">
+      <table class="tab">
+        <thead><tr><th>Teil</th><th>Fehlt er, dann</th></tr></thead>
+        <tbody>
+          <tr><td>description</td><td style="white-space:normal">findet die Deckungsprüfung (F-04) nichts, wogegen sie auflösen könnte — der Katalog wird unbenutzbar, lange bevor er unvollständig ist</td></tr>
+          <tr><td>precondition</td><td style="white-space:normal">startet der Pod und scheitert nach zwanzig Minuten an etwas, das vorher in einer Tabelle stand</td></tr>
+          <tr><td>procedure</td><td style="white-space:normal">erfindet jeder Lauf den Weg neu, und keine zwei Läufe sind vergleichbar (Q-04)</td></tr>
+          <tr><td>evidence</td><td style="white-space:normal">heißt „fertig&#8220; wieder das, was der Agent dafür hält (Q-02)</td></tr>
+          <tr><td>boundary</td><td style="white-space:normal">improvisiert der Agent über seine Reichweite hinaus — und tut es überzeugend</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Die Beschreibung ist die Auflösungsfläche.</b> Sie sagt, wofür die Fähigkeit da ist <em>und
+      wofür ausdrücklich nicht</em> — an ihr entscheidet F-04, ob ein Auftrag gedeckt ist. Eine Fähigkeit,
+      die man nur findet, wenn man sie schon kennt, ist keine.</li>
+      <li><b>Die Grenze ist der wertvollste Teil.</b> Ein Modell weiß nicht, wo es aufhören sollte; ein
+      Katalog, in dem jede Fähigkeit ihr eigenes Ende benennt, weiß es. Das ist der Unterschied zwischen
+      einem fähigen Agenten und einem verlässlichen.</li>
+      <li><b>Jede Fähigkeit nennt ihre Mindest-Vollmachtsstufe.</b> Ein Umschlag der Stufe
+      <code>public</code> (T-01) kann eine schreibende Fähigkeit damit gar nicht erst auflösen — Durchsetzung
+      statt Ermahnung im Prompt.</li>
+      <li><b>Was keine Fähigkeit ist:</b> Wissen (das ist G-01), Vollmacht (K-04), Budget (V-04), die
+      Pipeline (T-05). Fähigkeiten sind das <em>Wie</em> — nicht das Darf, das Weiß oder das Kostet. Sobald
+      dieser Schnitt verwischt, wird der Katalog zum Sammelbecken und ist in einem Jahr nicht mehr prüfbar.</li>
+      <li><b>Eine Fähigkeit ohne Nachweis ist keine Fähigkeit, sondern eine Gewohnheit.</b></li>
+    </ul>
+  </div>
+</section>
+
+<!-- F-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-02</span>
+    <h2 class="tafel__t">Drei Ordnungen</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">nicht nach Kosten geschnitten, sondern nach Beweisbarkeit</span>
+  </div>
+  <div class="tafel__k">
+    <p>Die Größe einer Fähigkeit bemisst sich nicht an ihrem Verbrauch — dafür gibt es die Klassen aus R-A.
+    Sie bemisst sich daran, <b>was wahr sein muss, damit das Ergebnis stimmt</b>. Daraus folgen drei
+    Ordnungen, und aus den Ordnungen folgt, wer wen aufrufen darf.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Ordnung</th><th>Modellanteil</th><th>Nachweis</th><th>Endet mit</th></tr></thead>
+        <tbody>
+          <tr><td>Griff<div class="m">handle</div></td><td style="white-space:normal">keiner</td><td style="white-space:normal">mechanisch, durch Konstruktion</td><td style="white-space:normal">einem Artefakt</td></tr>
+          <tr><td>Verfahren<div class="m">procedure</div></td><td style="white-space:normal">genau eine Entscheidung: welche Griffe, in welcher Reihenfolge</td><td style="white-space:normal">Typen, Tests, Artefaktvergleich</td><td style="white-space:normal">einer prüfbaren Behauptung</td></tr>
+          <tr><td>Feldzug<div class="m">campaign</div></td><td style="white-space:normal">Plan und Bewertung auf Aggregaten</td><td style="white-space:normal">zitierte Fakten plus ausgeführter mechanischer Anteil</td><td style="white-space:normal">einem Plan und Wellen (G-04)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Nur nach unten rufen.</b> Ein Feldzug ruft Verfahren, ein Verfahren ruft Griffe, ein Griff ruft
+      nichts. Der Aufrufgraph ist damit ein gerichteter Baum begrenzter Tiefe — Kosten sind vorhersagbar,
+      Läufe sind wiederholbar, und es gibt keine Schleife, die niemand vorhergesehen hat.</li>
+      <li><b>Ein Feldzug ändert nichts selbst.</b> Er erzeugt Teilaufträge. Ein großer Agent, der
+      zehntausend kleine Änderungen direkt schreibt, erzeugt einen Diff, den niemand prüfen kann — genau
+      das Ergebnis, das G-04 als unehrlich bezeichnet.</li>
+      <li><b>Das Modell sitzt in genau einer Stelle je Verfahren.</b> Deshalb sind 95 % der Änderungen
+      mechanisch ableitbar (G-04): nicht weil das Modell wenig kann, sondern weil es nur dort gefragt wird,
+      wo es das <em>Ob</em> entscheidet, und nie beim <em>Wie</em>.</li>
+      <li><b>Abbruchbedingung je Fähigkeit</b>, enger als die globale Nachbesserungsrunde aus T-05. Ein
+      Griff, der zweimal scheitert, ist kaputt und nicht unglücklich.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- F-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-03</span>
+    <h2 class="tafel__t">Der Startbestand</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">was am ersten Tag im Katalog steht</span>
+  </div>
+  <div class="tafel__k">
+    <h4 class="mini-h">Griffe — kein Modell, Nachweis durch Konstruktion</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Griff</th><th>Beweist</th></tr></thead>
+        <tbody>
+          <tr><td><code>fact.query</code></td><td style="white-space:normal">Symbole, Aufrufer, Typen, Ownership — abgeleitet, nie geraten (G-01)</td></tr>
+          <tr><td><code>context.assemble</code></td><td style="white-space:normal">Anker, Hülle, Skelett, Körper, Manifest (G-07)</td></tr>
+          <tr><td><code>test.select</code></td><td style="white-space:normal">betroffene Tests aus dem Bauzielgraphen</td></tr>
+          <tr><td><code>build</code> · <code>check.types</code> · <code>check.tests</code></td><td style="white-space:normal">die drei billigsten Evidenzklassen aus Q-02</td></tr>
+          <tr><td><code>codemod.apply</code></td><td style="white-space:normal">Umbenennung samt aller Referenzen, deterministisch</td></tr>
+          <tr><td><code>artifact.compare</code></td><td style="white-space:normal">bitgleich — das schärfste billige Orakel (G-06)</td></tr>
+          <tr><td><code>flake.detect</code></td><td style="white-space:normal">Wiederholung mit Isolierung statt Schulterzucken</td></tr>
+          <tr><td><code>snapshot.create</code> · <code>snapshot.reap</code></td><td style="white-space:normal">O(1)-Arbeitskopie, Reaper-fest (T-04)</td></tr>
+          <tr><td><code>effect.enqueue</code></td><td style="white-space:normal">Postausgang statt Selbstwirkung (K-03)</td></tr>
+          <tr><td><code>gap.report</code></td><td style="white-space:normal">das Aufhören selbst ist eine Fähigkeit, kein Ausfall</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4 class="mini-h" style="margin-top:26px">Verfahren — ein Modellschritt, Nachweis am Test</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Verfahren</th><th>Endet mit der Behauptung</th></tr></thead>
+        <tbody>
+          <tr><td><code>spec.derive</code></td><td style="white-space:normal">„das sind die Abnahmekriterien, das die Annahmen&#8220; (Q-01)</td></tr>
+          <tr><td><code>test.repair</code></td><td style="white-space:normal">„dieser Test läuft, und keiner der anderen ist dabei gefallen&#8220;</td></tr>
+          <tr><td><code>bug.fix</code></td><td style="white-space:normal">„die Reproduktion schlägt nicht mehr an, der Test hält sie fest&#8220;</td></tr>
+          <tr><td><code>interface.change</code></td><td style="white-space:normal">„alle Aufrufer sind angepasst&#8220; — belegt über <code>fact.query</code>, nicht behauptet</td></tr>
+          <tr><td><code>function.extract</code></td><td style="white-space:normal">„das Artefakt ist bitgleich&#8220;</td></tr>
+          <tr><td><code>dependency.update</code></td><td style="white-space:normal">„grün, und die Bruchstellen sind benannt&#8220;</td></tr>
+          <tr><td><code>test.write</code></td><td style="white-space:normal">„dieses Abnahmekriterium ist jetzt maschinell prüfbar&#8220;</td></tr>
+          <tr><td><code>review.produce</code></td><td style="white-space:normal">zweite Meinung auf Diff und Kriterium, ohne den Weg des Autors (Q-02)</td></tr>
+          <tr><td><code>image.build</code></td><td style="white-space:normal">Rauchtest bestanden, Index veröffentlicht (T-03)</td></tr>
+          <tr><td><code>adapter.build</code></td><td style="white-space:normal">ein neuer Eingang erfüllt den Vertrag aus T-01 — ein Auftrag, kein Release</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4 class="mini-h" style="margin-top:26px">Feldzüge — Plan und Wellen, keine eigene Änderung</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Feldzug</th><th>Liefert</th></tr></thead>
+        <tbody>
+          <tr><td><code>project.plan</code></td><td style="white-space:normal">die Zerlegung des Captains, gegen eine Spezifikationsversion (T-02, Q-01)</td></tr>
+          <tr><td><code>corpus.reduce</code></td><td style="white-space:normal">Äquivalenzklassen und Reduktionsstufen (G-02)</td></tr>
+          <tr><td><code>module.extract</code></td><td style="white-space:normal">Schnitt, erlaubte Kanten, Wellen in topologischer Ordnung (G-04)</td></tr>
+          <tr><td><code>dependencies.untangle</code></td><td style="white-space:normal">Zyklen, Instabilität, Reihenfolge der Auflösung</td></tr>
+          <tr><td><code>framework.migrate</code></td><td style="white-space:normal">mechanischer Anteil ausgeführt, Rest als belegter Migrationsplan</td></tr>
+          <tr><td><code>coverage.build</code></td><td style="white-space:normal">wo Tests fehlen, nach Risiko geordnet (Q-02)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:20px"><b>Der Katalog ist das einzige Artefakt, das absichtlich
+    wächst.</b> Images, Pipelines und Entscheidungen sollen wenige bleiben. Hier ist Wachstum das Ziel —
+    aber nur um geprüfte Stücke, und jedes mit Grenze.</div>
+  </div>
+</section>
+
+<!-- F-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-04</span>
+    <h2 class="tafel__t">Deckungsprüfung</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">scheitern, bevor es teuer wird</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten"><b>1 · criteria</b><span>aus der Spezifikation (Q-01)</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>2 · resolve</b><span>welche Fähigkeiten, welche Versionen</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>3 · coverage</b><span>vollständig oder nicht</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>4 · gap</b><span>Bauauftrag oder Rückfrage</span></div>
+    </div>
+    <p><b>Ein Auftrag startet nur bei vollständiger Deckung.</b> Hartes Tor, dieselbe Mechanik wie der
+    Lückenbericht in G-07. Der teuerste Fehlschlag ist der, der nach zwanzig Minuten an etwas scheitert,
+    das vorher in einer Tabelle stand.</p>
+
+    <h4 class="mini-h" style="margin-top:24px">Ein Fehlschlag hat fünf Ursachen — nur eine ist eine fehlende Fähigkeit</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Ursache</th><th>Erkennt man an</th><th>Hilft dagegen</th></tr></thead>
+        <tbody>
+          <tr><td>skill.missing<div class="m">Fähigkeit fehlt</div></td><td style="white-space:normal">keine Deckung im Katalog</td><td style="white-space:normal">Fähigkeit bauen (F-05)</td></tr>
+          <tr><td>knowledge.missing<div class="m">Wissen fehlt</div></td><td style="white-space:normal">Lückenbericht der Kontextmontage (G-07)</td><td style="white-space:normal">Vorbereitungsauftrag, indexieren</td></tr>
+          <tr><td>goal.wrong<div class="m">Ziel ist falsch</div></td><td style="white-space:normal">kein Abnahmekriterium formulierbar</td><td style="white-space:normal">Rückfrage (Q-01) — <b>mehr Fähigkeit macht es schlimmer</b></td></tr>
+          <tr><td>budget.exhausted<div class="m">Budget erschöpft</div></td><td style="white-space:normal">Topf leer (V-04)</td><td style="white-space:normal">aufteilen, nicht nachlegen</td></tr>
+          <tr><td>unsolvable<div class="m">So nicht lösbar</div></td><td style="white-space:normal">zwei Kriterien schließen einander aus</td><td style="white-space:normal">Zuschnitt ändern, Mensch</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b><code>coverage_rate</code> ist die fünfte Kennzahl</b> neben den vier aus Q-04: Anteil der Aufträge, die ohne
+      neue Fähigkeit auskommen. Steigt er, wird die Plattform mit jedem Auftrag billiger. Steht er, wiederholt
+      sie sich nur.</li>
+      <li><b><code>success_rate</code> je Fähigkeit</b> statt Erfolgsquote je Modell. Damit weiß man, <em>welche</em>
+      Fähigkeit schwach ist — und nicht bloß, dass „das Modell manchmal Unsinn macht&#8220;.</li>
+      <li><b>Fähigkeiten werden je Auftrag festgenagelt, nie „neueste&#8220;.</b> Sonst ändert eine
+      Katalogpflege am Dienstag das Verhalten von tausend laufenden Vorhaben (Q-04).</li>
+    </ul>
+    <div class="merk"><b>Mehr Fähigkeit auf ein falsches Ziel geworfen geht weiter in die falsche
+    Richtung.</b> Deshalb steht die Deckungsprüfung <em>hinter</em> Q-01 und nicht davor: erst das
+    Kriterium, dann die Frage, ob wir es können.</div>
+  </div>
+</section>
+
+<!-- F-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-05</span>
+    <h2 class="tafel__t">Die Lücke ist ein Auftrag</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">die Brücke wird einmal gebaut, nicht in jedem Lauf</span>
+  </div>
+  <div class="tafel__k">
+    <p>Findet ein Verfahren keinen passenden Griff, baut es ihn <b>nicht im Lauf</b>. Es meldet eine
+    Fähigkeitslücke, und die wird ein normaler Auftrag: dieselbe Pipeline, dieselben Prüfungen, derselbe
+    Prüfstand. Das ist die einzige Stelle, an der sich diese Plattform von einem geschickten Prompt
+    unterscheidet.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Weg</th><th>Kosten beim ersten Mal</th><th>Was bleibt</th></tr></thead>
+        <tbody>
+          <tr><td>Im Lauf improvisieren</td><td style="white-space:normal">scheinbar billiger</td><td style="white-space:normal">einmal benutzt, nie geprüft, nicht wiederholbar, im Katalog unsichtbar</td></tr>
+          <tr><td>Fähigkeit bauen</td><td style="white-space:normal">einmal teurer</td><td style="white-space:normal">geprüft, versioniert, mit Grenze — ab dem zweiten Auftrag umsonst</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Aufnahmefähig ist eine neue Fähigkeit erst mit</b> Nachweisklasse, benannter Grenze,
+      mindestens drei Fällen im Regressionskorpus (Q-04) und einem Namen, der auch sagt, was sie
+      <em>nicht</em> tut.</li>
+      <li><b>Wo die Brücke endet, steht ein Schild.</b> Eine abgebrochene Fähigkeit liefert Lückenbericht
+      und einen Vorschlag zur Aufteilung — nie Schweigen und nie ein halbes Ergebnis ohne Vermerk. Ein Weg,
+      der irgendwo aufhört, ist brauchbar; einer, von dem niemand weiß, wo er aufhört, ist gefährlich.</li>
+      <li><b>Der Rückschreibepfad aus G-07 gilt hier wörtlich.</b> Fähigkeiten und Urteile sind das Einzige,
+      was dieses System über tausende Aufträge hinweg billiger macht statt gleich teuer. Alles andere —
+      Modelle, Knoten, Caches — hält die Kosten bestenfalls konstant.</li>
+      <li><b>Auch Feldzüge dürfen Lücken melden.</b> Ein Plan, der ein Verfahren voraussetzt, das es nicht
+      gibt, ist kein Plan, sondern eine Absichtserklärung.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- F-06 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-06</span>
+    <h2 class="tafel__t">Was die Harness beiträgt</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">nicht klüger, sondern verlässlich</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Das Modell allein kann</th><th>Erst die Harness gibt</th></tr></thead>
+        <tbody>
+          <tr><td style="white-space:normal;font-weight:400">einen Schritt gut raten</td><td style="white-space:normal">dass zwei Läufe vergleichbar sind (Q-04)</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">plausiblen Code schreiben</td><td style="white-space:normal">dass das Ergebnis belegt ist statt behauptet (Q-02)</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">lange Kontexte lesen</td><td style="white-space:normal">dass es weiß, was es nicht gesehen hat (G-07)</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">Werkzeuge aufrufen</td><td style="white-space:normal">dass ein Aufruf höchstens einmal wirkt (K-03)</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">vorsichtig formulieren</td><td style="white-space:normal">dass es nichts darf, was der Kanal nicht erlaubt (K-04)</td></tr>
+          <tr><td style="white-space:normal;font-weight:400">aufgeben</td><td style="white-space:normal">dass Aufgeben ein verwertbares Ergebnis ist: <code>unproven</code> (K-02)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:20px"><b>Die Harness macht das Modell nicht klüger. Sie macht seine
+    Fehler sichtbar, begrenzt und wiederholbar.</b> Ein gutes Modell erreicht das Ziel oft auch ohne sie.
+    Die Frage dieser Plattform ist aber nicht, ob ein Lauf das Ziel erreicht, sondern ob man tausend
+    Ergebnissen ohne Nachprüfung trauen kann — und das ist keine Eigenschaft des Modells, sondern des
+    Systems um es herum.</div>
+    <div class="merk" style="margin-top:14px"><b>Deshalb ist der Katalog das Herzstück und nicht das
+    Zubehör.</b> Modelle werden besser und werden getauscht (E-06). Der Katalog bleibt, wächst und trägt
+    das, was an dieser Plattform eigen ist: nicht die Intelligenz, sondern die Erfahrung, in Stücken, die
+    sich einzeln prüfen lassen.</div>
+  </div>
+</section>
+
+<!-- F-07 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">F-07</span>
+    <h2 class="tafel__t">Format</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">kein eigenes erfinden</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> eine Fähigkeit wird als <code>SKILL.md</code>
+    nach dem offenen Agent-Skills-Standard abgelegt — YAML-Frontmatter plus Markdown-Rumpf, daneben
+    <code>scripts/</code>, <code>references/</code>, <code>assets/</code>. Die Teile aus F-01, die der
+    Standard nicht kennt, stehen unter <code>metadata:</code>, das er ausdrücklich offen lässt.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Teil aus F-01</th><th>Im Format</th></tr></thead>
+        <tbody>
+          <tr><td>description</td><td style="white-space:normal"><code>description</code> im Frontmatter — dort ohnehin das Auslösefeld, samt der verbreiteten Konvention „nicht verwenden für &#8230;&#8220;</td></tr>
+          <tr><td>procedure</td><td style="white-space:normal">der Markdown-Rumpf; deterministische Schritte als <code>scripts/</code>, deren Code nie in den Kontext gerät, sondern nur deren Ausgabe — genau der Schnitt aus F-02</td></tr>
+          <tr><td>precondition</td><td style="white-space:normal"><code>metadata.precondition</code>, plus <code>allowed-tools</code> für die Werkzeugseite</td></tr>
+          <tr><td>evidence</td><td style="white-space:normal"><code>metadata.evidence</code> — im Standard nicht vorgesehen, und die wichtigste Zutat dieser Plattform (Q-02)</td></tr>
+          <tr><td>boundary</td><td style="white-space:normal"><code>metadata.boundary</code> mit Ausstieg <code>gap.report</code> — der Standard kennt nur die Auswahlgrenze, nicht die Laufzeitgrenze</td></tr>
+          <tr><td>Ordnung, Vollmacht</td><td style="white-space:normal"><code>metadata.order</code> (handle · procedure · campaign), <code>metadata.min_authority</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Portabel, weil unverändert lauffähig.</b> Wer nur <code>name</code>, <code>description</code>
+      und Rumpf benutzt, läuft in jeder Laufzeit, die den Standard unterstützt; unbekannte Felder werden
+      ignoriert. Damit ist eine Fähigkeit gleichzeitig ein Katalogeintrag dieser Plattform und ein Werkzeug
+      an einer Entwicklerkonsole — dieselbe Datei, geprüft an derselben Stelle.</li>
+      <li><b>Der Pod sieht den Katalog nie.</b> Der Standard lädt alle Beschreibungen dauerhaft mit; bei
+      dreihundert Fähigkeiten wären das Zehntausende Token in jedem Pod. Hier löst die Deckungsprüfung
+      (F-04) vorher auf und legt nur die aufgelösten Fähigkeiten bei. Das ist strenger als gestaffeltes
+      Nachladen und aus demselben Grund richtig wie die Kontextmontage in G-07: <b>ein Agent wählt nicht,
+      was er liest.</b></li>
+      <li><b>Drei Zutaten fehlen dem Standard</b>, und sie sind genau die, die aus einem Katalog eine
+      Harness machen: der Nachweis (Q-02), das Festnageln je Auftrag über einen Inhalts-Hash (Q-04) und die
+      deterministische Auflösung statt der Selbstauswahl durch das Modell. Alle drei liegen in
+      <code>metadata:</code> und stören dort niemanden.</li>
+      <li><b>Was der Standard besser kann als ein Eigenbau:</b> die Beschreibung als Auslösefeld ist dort
+      seit Langem erprobt, einschließlich der Erfahrung, dass Fähigkeiten eher zu selten als zu oft greifen.
+      Diese Erfahrung übernimmt man, statt sie noch einmal zu bezahlen.</li>
+      <li><b>Evaluationen gehören zum Format, nicht daneben.</b> Die Werkzeuge des Standards für
+      Testläufe und für das Schärfen der Beschreibung sind dieselbe Arbeit wie der Regressionskorpus aus
+      F-05 und Q-04 — drei Fälle je Fähigkeit, bevor sie in den Katalog darf.</li>
+    </ul>
+    <div class="merk"><b>Ein eigenes Format hätte hier nichts gewonnen.</b> Der Katalog ist der Ort, an dem
+    diese Plattform Erfahrung ansammelt — und Erfahrung, die nur im eigenen Dateiformat lesbar ist, ist an
+    das eigene System gefesselt. Fremd ist an dieser Entscheidung nur die Hülle; alles, was F-01 bis F-06
+    verlangen, bleibt darin sichtbar.</div>
+  </div>
+</section>
+
+<div class="abschnitt">Regelwerk</div>
+
+<!-- R-A -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">R-A</span>
+    <h2 class="tafel__t">Ressourcenvertrag</h2>
+    <span class="tafel__sub">Anforderung garantiert, Limit geduldet</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead>
+          <tr><th>Klasse</th><th>CPU angefordert</th><th>CPU-Limit</th><th>RAM angefordert</th><th>RAM-Limit</th><th>Typisch für</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>tiny</td><td class="m">0,1</td><td class="m">1,0</td><td class="m">128 MB</td><td class="m">512 MB</td><td>Lesen, Suchen, Planen</td></tr>
+          <tr><td>small</td><td class="m">0,3</td><td class="m">2,0</td><td class="m">384 MB</td><td class="m">1,5 GB</td><td>Skripte, kleine Patches</td></tr>
+          <tr><td>medium</td><td class="m">1,0</td><td class="m">4,0</td><td class="m">1 GB</td><td class="m">3 GB</td><td>Bauen und Testen</td></tr>
+          <tr><td>large</td><td class="m">2,0</td><td class="m">8,0</td><td class="m">3 GB</td><td class="m">8 GB</td><td>Monorepo, E2E, Image-Bau</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Angefordert</b> ist das, was der Scheduler reserviert. <b>Limit</b> ist das, was ein Pod
+      sich kurz nehmen darf, wenn die Maschine gerade Luft hat.</li>
+      <li><code>memory.high</code> statt <code>memory.max</code> — ein Pod wird gebremst, nicht abgeschossen.
+      Das rettet lange Agent-Sitzungen, die kurz über ihr Budget rutschen.</li>
+      <li><code>cpu.weight</code> statt <code>cpu.max</code> — Lastspitzen sind erwünscht, solange sie
+      niemanden verdrängen. Fairness kommt über Gewichte, nicht über harte Deckel.</li>
+      <li><code>pids.max</code> und <code>io.latency</code> nicht vergessen: ein einzelner Pod mit einer
+      Fork-Schleife legt sonst die ganze Maschine lahm.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- R-B -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">R-B</span>
+    <h2 class="tafel__t">Scheduler</h2>
+    <span class="tafel__sub">Token je Phase, nicht ein Zähler</span>
+  </div>
+  <div class="tafel__k">
+    <p>Ein einzelner Zähler „aktive Plätze" ist zu grob. Die Phasen eines Auftrags belasten völlig
+    verschiedene Ressourcen, und ein Pod hält immer nur das Token seiner <em>aktuellen</em> Phase.
+    Wer auf eine Modellantwort wartet, gibt sein CPU-Token vorher zurück.</p>
+    <div class="kette">
+      <div class="knoten knoten--kalt"><b>net</b><span>planen, nachbessern · viele Plätze</span></div>
+      <div class="knoten"><b>io</b><span>vorbereiten, abräumen · wenige</span></div>
+      <div class="knoten knoten--sig"><b>cpu · ram</b><span>bauen, prüfen · der Engpass</span></div>
+    </div>
+    <p>Auf einer kleinen Maschine ist das kein Feinschliff: 20 Aufträge können laufen, während nur zwei
+    rechnen. Das ist der Unterschied zwischen 3 und 20 fertigen Aufträgen pro Stunde.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Priorität</th><th>Wartet höchstens</th><th>Darf verdrängen</th><th>Wofür</th></tr></thead>
+        <tbody>
+          <tr><td>interactive</td><td class="m">2 s</td><td class="m">ja</td><td>Jemand sitzt davor und schaut zu</td></tr>
+          <tr><td>batch</td><td class="m">5 min</td><td class="m">nein</td><td>Die hundert Teilaufträge eines Vorhabens</td></tr>
+          <tr><td>maintenance</td><td class="m">1 h</td><td class="m">nein</td><td>Image-Bau, Abhängigkeiten aktualisieren</td></tr>
+          <tr><td>background</td><td class="m">unbegrenzt</td><td class="m">nein</td><td>Aufräumen, Indizieren, Vorwärmen</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Alterung</b> in der Warteschlange: je länger ein Stapelauftrag wartet, desto weiter steigt er.
+      Sonst verhungert er hinter interaktiver Arbeit.</li>
+      <li>Verdrängen heißt <b>einfrieren, nicht abbrechen</b>. Der Pod verliert seinen Platz, nicht seinen Zustand.</li>
+      <li><b>Große Läufe bekommen Exklusivbetrieb.</b> Über ~60 % des verfügbaren RAM hält ein Auftrag alle
+      CPU-Token; laufende Pods werden an der nächsten Phasengrenze eingefroren.</li>
+      <li><b>Zwei große Läufe niemals zeitscheiben.</b> Sequenziell bei voller Maschine schlägt parallel bei
+      halber — Build-Werkzeuge überbuchen sich selbst, der Page Cache teilt sich, und beide kriechen in den Swap.
+      Reihenfolge: kurze zuerst, mit Alterung als Schutz.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- R-C -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">R-C</span>
+    <h2 class="tafel__t">Engpässe erkennen</h2>
+    <span class="tafel__sub">Druck statt Auslastung</span>
+  </div>
+  <div class="tafel__k">
+    <p>Auslastung ist die falsche Metrik: 100 % CPU ist gesund, 40 % CPU-<em>Druck</em> heißt, dass Arbeit
+    liegen bleibt. Lies <code>cpu.pressure</code>, <code>memory.pressure</code> und <code>io.pressure</code>
+    aus der Pods-Slice — Dateilesevorgänge, die nichts kosten und alle zwei Sekunden gehen.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Signal</th><th>Bedeutung</th><th>Reaktion</th></tr></thead>
+        <tbody>
+          <tr><td class="m">memory some avg10 &gt; 10 %</td><td>wird knapp</td><td>keine neuen Pods zulassen</td></tr>
+          <tr><td class="m">memory full avg10 &gt; 5 %</td><td>alles steht</td><td>sofort einfrieren, nicht abwarten</td></tr>
+          <tr><td class="m">io full avg10 &gt; 20 %</td><td>Platte ist der Engpass</td><td>I/O-Token auf 1, Installationen serialisieren</td></tr>
+          <tr><td class="m">cpu some avg60 &gt; 60 %</td><td>bei freien Token: etwas rechnet daneben</td><td>zram, Proxy oder Ausreißer suchen</td></tr>
+          <tr><td class="m">memory.events high steigt</td><td>Pod ist falsch eingestuft</td><td>Klasse hochsetzen, nicht mehr Zeit geben</td></tr>
+          <tr><td class="m">pgmajfault steigt schnell</td><td>Swap-Thrashing beginnt</td><td>härteste Stufe, sofort</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h4 class="mini-h" style="margin-top:24px">Eskalationsleiter</h4>
+    <div class="kette">
+      <div class="knoten"><b>1 · throttle</b><span>cpu.weight senken</span></div>
+      <div class="knoten"><b>2 · block</b><span>keine Zulassung mehr</span></div>
+      <div class="knoten knoten--kalt"><b>3 · freeze</b><span>niedrigste Priorität zuerst</span></div>
+      <div class="knoten knoten--kalt"><b>4 · checkpoint</b><span>CRIU-Dump, RAM frei</span></div>
+      <div class="knoten knoten--sig"><b>5 · escalate</b><span>an den Captain melden</span></div>
+    </div>
+    <ul class="liste" style="margin-top:8px">
+      <li><code>memory.min</code> auf der System-Slice reserviert Control Plane, Proxies und SSH hart.
+      Das ist der Unterschied zwischen „langsam geworden" und „muss neu starten".</li>
+      <li><code>memory.oom.group=1</code> als Netz darunter: falls es doch knallt, stirbt der ganze Pod
+      sauber statt eines zufälligen Prozesses.</li>
+      <li><b>Der Klassiker:</b> <code>os.cpus()</code> meldet im Container die Kerne des <em>Hosts</em>.
+      Ein Pod mit einem Kern startet vier Jest-Worker und thrasht. Injiziere <code>MAKEFLAGS</code>,
+      <code>CARGO_BUILD_JOBS</code>, <code>UV_THREADPOOL_SIZE</code>, <code>NODE_OPTIONS</code> und
+      <code>TURBO_CONCURRENCY</code> aus der Zuteilung.</li>
+      <li><b>Vorhersagen statt aufräumen:</b> Spitzen-RSS und Laufzeit je Repo und Phase mitschreiben.
+      Nach drei Läufen entscheidet die Zulassung mechanisch — über 90 % startet gar nicht erst, sondern
+      meldet sich mit Optionen zurück.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- R-D : Signature -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">R-D</span>
+    <h2 class="tafel__t">Belegungstafel</h2>
+    <span class="tafel__sub">Regler bewegen, Flotte beobachten</span>
+  </div>
+  <div class="tafel__k" style="padding-bottom:4px">
+    <p>Zwei Achsen: links die Auslegung <em>eines</em> Knotens, darunter die Zahl gleichartiger
+    Arbeitsknoten in der Zelle. Alles rechts gilt für die Zelle. Eingefrorene Pods kosten komprimierten
+    Speicher, aktive Pods kosten echten — der zram-Faktor gilt deshalb nur für die Grundlast, nicht für
+    die Rechenlast. Die Grundlast je Knoten steht mit 12 GB bewusst auf dem konservativen Wert aus E-05:
+    er trägt auch den Einzelknoten mit <code>role = all</code>. Ein reiner Arbeitsknoten liegt bei 6 GB —
+    die Tafel plant lieber zu eng als zu weit.</p>
+  </div>
+  <div class="board">
+    <div class="regler">
+      <h4>Knoten</h4>
+      <div class="feld">
+        <div class="feld__l"><span>Arbeitsspeicher</span><span id="w-ram">256 GB</span></div>
+        <input type="range" id="r-ram" min="64" max="1024" step="64" value="256" aria-label="Arbeitsspeicher in Gigabyte">
+      </div>
+      <div class="feld">
+        <div class="feld__l"><span>Kerne</span><span id="w-cpu">96</span></div>
+        <input type="range" id="r-cpu" min="16" max="256" step="16" value="96" aria-label="Anzahl vCPU">
+      </div>
+      <div class="feld">
+        <div class="feld__l"><span>Arbeitsknoten</span><span id="w-knoten">1</span></div>
+        <input type="range" id="r-knoten" min="1" max="64" step="1" value="1" aria-label="Anzahl gleichartiger Arbeitsknoten in der Zelle">
+      </div>
+      <h4 style="margin-top:26px">Last</h4>
+      <div class="feld">
+        <div class="feld__l"><span>Flotte</span><span id="w-flotte">2000</span></div>
+        <input type="range" id="r-flotte" min="100" max="6000" step="100" value="2000" aria-label="Anzahl angelegter Workpods">
+      </div>
+      <div class="feld">
+        <div class="feld__l"><span>Andrang</span><span id="w-andrang">15 %</span></div>
+        <input type="range" id="r-andrang" min="1" max="100" step="1" value="15" aria-label="Anteil der Pods, die gerade rechnen wollen">
+      </div>
+      <div class="feld">
+        <div class="feld__l"><span>Ø je aktivem Pod</span><span id="w-pod">960 MB</span></div>
+        <input type="range" id="r-pod" min="200" max="2400" step="20" value="960" aria-label="Durchschnittlicher Speicherbedarf eines aktiven Pods">
+      </div>
+    </div>
+
+    <div class="tafelseite">
+      <div class="ampel">
+        <div class="kpi kpi--heiss"><div class="kpi__l">Aktive Plätze</div><div class="kpi__v" id="k-slots">—</div></div>
+        <div class="kpi kpi--heiss"><div class="kpi__l">Davon belegt</div><div class="kpi__v" id="k-aktiv">—</div></div>
+        <div class="kpi"><div class="kpi__l">Warteschlange</div><div class="kpi__v" id="k-warte">—</div></div>
+        <div class="kpi kpi--kalt"><div class="kpi__l">Eingefroren</div><div class="kpi__v" id="k-frost">—</div></div>
+        <div class="kpi"><div class="kpi__l">Je Knoten</div><div class="kpi__v" id="k-jek">—</div></div>
+        <div class="kpi"><div class="kpi__l">Engpass</div><div class="kpi__v" id="k-eng" style="font-size:19px">—</div></div>
+      </div>
+
+      <div id="raster" role="img" aria-label="Rasterdarstellung der Flotte nach Zustand"></div>
+
+      <div class="legende">
+        <span><i style="background:var(--signal)"></i>aktiv</span>
+        <span><i style="border:1px solid var(--signal)"></i>wartet auf Platz</span>
+        <span><i style="background:var(--kalt-bg);border:1px solid var(--kalt)"></i>eingefroren</span>
+      </div>
+
+      <p class="hinweis" id="notiz">—</p>
+    </div>
+  </div>
+</section>
+
+<div class="abschnitt">Verträge</div>
+
+<!-- K-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">K-01</span>
+    <h2 class="tafel__t">Drei Objekte</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">drei Lebensdauern, eine Herkunftskette</span>
+  </div>
+  <div class="tafel__k">
+    <p>Bis hierher sind Umschlag, Vorhaben, Auftrag und Vollmacht Begriffe. Ein Abbild bauen kann man erst
+    aus Feldern. Das ist der kleinste Satz, der die Tafeln T-01 bis Q-04 trägt — nicht das Schema, aber die
+    Größen, ohne die eine der Tafeln nicht implementierbar ist.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Objekt</th><th>Trägt</th><th>Lebt</th></tr></thead>
+        <tbody>
+          <tr><td>envelope<div class="m">Umschlag</div></td><td style="white-space:normal"><code>id</code>, <code>channel</code>, <code>channel_message_id</code>, <code>sender_external</code>, <code>principal?</code>, <code>authority</code>, <code>text</code>, <code>attachments[]</code>, <code>thread</code>, <code>received_at</code>, <code>idempotency</code></td><td class="m">Minuten</td></tr>
+          <tr><td>spec<div class="m">Spezifikation</div></td><td style="white-space:normal"><code>id</code>, <code>version</code>, <code>project</code>, <code>goal</code>, <code>acceptance[]</code>, <code>assumptions[]</code>, <code>bounds</code> (Repos, Pfade, Umgebungen), <code>budget</code>, <code>risk_class</code></td><td class="m">Monate</td></tr>
+          <tr><td>order<div class="m">Auftrag</div></td><td style="white-space:normal"><code>id</code>, <code>project</code>, <code>spec@version</code>, <code>parent</code>, <code>class</code> (R-A), <code>platform</code>, <code>image_hash</code>, <code>pipeline@version</code>, <code>authority</code>, <code>budget_share</code>, <code>locality_group</code>, <code>state</code>, <code>attempt</code>, <code>idempotency</code></td><td class="m">Minuten bis Stunden</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Kennungen vergibt der Erzeuger, nicht die Datenbank.</b> Sortierbare UUID (v7) — ein zentraler
+      Zähler ist genau die Art von Serialisierung, die horizontale Skalierung später unmöglich macht.</li>
+      <li><b>Jedes Objekt trägt seine Zelle.</b> Ohne Zellkennung im Datensatz ist eine spätere Wanderung
+      zwischen Zellen (V-03) nicht durchführbar, und Mandantengrenzen sind nicht prüfbar.</li>
+      <li><b>Alles trägt sein Vorhaben.</b> Das ist keine Bequemlichkeit, sondern die Voraussetzung für
+      Löschung, Kostenzuordnung und Vorfallradius. Ein Objekt ohne Vorhabenbezug ist später nicht mehr
+      zuzuordnen und nicht mehr zu entfernen.</li>
+      <li><b>Kein Objekt enthält Geheimnisse, nur Verweise darauf.</b> Sonst steht der Schlüssel im
+      Ereignisprotokoll, im Backup und im Support-Ticket.</li>
+      <li><b>Anhänge sind Daten wie Text</b> (T-01): Typ- und Größenprüfung am Eingang, inhaltsadressiert
+      abgelegt, read-only in genau den Pod gemountet, der sie braucht, nie ausführbar. Ein PDF aus einem
+      offenen Kanal ist derselbe Angriffsweg wie eine Nachricht — nur langsamer bemerkt.</li>
+    </ul>
+    <div class="merk"><b>Die Herkunftskette ist die Bedingung für Aufklärung.</b> Auftrag zeigt auf
+    Spezifikationsversion, Spezifikation auf Umschlag, Umschlag auf Kanalnachricht. Damit ist jede Änderung
+    an der Welt rückwärts bis zu dem Satz auflösbar, der sie ausgelöst hat — und zwar mechanisch, nicht
+    durch Nachlesen von Protokollen.</div>
+  </div>
+</section>
+
+<!-- K-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">K-02</span>
+    <h2 class="tafel__t">Zustandsmaschine</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">wer schreibt, und was danach unmöglich ist</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten"><b>new</b><span>Umschlag angenommen</span></div>
+      <div class="knoten"><b>admitted</b><span>Budget reserviert</span></div>
+      <div class="knoten"><b>queued</b><span>in der Schlange (R-B)</span></div>
+      <div class="knoten knoten--sig"><b>leased</b><span>Lease erteilt</span></div>
+      <div class="knoten knoten--sig"><b>running</b><span>Pod arbeitet</span></div>
+      <div class="knoten knoten--kalt"><b>frozen</b><span>verdrängt, Zustand da</span></div>
+      <div class="knoten"><b>awaiting_reply</b><span>Rückfrage draußen</span></div>
+      <div class="knoten"><b>delivered</b><span>Evidenz erbracht</span></div>
+      <div class="knoten"><b>unproven</b><span>Ergebnis ohne Beleg</span></div>
+      <div class="knoten"><b>failed</b><span>mit Ursache</span></div>
+      <div class="knoten"><b>cancelled</b><span>Budget, Halt, Widerruf</span></div>
+    </div>
+    <div class="tabhuelle" style="margin-top:14px">
+      <table class="tab">
+        <thead><tr><th>Übergang</th><th>Schreibt</th><th>Auslöser</th></tr></thead>
+        <tbody>
+          <tr><td>queued → leased</td><td class="m">Steuerung</td><td>Worker fordert Kapazität an (V-02)</td></tr>
+          <tr><td>leased → queued</td><td class="m">Steuerung</td><td>Frist abgelaufen, kein Herzschlag</td></tr>
+          <tr><td>running → frozen</td><td class="m">Worker</td><td>Verdrängung an Phasengrenze (R-B)</td></tr>
+          <tr><td>running → awaiting_reply</td><td class="m">Worker</td><td>Rückfrage nach Q-01; Lease pausiert, Budget läuft nicht</td></tr>
+          <tr><td>running → delivered / unproven</td><td class="m">Worker</td><td>Bericht mit Evidenzklasse (Q-02)</td></tr>
+          <tr><td>jeder → cancelled</td><td class="m">Steuerung</td><td>Budget erschöpft, Vollmacht widerrufen, Halt (B-04)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Ein Feld, ein Schreiber.</b> Den Lease-Übergang schreibt ausschließlich die Steuerung, alles
+      danach ausschließlich der Worker per Bericht. Zwei Schreiber auf demselben Feld sind der Anfang jeder
+      Doppelausführung, und zwar erst unter Last, also erst in Produktion.</li>
+      <li><b>Der Versuch ist die Wiederholungseinheit</b>, nicht der Auftrag: gleiche Auftrags-ID, gleicher
+      Idempotenzschlüssel, neuer Versuchszähler, eigenes Ergebnis. Erst damit ist die harmlose
+      Doppelausführung aus V-02 auch belegbar harmlos.</li>
+      <li><b>Kein Endzustand ohne Ursache.</b> <code>failed</code> ohne Ursachenschlüssel ist ein Fehler im
+      Protokoll, kein Ergebnis — und macht später jede Auswertung nach Fehlerart (Q-03) unmöglich.</li>
+      <li><b>Rückfragen haben eine Frist.</b> Ohne Antwort nach <code>n</code> Stunden: Auftrag zurück an den
+      Captain mit dem Vorschlag, unter Annahme fortzufahren — die Annahme wird protokolliert (Q-01), nicht
+      unterschlagen. Ein Pod, der ewig auf einen Menschen wartet, ist ein Leck im Budget.</li>
+      <li><b>Zustände sind nicht rückwärts erreichbar.</b> Kein Weg zurück aus einem Endzustand; ein neuer
+      Anlauf ist ein neuer Auftrag mit Verweis auf den alten. Sonst gibt es keine Statistik, sondern nur
+      eine Momentaufnahme.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- K-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">K-03</span>
+    <h2 class="tafel__t">Wirkung nach außen</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">wo Doppelausführung aufhört, harmlos zu sein</span>
+  </div>
+  <div class="tafel__k">
+    <p>V-02 begründet den Verzicht auf Leader-Wahl damit, dass ein doppelt ausgeführter Auftrag harmlos ist.
+    Das stimmt innerhalb des Systems — Pods sind ephemer und erzeugen einen Patch. Es stimmt <b>nicht</b> an
+    der Stelle, an der aus einem Patch ein Push, aus einem Bericht eine E-Mail und aus einer Freigabe ein
+    Deploy wird. Genau dort braucht der Entwurf ein Gegenstück.</p>
+    <div class="kette">
+      <div class="knoten"><b>pod</b><span>erzeugt Wirkungsabsicht</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>outbox</b><span>Schlüssel: Auftrag + Ziel + Inhaltshash</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>gate</b><span>Git-Proxy oder Egress-Proxy</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>receipt</b><span>Ergebnis zurück in den Auftrag</span></div>
+    </div>
+    <ul class="liste" style="margin-top:8px">
+      <li><b>Zwei Tore, sonst nichts.</b> Alle Außenwirkung läuft über Git-Proxy oder Egress-Proxy. Was
+      nicht durch ein Tor geht, existiert nicht — und weil Pods kein Netz haben (T-04), ist das erzwingbar
+      statt vereinbart.</li>
+      <li><b>Der Pod wirkt nie selbst.</b> Er legt eine Absicht in den Postausgang, das Tor führt sie
+      höchstens einmal aus. Der Pod darf jederzeit sterben, verdrängt oder ausgelagert werden — die Wirkung
+      geschieht trotzdem genau einmal.</li>
+      <li><b>Der Schlüssel ist fachlich, nicht technisch.</b> <code>order + target + content_hash</code>:
+      derselbe Patch auf denselben Branch ist derselbe Push, egal wie viele Versuche ihn erzeugt haben.</li>
+      <li><b>Nicht idempotenzfähige Ziele bekommen ein Register</b> — E-Mail, Zahlung, fremde Ticketsysteme:
+      erst eintragen, dann ausführen, dann quittieren. Fehlt die Quittung, wird <em>nachgefragt</em>, nicht
+      wiederholt. Das ist der einzige Ort im System, an dem Wiederholung verboten ist.</li>
+      <li><b>Antworten in Kanäle sind Ereignisse</b> (T-02), und der Adapter dedupliziert über die
+      Ereignis-ID. Sonst erzeugt ein Steuerungsneustart 200 Nachrichten in einem Thread, den vorher niemand
+      lesen wollte.</li>
+    </ul>
+    <div class="merk"><b>Das ist der Preis für „kein Konsens&#8220;.</b> Statische Stabilität und Pull-Leases
+    kosten nichts, solange die Außenwirkung an einer Stelle serialisiert ist. Verzichtet man auf beides,
+    braucht man Raft — und zwar aus dem einzigen Grund, aus dem man Raft je braucht: damit etwas genau
+    einmal passiert.</div>
+  </div>
+</section>
+
+<!-- K-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">K-04</span>
+    <h2 class="tafel__t">Vollmacht als Token</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">ein Feld kann man setzen, eine Signatur nicht</span>
+  </div>
+  <div class="tafel__k">
+    <p>T-01 verlangt, dass kein LLM auf dem Weg die Vollmacht erhöhen kann. Als angeheftetes Feld ist das
+    eine Vereinbarung zwischen Komponenten — sie hält, solange keine kompromittiert ist. Als signiertes
+    Token ist es eine Eigenschaft. Das Format legt E-10 fest.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Im Token</th><th>Bedeutung</th></tr></thead>
+        <tbody>
+          <tr><td>issuer, cell</td><td style="white-space:normal">wer bürgt, und wo das gilt</td></tr>
+          <tr><td>principal, project</td><td style="white-space:normal">für wen, in welchem Radius</td></tr>
+          <tr><td>level</td><td style="white-space:normal">confidential · linked · public (T-01)</td></tr>
+          <tr><td>targets</td><td style="white-space:normal">Repos, Branches, Egress-Ziele, Umgebungen</td></tr>
+          <tr><td>budget</td><td style="white-space:normal">Pod-Minuten, Token, Geld (V-04)</td></tr>
+          <tr><td>expires</td><td style="white-space:normal">Minuten bis Stunden, nie Tage</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Nur Abschwächung, nie Erweiterung.</b> Jeder Hop darf Bedingungen hinzufügen — dieses Repo,
+      diese Pfade, zwanzig Minuten —, keiner darf welche entfernen. Ein Captain, der Teilaufträge erzeugt,
+      schwächt ab; das ist der einzige Weg, wie neue Vollmachten entstehen.</li>
+      <li><b>Geprüft wird an der Wirkung, nicht bei der Weitergabe.</b> Git-Proxy, Egress-Proxy und
+      Steuerungs-API prüfen jeweils vollständig. Ein Tor, das der Herkunft vertraut, ist kein Tor.</li>
+      <li><b>Kurz gültig, über den Lease erneuert.</b> Ein entwendetes Token ist damit ein Zeitfenster statt
+      eines Dauerzugangs — und ein Worker, der aus der Flotte fällt, verliert seine Rechte von selbst.</li>
+      <li><b>Widerruf je Vorhaben</b>, verteilt auf derselben Leitung wie die Egress-Allowlist und mit
+      derselben statischen Stabilität (V-02): letzte bekannte Sperrliste bleibt gültig, neue Vollmachten
+      werden verweigert.</li>
+      <li><b>Zeit ist Infrastruktur.</b> Ablauf und Lease sind Zeitfunktionen; ein Knoten mit falscher Uhr
+      erteilt oder verweigert Rechte willkürlich. Zeitsynchronisierung gehört ins Abbild und in den
+      Selbsttest (A-06), nicht in eine Betriebsanleitung.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="abschnitt">Verteilung</div>
+
+<!-- V-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">V-01</span>
+    <h2 class="tafel__t">Vier Ebenen</h2>
+    <span class="tafel__sub">logisch konstant, physisch variabel</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten knoten--sig"><b>control</b><span>Router, Scheduler, Zustand, Leases</span></div>
+      <div class="knoten"><b>captain</b><span>reservierte Kapazität je Vorhaben</span></div>
+      <div class="knoten knoten--kalt"><b>knowledge</b><span>Faktenlager, lesend skaliert</span></div>
+      <div class="knoten"><b>work</b><span>Workpods, Snapshots, Caches</span></div>
+    </div>
+    <p><b>Die Steuerebene hält nur, was teuer zu rekonstruieren ist:</b> Aufträge, Vorhaben, Vollmachten,
+    Identitätsverknüpfungen, Pipeline-Definitionen, Architekturentscheidungen, Leases. Alles andere darf sterben.</p>
+    <ul class="liste">
+      <li><b>Das Faktenlager ist eine eigene Ebene.</b> Es wird von tausenden Pods gelesen und in seltenen
+      Batches geschrieben. Bei den Workern wird es vom selben Speicherdruck zerdrückt wie sie; bei der
+      Steuerung zerdrückt es die Steuerung.</li>
+      <li><b>Der Captain gehört nicht auf die Steuerinsel.</b> Ein modellgetriebener Prozess mit
+      unvorhersehbarem Verbrauch, der fremden Text liest, hat neben der Zustandsdatenbank nichts verloren.
+      Er ist ein privilegierter Client, kein Teil der Steuerung.</li>
+      <li><b>Reservierung schlägt Priorität.</b> Priorität verspricht Reihenfolge, Reservierung verspricht
+      Verfügbarkeit. Unter Dauerlast degradiert Priorität, und du bekommst die Todesspirale: Überlast →
+      Scheduler langsam → Zulassung hinkt → mehr zugelassen → mehr Überlast.</li>
+    </ul>
+    <div class="tabhuelle" style="margin-top:18px">
+      <table class="tab">
+        <thead><tr><th>Stufe</th><th>Bindung</th><th>Schützt gegen</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td style="white-space:normal">cgroup-Slices auf einer Maschine, <code>memory.min</code></td><td>Speicherdruck, CPU-Aushungern</td></tr>
+          <tr><td>1</td><td style="white-space:normal">Steuerung in eigener VM auf demselben Host</td><td>Kernelprobleme der Arbeitslast</td></tr>
+          <tr><td>2</td><td style="white-space:normal">eigene kleine Maschine für die Steuerung</td><td>Hostausfall, I/O-Sättigung</td></tr>
+          <tr><td>3</td><td style="white-space:normal">Steuerung repliziert, Worker als Flotte</td><td>Ausfall der Steuermaschine</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:16px"><b>Die Ökonomie ist asymmetrisch.</b> Für tausende Pods
+    braucht die Steuerebene etwa 4 Kerne und 16 GB. Du schützt die teure Maschine mit einer billigen.</div>
+  </div>
+</section>
+
+<!-- V-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">V-02</span>
+    <h2 class="tafel__t">Fähre und Ausfall</h2>
+    <span class="tafel__sub">Arbeiter holen ab, Steuerung ruft nie an</span>
+  </div>
+  <div class="tafel__k">
+    <p>Nicht Push, sondern Pull. Der Worker fordert Kapazität an, bekommt Aufträge mit einer Frist und
+    verlängert sie per Herzschlag. Läuft die Frist ab, geht der Auftrag zurück in die Warteschlange.
+    Das ergibt Failover ohne Leader-Wahl — und weil Pods ephemere Snapshots sind, die einen Patch erzeugen,
+    ist ein doppelt ausgeführter Auftrag harmlos.</p>
+    <ul class="liste">
+      <li><b>Worker brauchen keinen offenen Port.</b> Alle Verbindungen gehen ausgehend. Das funktioniert
+      über NAT, Rechenzentren und Clouds — und damit auch für die Windows- und macOS-Runner aus T-04.</li>
+      <li><b>Gegendruck entsteht von selbst.</b> Ein überlasteter Worker fragt nicht nach mehr. Robuster als
+      jeder Versuch der Steuerung, freie Kapazität aus veralteten Metriken zu schätzen.</li>
+    </ul>
+    <h4 class="mini-h" style="margin-top:24px">Statische Stabilität</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Bei Ausfall der Steuerung</th><th>Verhalten</th></tr></thead>
+        <tbody>
+          <tr><td>Laufende Pods</td><td>laufen zu Ende, brauchen die Steuerung nicht</td></tr>
+          <tr><td>Gültige Leases</td><td>arbeiten bis zum Fristende weiter</td></tr>
+          <tr><td>Neue Aufträge</td><td>Adapter puffern, nichts geht verloren</td></tr>
+          <tr><td>Ergebnisse</td><td>lokal gepuffert, nachgeliefert</td></tr>
+          <tr><td>Egress-Policy</td><td>letzte bekannte Allowlist bleibt gültig</td></tr>
+          <tr><td>Neue Vollmachten</td><td>werden verweigert</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Reaper läuft auf dem Worker</b>, nicht in der Steuerung. Sitzt die Fristdurchsetzung
+      zentral, füllt ein zwanzigminütiger Ausfall die Platten aller Worker mit verwaisten Snapshots.</li>
+      <li><b>Lokalität ist die neue Engstelle.</b> Ein Pod für Repo X ist auf einem Knoten mit warmem
+      Snapshot und Cache um Größenordnungen billiger. Also: klebrige Zuordnung Repo → Knoten, Warteschlangen
+      je Lokalitätsgruppe, Work-Stealing nur innerhalb. Ein Scheduler, der gleichmäßig verteilt, ist auf
+      dieser Last <b>langsamer als eine einzelne Maschine</b>.</li>
+      <li><b>Fang nicht mit Raft an.</b> Eine Steuermaschine mit repliziertem Postgres und statischer
+      Stabilität reicht als Stufe 3. Überleben laufende Pods den Ausfall, ist ein Failover von 60 Sekunden
+      ein Nichtereignis. Konsens erst, wenn du beweisen kannst, dass du ihn brauchst.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- V-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">V-03</span>
+    <h2 class="tafel__t">Zellen</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">skaliert wird die Zelle, nicht der Cluster</span>
+  </div>
+  <div class="tafel__k">
+    <p>V-01 endet bei Stufe 3: Steuerung repliziert, Worker als Flotte. Das trägt eine Maschine bis
+    einige Dutzend. Darüber hinaus wächst nicht mehr die Zelle, sondern ihre Anzahl. Eine <b>Zelle</b> ist
+    ein vollständiges System — Steuerung, Wissen, Arbeit, Tore — mit eigener Datenbank, eigener
+    Warteschlange und eigener Obergrenze.</p>
+    <div class="kette">
+      <div class="knoten knoten--sig"><b>global</b><span>Identität, Zellzuordnung, Abbild-Index, Abrechnung</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>cell</b><span>Steuerung, Faktenlager, Warteschlange, Tore</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>locality group</b><span>Repos mit warmen Snapshots</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>node</b><span>Pods, Caches, Reaper</span></div>
+    </div>
+    <div class="tabhuelle" style="margin-top:6px">
+      <table class="tab">
+        <thead><tr><th>Ebene</th><th>Hält</th><th>Wächst durch</th><th>Ausfall bedeutet</th></tr></thead>
+        <tbody>
+          <tr><td>global</td><td style="white-space:normal">extern → Prinzipal, Vorhaben → Zelle, Abbild-Index (inhaltsadressiert), Kostenkonten</td><td class="m">gar nicht</td><td style="white-space:normal">keine neuen Vorhaben; laufende laufen weiter</td></tr>
+          <tr><td>cell</td><td style="white-space:normal">Aufträge, Spezifikationen, Vollmachten, Leases, Fakten, Urteile, Snapshots</td><td class="m">Verdopplung</td><td style="white-space:normal">die Vorhaben dieser Zelle stehen</td></tr>
+          <tr><td>node</td><td style="white-space:normal">Pods, Caches, Paket-Store, Egress-Proxy</td><td class="m">Anstellen</td><td style="white-space:normal">Leases verfallen, Aufträge kehren zurück</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Das Vorhaben ist der Routing-Schlüssel.</b> Ein Vorhaben liegt vollständig in einer Zelle —
+      Captain, Aufträge, Snapshots, Fakten, Urteile. Damit ist jede heiße Schleife zellintern und über
+      Zellgrenzen fließen nur Anmeldung, Zuordnung und Abrechnung.</li>
+      <li><b>Die Obergrenze ist eine gemessene Zahl, kein Gefühl.</b> Ein Primary, ein Scheduler, eine
+      Warteschlange — die Grenze liegt dort, wo die Zulassung anfängt zu hinken (V-01, Todesspirale). Sie
+      wird gemessen, eingetragen und danach nicht überschritten, sondern verdoppelt.</li>
+      <li><b>Ein globaler Scheduler ist ein globaler Ausfall.</b> Und er wäre auf dieser Last obendrein
+      langsamer: Lokalität schlägt Gleichverteilung (V-02). Zwei Zellen mit warmen Caches schlagen einen
+      Verbund, der Aufträge über Regionen streut.</li>
+      <li><b>Zellwechsel ist Wanderung, nicht Failover.</b> Vorhaben einfrieren, Zustand kopieren, Fakten in
+      der Zielzelle neu ableiten — sie sind ableitbar (V-05) —, umschalten. Geplant, selten, überprüfbar.</li>
+      <li><b>Der Weg dahin ist einer.</b> Stufe 0 bis 3 aus V-01 ist dieselbe Software mit anderen
+      Boot-Größen (A-02); Stufe 4 ist dieselbe Software ein zweites Mal. Nichts an diesem Entwurf wird für
+      Multi-Zelle umgebaut, wenn K-01 von Anfang an die Zellkennung führt.</li>
+    </ul>
+    <div class="merk"><b>Zellen sind zuerst eine Radiusentscheidung, dann eine Kapazitätsentscheidung.</b>
+    „Wie viele Vorhaben darf ein Vorfall treffen&#8220; ist die Frage, die die Zellgröße bestimmt — nicht
+    „wie viele Knoten verträgt Postgres&#8220;. Die zweite Zahl ist meist die größere.</div>
+  </div>
+</section>
+
+<!-- V-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">V-04</span>
+    <h2 class="tafel__t">Mandanten und Töpfe</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">tausend Absender, ein Engpass</span>
+  </div>
+  <div class="tafel__k">
+    <p>R-B ordnet Aufträge nach Priorität. Das genügt für einen Absender. Bei vielen bekommt ohne
+    Fairnessregel schlicht der die Maschine, der am schnellsten schickt — und ein einziges Vorhaben mit 200
+    Teilaufträgen verdrängt zwanzig Menschen, die auf eine Antwort warten.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Topf</th><th>Reserviert</th><th>Erschöpft heißt</th></tr></thead>
+        <tbody>
+          <tr><td>pod_minutes</td><td style="white-space:normal">bei der Zulassung, nicht bei der Abrechnung</td><td style="white-space:normal">keine neuen Aufträge, laufende zu Ende</td></tr>
+          <tr><td>tokens</td><td style="white-space:normal">vorab je Auftrag aus dem Analysebudget (G-04)</td><td style="white-space:normal">Rückmeldung mit Optionen statt stiller Kürzung</td></tr>
+          <tr><td>money</td><td style="white-space:normal">Tageskappe je Prinzipal</td><td style="white-space:normal">harte Grenze, nur ein Mensch hebt sie</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Vorab reservieren, nicht nachträglich zählen.</b> Inferenz ist der teuerste Posten (G-04);
+      eine Kostenkontrolle, die erst in der Auswertung zuschlägt, ist keine. Nicht verbrauchte Reservierung
+      fällt beim Endzustand zurück.</li>
+      <li><b>Fairness über gewichtete Anteile am Engpass</b>, nicht über eine Warteschlange je Mandant.
+      Wer wenig schickt, bekommt schnell; wer viel schickt, bekommt viel, aber nicht alles. Die Zuteilung
+      läuft über die knappste Ressource, und die wechselt (R-C).</li>
+      <li><b>Drei Kappen, drei Zwecke:</b> je Umschlag gegen Missbrauch, je Vorhaben gegen Ausreißer, je
+      Prinzipal und Tag gegen die Rechnung. Nur die dritte darf ein Mensch heben.</li>
+      <li><b>Der Mandant bestimmt die Zelle, die Zelle bestimmt die Region.</b> Für Prinzipale unter DSGVO
+      ist Datenhoheit damit eine Zuordnung, keine Einstellung: Fakten, Snapshots, Urteile und Protokolle
+      verlassen die Zelle nicht, weil sie es technisch nicht können (V-03).</li>
+      <li><b>Löschung ist ein Auftrag, kein Ticket.</b> Weil jedes Objekt sein Vorhaben trägt (K-01) und
+      Fakten ableitbar sind, ist „alles zu diesem Vorhaben entfernen&#8220; ausführbar und belegbar. Ohne die
+      Regel aus K-01 ist es beides nicht.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- V-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">V-05</span>
+    <h2 class="tafel__t">Zustand und Sicherung</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">was du nicht wiederherstellen kannst, ist die Plattform</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Datenart</th><th>Herkunft</th><th>Verlust bedeutet</th><th>Sicherung</th></tr></thead>
+        <tbody>
+          <tr><td>control state</td><td style="white-space:normal">autoritativ</td><td style="white-space:normal">die Plattform steht</td><td style="white-space:normal">synchrone Replik in der Zelle, Zeitpunkt-Wiederherstellung</td></tr>
+          <tr><td>specs</td><td style="white-space:normal">menschlich</td><td style="white-space:normal">die Absicht ist weg</td><td style="white-space:normal">wie Steuerzustand, zusätzlich exportierbar</td></tr>
+          <tr><td>decisions <span class="m">(G-01)</span></td><td style="white-space:normal">menschlich, seriell</td><td style="white-space:normal">schwerster Verlust</td><td style="white-space:normal">in Git, nicht in der Datenbank</td></tr>
+          <tr><td>judgments</td><td style="white-space:normal">teuer erzeugt</td><td style="white-space:normal">Tokenkosten erneut</td><td style="white-space:normal">Append-only-Log, repliziert</td></tr>
+          <tr><td>facts</td><td style="white-space:normal">ableitbar aus Code</td><td style="white-space:normal">Neuindexierung</td><td style="white-space:normal">Tagesschnappschuss genügt</td></tr>
+          <tr><td>snapshots, caches, images</td><td style="white-space:normal">reproduzierbar</td><td style="white-space:normal">Anlaufzeit</td><td style="white-space:normal">gar nicht sichern</td></tr>
+          <tr><td>audit</td><td style="white-space:normal">Nachweis</td><td style="white-space:normal">keine Aufklärung</td><td style="white-space:normal">getrennter Speicher, unveränderlich, eigene Frist</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Entscheidungen gehören in Git.</b> Sie sind wenige, versioniert und der einzige serielle Teil
+      des Systems (G-01) — sie müssen einen Datenbankverlust überleben und von Menschen ohne Plattform
+      lesbar sein.</li>
+      <li><b>Migrationen laufen erweiternd:</b> neues Feld schreiben, beide lesen, altes entfernen — drei
+      Auslieferungen. Bei rollendem Update ohne Drain (A-02) laufen zwei Versionen gleichzeitig; alles
+      andere ist ein geplanter Ausfall mit anderem Namen.</li>
+      <li><b>Wiederherstellung wird geübt, nicht dokumentiert.</b> Eine ungeprobte Sicherung ist eine
+      Vermutung. Die Übung ist ein normaler Auftrag: Zelle aus Sicherung neu aufbauen, gegen den
+      Regressionskorpus (Q-04) laufen lassen, Zeit messen.</li>
+      <li><b>Ableitbares nicht sichern.</b> Fakten und Snapshots zu sichern kostet mehr Platte als die Zelle
+      selbst und rettet nur Zeit, die man ohnehin für das Neuableiten hat.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="abschnitt">Betrieb</div>
+
+<!-- B-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">B-01</span>
+    <h2 class="tafel__t">Identität der Maschinen</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">wer sich Arbeiter nennen darf</span>
+  </div>
+  <div class="tafel__k">
+    <p>Der Pull-Entwurf aus V-02 verlagert die gesamte Vertrauensfrage auf einen Moment: die Anmeldung. Wer
+    ziehen darf, bekommt Aufträge, Vollmachten und die Tore. Ein Abbild allein darf das nicht genügen
+    lassen — es liegt auf jedem Knoten, in jeder Sicherung und in jedem Speicherabbild.</p>
+    <div class="kette">
+      <div class="knoten"><b>enrollment token</b><span>einmalig, Minuten gültig</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>node certificate</b><span>Rolle und Zelle im Namen</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>renewal</b><span>stündlich, überlappend</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>expiry</b><span>Zertifikat verfällt von selbst</span></div>
+    </div>
+    <ul class="liste" style="margin-top:8px">
+      <li><b>Kein geteiltes Dauergeheimnis im Abbild.</b> Ein Abbild ist wie öffentlich zu behandeln. Was
+      ein Knoten an Identität braucht, entsteht beim ersten Start und liegt verschlüsselt auf seiner
+      Datenplatte (A-05).</li>
+      <li><b>Rolle und Zelle stehen im Namen der Identität</b>, nicht in einer Tabelle daneben. Damit kann
+      die Steuerung „Arbeitsknoten aus Zelle B&#8220; als Aussage prüfen statt als Behauptung annehmen.</li>
+      <li><b>Wo Hardware es hergibt: Schlüssel im TPM, Attestierung beim Beitritt.</b> Dann ist „richtiges
+      Abbild auf richtigem Knoten&#8220; prüfbar — und A-03 bekommt seinen Zweck: Verity-Messwerte sind nur
+      dann etwas wert, wenn jemand sie abfragt.</li>
+      <li><b>Anmeldedaten für Modelle und Git liegen ausschließlich in den Toren</b>, nie auf
+      Arbeitsknoten und nie in Pods (T-04). Ein kompromittierter Arbeitsknoten kostet dann Rechenzeit,
+      keine Schlüssel.</li>
+      <li><b>Rotation ist Betrieb, nicht Notfall:</b> Knotenzertifikate stündlich, Tor-Geheimnisse
+      wöchentlich, Aussteller jährlich, jeweils mit Überlappung. Was nur im Notfall rotiert wird, rotiert
+      im Notfall zum ersten Mal.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- B-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">B-02</span>
+    <h2 class="tafel__t">Netzgrenzen und Tore</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">im Ebenenmodell fehlten sie</span>
+  </div>
+  <div class="tafel__k">
+    <p>V-01 nennt vier Ebenen: Steuerung, Kapitän, Wissen, Arbeit. Die beiden sicherheitskritischsten
+    Bauteile des ganzen Entwurfs kommen darin nicht vor — Egress-Proxy und Git-Proxy. Sie sind eine eigene
+    Ebene, und ihr Standort ist eine Entscheidung, keine Nebensache.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Grenze</th><th>Darf</th><th>Darf nicht</th></tr></thead>
+        <tbody>
+          <tr><td>pod</td><td style="white-space:normal">ein Unix-Socket zum Egress-Proxy</td><td style="white-space:normal">Netz, DNS, Ports, Nachbarpods</td></tr>
+          <tr><td>node</td><td style="white-space:normal">ausgehend zu Steuerung und Toren</td><td style="white-space:normal">eingehende Ports, auch kein SSH</td></tr>
+          <tr><td>gates</td><td style="white-space:normal">ins Internet, mit Schlüsseln und Allowlist</td><td style="white-space:normal">Aufträge annehmen, Zustand halten</td></tr>
+          <tr><td>cell</td><td style="white-space:normal">intern frei, nach außen benannt</td><td style="white-space:normal">Daten in andere Zellen (V-04)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Egress-Proxy steht auf dem Arbeitsknoten</b>, nicht zentral. Er ist der Ort, an dem
+      Schlüssel eingesetzt werden — je zentraler er steht, desto mehr Verkehr zwingt man durch eine Stelle,
+      die dann Engpass und lohnendes Ziel zugleich ist.</li>
+      <li><b>Keine Namensauflösung im Pod.</b> DNS ist der erste Tunnel, den ein kompromittierter Pod
+      benutzt. Der Proxy löst auf, der Pod kennt nur Namen, die auf seiner Allowlist stehen.</li>
+      <li><b>Allowlist je Auftrag, nicht je Knoten:</b> Ziel, Methode, Größenlimit — abgeleitet aus der
+      Vollmacht (K-04). <b>Abgelehnte Ziele sind das beste Frühwarnsignal für Injektion</b>, das dieses
+      System hat; sie gehören in die Anzeige, nicht nur ins Protokoll.</li>
+      <li><b>Kein offener Port heißt kein offener Port.</b> Fernzugriff läuft über denselben ausgehenden
+      Kanal oder gar nicht (A-04). Ein Knoten, auf den man sich einloggen kann, wird von Hand repariert —
+      und ab da gibt es keine zwei gleichen Knoten mehr.</li>
+      <li><b>Regeln kommen aus dem Abbild</b>, nicht aus der Laufzeit: alles verboten, Ausnahmen benannt.
+      Eine Firewall, die ein Dienst zur Laufzeit ändern kann, ist eine Empfehlung.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- B-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">B-03</span>
+    <h2 class="tafel__t">Beobachtung</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">eine Spur je Auftrag, nicht tausend je Pod</span>
+  </div>
+  <div class="tafel__k">
+    <p>Die Einheit der Beobachtung ist der Auftrag, nicht der Prozess und nicht der Knoten. Ein Auftrag ist
+    eine Spur vom Umschlag bis zum Ergebnis, mit den Phasen aus R-B als Abschnitten, und trägt Kosten,
+    Evidenzklasse, Versuch sowie Modell-, Prompt- und Pipelineversion (Q-04). Alles andere ist Beiwerk.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Kennzahl (SLO)</th><th>Gilt für</th><th>Bricht zuerst bei</th></tr></thead>
+        <tbody>
+          <tr><td>time_to_first_progress<div class="m">erster Fortschritt</div></td><td style="white-space:normal">interaktive Aufträge</td><td style="white-space:normal">Zulassung und Warteschlange (R-B)</td></tr>
+          <tr><td>no_clarification_rate<div class="m">ohne Rückfrage</div></td><td style="white-space:normal">alle</td><td style="white-space:normal">Absichtsqualität (Q-01)</td></tr>
+          <tr><td>escape_rate<div class="m">Durchschlupf</div></td><td style="white-space:normal">alle</td><td style="white-space:normal">Evidenzklassen (Q-02)</td></tr>
+          <tr><td>cost_per_acceptance<div class="m">Kosten je Abnahme</div></td><td style="white-space:normal">je Vorhaben und Mandant</td><td style="white-space:normal">Kontextbreite, Modellrouting (G-03, G-07)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Vier Alarme dürfen einen Menschen wecken:</b> Steuerung nicht erreichbar; Warteschlange wächst
+      über zwanzig Minuten monoton; Durchschlupf oder Ablehnungen springen; Budget einer Zelle vorzeitig
+      erschöpft. Alles andere ist eine Anzeige. Ein fünfter Alarm entwertet die vier.</li>
+      <li><b>Protokolle der Pods sind Beweismittel</b>, keine Debug-Ausgabe: sofort zum Knoten (T-04), dort
+      mit Auftrags-ID und Versuch versehen, mit dem Auftrag verknüpft aufbewahrt.</li>
+      <li><b>Die Auditspur liegt getrennt und unveränderlich:</b> wer hat wann welche Vollmacht bekommen,
+      welches Tor hat was durchgelassen, welcher Mensch hat was abgenommen. Sie ist der einzige Speicher,
+      der eine eigene Aufbewahrungsfrist je Mandant hat.</li>
+      <li><b>Kostensichtbarkeit je Vorhaben</b> ist das Stoffwechselbudget aus G-06, eine Ebene höher.
+      Dieselbe Beobachtung gilt: was eine Zahl neben sich hat, wird billiger; was keine hat, wächst.</li>
+      <li><b>Die Belegungstafel misst, sie schätzt nicht.</b> R-D ist eine Auslegungsrechnung. Im Betrieb
+      stehen an denselben Stellen echte Werte aus <code>cpu.pressure</code> und <code>memory.pressure</code>
+      (R-C) — dieselbe Anzeige, andere Quelle.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- B-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">B-04</span>
+    <h2 class="tafel__t">Der schlechte Tag</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">vorher entschieden, nicht mittendrin</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Vorfall</th><th>Erstes Mittel</th><th>Wer löst aus</th></tr></thead>
+        <tbody>
+          <tr><td>Injektion vermutet<div class="m">Tor lehnt Ziele gehäuft ab</div></td><td style="white-space:normal">Vorhaben einfrieren, Vollmachten des Vorhabens sperren (K-04)</td><td class="m">Schwellwert</td></tr>
+          <tr><td>Knoten kompromittiert</td><td style="white-space:normal">aus der Zuteilung nehmen, Pods auslagern, Knoten neu starten — das Abbild ist unveränderlich (A-03)</td><td class="m">automatisch</td></tr>
+          <tr><td>Modellanbieter gestört</td><td style="white-space:normal">zweiter Anbieter, Abnahmeklasse anheben (Q-02), Stapel pausieren</td><td class="m">Betrieb</td></tr>
+          <tr><td>Kostenausreißer</td><td style="white-space:normal">Töpfe schließen (V-04), laufende Aufträge zu Ende, keine neuen</td><td class="m">Schwellwert</td></tr>
+          <tr><td>Warteschlange läuft voll</td><td style="white-space:normal">Lastabweisung am Eingang, nach Vollmachtsstufe: <code>public</code> zuerst (T-01)</td><td class="m">automatisch</td></tr>
+          <tr><td>Vergifteter Auftrag</td><td style="white-space:normal">nach zwei Abstürzen in Quarantäne statt drittem Versuch (K-02)</td><td class="m">automatisch</td></tr>
+          <tr><td>Lage unklar</td><td style="white-space:normal">globaler Halt: keine Zulassung mehr, laufende Aufträge zu Ende, Zustand bleibt</td><td class="m">ein benannter Mensch</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der globale Halt ist eine Eigenschaft der Zulassung, kein Neustart.</b> Wer im Vorfall
+      Prozesse abschießt, vernichtet genau die Spuren, die er zur Aufklärung braucht — und macht aus
+      einem beherrschten Vorfall einen Datenverlust.</li>
+      <li><b>Abgewiesen wird am Eingang, nicht in der Mitte.</b> Ein abgelehnter Umschlag mit Begründung
+      ist billiger und ehrlicher als ein Auftrag, der nach zwanzig Minuten stirbt.</li>
+      <li><b>Jeder Automatismus hat eine Aus-Stellung und ein Protokoll.</b> Automatik, die man nicht
+      abschalten kann, ist der nächste Vorfall — und die einzige Art von Fehler, die eine Plattform wie
+      diese systematisch selbst erzeugt.</li>
+      <li><b>Geübt wird im Betrieb, nicht auf Papier:</b> Zelle ausfallen lassen, Steuerung neu starten,
+      Sicherung zurückspielen (V-05). Statische Stabilität (V-02) ist eine Behauptung, bis sie einmal
+      gemessen wurde.</li>
+    </ul>
+  </div>
+</section>
+
+<div class="abschnitt">Große Aufträge</div>
+
+<!-- G-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-01</span>
+    <h2 class="tafel__t">Gedächtnis</h2>
+    <span class="tafel__sub">drei Schichten, nie vermischt</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten"><b>facts</b><span>Symbole, Aufrufgraph, Typen, Ownership</span></div>
+      <div class="knoten"><b>judgments</b><span>Was tut das, ist das eine gute Naht</span></div>
+      <div class="knoten knoten--sig"><b>decisions</b><span>Modulgrenzen, erlaubte Kanten</span></div>
+    </div>
+    <ul class="liste">
+      <li><b>Fakten</b> werden abgeleitet, nie von einem Modell erzeugt — Compiler-Frontends,
+      Buildgraph-Abfragen, <code>git blame</code>. Ein halluzinierter Aufrufgraph ist schlimmer als keiner.</li>
+      <li><b>Urteile</b> sind teuer, unscharf und datiert. <b>Jedes zitiert die Fakten, auf denen es ruht.</b>
+      Ändert sich ein Inhalts-Hash, verfallen alle Urteile darüber automatisch. Ohne diese Regel beschreibt
+      das Gedächtnis nach drei Wellen die Codebasis von vorgestern.</li>
+      <li><b>Entscheidungen</b> sind wenige, versioniert und der einzige serielle Teil. Sie werden zu einem
+      maschinell prüfbaren Vertrag: Modul A darf von B und C abhängen, nicht von D.</li>
+      <li>Fakten liegen spaltenweise, partitioniert nach Build-Ziel, als CoW-Snapshot read-only im Pod.
+      Urteile gehen in ein Append-only-Log — neue <em>ersetzen</em> alte explizit, statt sie zu überschreiben.</li>
+      <li><b>Widersprüche werden markiert, nicht aufgelöst.</b> Wenn zwei Pods gegensätzlich urteilen, ist
+      die Grenze dort meist wirklich mehrdeutig. Genau das soll ein Mensch sehen.</li>
+    </ul>
+    <div class="merk"><b>Agenten lesen keinen Code, um zu verstehen — sie lesen Fakten.</b> 10.000 Pods mit
+    je 200K Kontext fassen zusammen unter einem Promille eines solchen Korpus. Das Faktenlager ist der
+    geteilte Speicher; Kontextfenster sind nur Register. Code wird nur in eng geschnittenen Fenstern gelesen,
+    wenn konkret etwas geändert wird.</div>
+  </div>
+</section>
+
+<!-- G-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-02</span>
+    <h2 class="tafel__t">Reduktionskaskade</h2>
+    <span class="tafel__sub">weniger analysieren schlägt schneller analysieren</span>
+  </div>
+  <div class="tafel__k">
+    <p>Bei einem Bestand, der über Jahrzehnte gewachsen ist, liegt der größte Hebel vor der Analyse.
+    Die Stufen bilden einen Trichter: jede ist Größenordnungen billiger als die nächste und verkleinert
+    deren Eingabe.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Stufe</th><th>Findet</th><th>Aufwand</th><th>Reduktion</th></tr></thead>
+        <tbody>
+          <tr><td>chunk hash</td><td>identische Blöcke, versatzunabhängig (FastCDC, BLAKE3)</td><td class="m">Minuten/TB</td><td class="m">3–10×</td></tr>
+          <tr><td>file hash</td><td>Vendor-Kopien, Branch-Duplikate</td><td class="m">Minuten</td><td class="m">+2–5×</td></tr>
+          <tr><td>AST normal form</td><td>Kopien mit kosmetischen Unterschieden</td><td class="m">Stunden</td><td class="m">+1,2–2×</td></tr>
+          <tr><td>reachability</td><td>nie erreichter Code ab Einsprungpunkt</td><td class="m">Stunden</td><td class="m">50–80 % der Fremdbäume</td></tr>
+          <tr><td>semantics</td><td>funktionsgleiche Reimplementierungen</td><td class="m">teuer</td><td class="m">wenige %</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Repräsentantenprinzip.</b> 4.000 byte-identische Dateien werden einmal analysiert, das Urteil
+      auf die Äquivalenzklasse gefächert. Bei Dedup-Faktor 10 sinkt der Tokenverbrauch für dieselbe
+      Abdeckung um 90 %.</li>
+      <li><b>Jede Stufe schreibt Äquivalenzklassen, keine Löschungen.</b> Zwei identische Dateien können
+      absichtlich geforkt sein. „Gleich für Analysezwecke" und „darf zusammengelegt werden" sind
+      verschiedene Aussagen.</li>
+      <li><b>Erreichbarkeit lügt</b> bei Reflection, dynamischem Laden, Plugin-Registries,
+      <code>#ifdef</code>-Varianten und Codegenerierung zur Bauzeit. Verwertbar erst im Schnitt mit
+      dynamischer Evidenz: statisch unerreichbar <em>und</em> in Coverage, Linker-Map und Profildaten
+      nie beobachtet.</li>
+      <li><b>Ausbauen statt löschen.</b> Die benutzte Teilmenge extrahieren, den Rest nicht mehr bauen.
+      Reversibel, und der Beweis ist der grüne Build.</li>
+    </ul>
+    <div class="merk"><b>Verkleinern und Umstrukturieren gehören in getrennte Wellen.</b> Beides gleichzeitig
+    macht jede Regression unzuordenbar — war es der Modulschnitt oder die entfernte Abhängigkeit? Erst
+    reduzieren, verhaltenserhaltend und mechanisch prüfbar. Dann schneiden.</div>
+  </div>
+</section>
+
+<!-- G-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-03</span>
+    <h2 class="tafel__t">Caches</h2>
+    <span class="tafel__sub">fünf Schichten, fünf Schlüssel</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Cache</th><th>Schlüssel</th><th>Rettet</th></tr></thead>
+        <tbody>
+          <tr><td>facts</td><td class="m">Dateiinhalt + Indexer-Version</td><td>Neuindexierung über Branches und Läufe</td></tr>
+          <tr><td>judgments</td><td class="m">AST-Normalform + Modell- und Prompt-Version + zitierte Fakten</td><td>die teuersten Token</td></tr>
+          <tr><td>build</td><td class="m">Eingaben + Toolchain</td><td>Bauzeit, den eigentlichen Engpass</td></tr>
+          <tr><td>test result</td><td class="m">Hash der betroffenen Bauhülle</td><td>ganze Testläufe</td></tr>
+          <tr><td>prompt prefix</td><td class="m">geteilter Systemteil + Kontextpräfix</td><td>bei 10.000 Pods der größte Posten</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Schlüssel enthält die Version von allem, was den Eintrag erzeugt hat.</b> Sonst serviert
+      ein Modell-Upgrade stillschweigend Urteile der alten Generation.</li>
+      <li><b>Geteilte Caches nur über einen Daemon</b>, nie als beschreibbares Verzeichnis. Ein
+      kompromittierter Pod, der ein manipuliertes Artefakt hineinlegt, ist eine Lieferketten-Attacke
+      innerhalb des eigenen Systems. Pods lesen, nur der Daemon schreibt, Einträge über den Hash ihrer
+      Eingaben adressiert.</li>
+      <li><b>Paket-Store hart verlinkt statt kopiert</b> — pnpm-Store als Bind-Mount vom Host, statt je Pod
+      ein bis zwei GB <code>node_modules</code> zu materialisieren.</li>
+      <li><b>Modell-Routing als Kostenhebel:</b> Klassifikation an ein kleines Modell, Grenzentscheidungen
+      an das große. Bei Millionen Urteilen ist das Faktor 50 auf die Rechnung.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- G-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-04</span>
+    <h2 class="tafel__t">Wellen und Budget</h2>
+    <span class="tafel__sub">wo Parallelität endet</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Phase</th><th>Skaliert</th><th>Werkzeug</th></tr></thead>
+        <tbody>
+          <tr><td>reduce</td><td class="m">nahezu linear</td><td>Hashing, kein Modell</td></tr>
+          <tr><td>index</td><td class="m">nahezu linear</td><td>Compiler-Frontends, kein Modell</td></tr>
+          <tr><td>partition</td><td class="m">linear, CPU-gebunden</td><td>Graphpartitionierung, kein Modell</td></tr>
+          <tr><td>judge</td><td class="m">linear, teuer</td><td>Modell, auf Aggregaten</td></tr>
+          <tr><td>decide</td><td class="m">gar nicht</td><td>Mensch plus ein Modell</td></tr>
+          <tr><td>run waves</td><td class="m">linear je Welle</td><td>Codemods, Modell nur im Rest</td></tr>
+          <tr><td>verify</td><td class="m">sublinear</td><td>Build und Test</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Modulgrenzen findet man mit Graphenalgorithmen, nicht mit einem Sprachmodell.</b>
+      Community-Detection auf dem Abhängigkeitsgraphen, starke Zusammenhangskomponenten für Zyklen,
+      Instabilität <code>Ce/(Ca+Ce)</code>. Das Modell benennt und beurteilt die gefundenen Cluster.</li>
+      <li><b>Wellen in umgekehrter topologischer Reihenfolge</b>, Blätter zuerst. Innerhalb einer Welle sind
+      die Änderungen per Konstruktion disjunkt. Am Ende jeder Welle eine Barriere: bauen, testen, landen.
+      10.000 Pods füllen eine Welle — die Zahl der Wellen bleibt dieselbe.</li>
+      <li><b>95 % der Änderungen mechanisch abgeleitet.</b> Das Modell entscheidet <em>ob</em> ein Symbol
+      umzieht, ein deterministischer Codemod erledigt das <em>wie</em> samt aller Referenzen.
+      Der Unterschied zwischen 99 % und 99,9 % Abdeckung ist der zwischen 10.000 und 1.000 Stellen,
+      die ein Mensch prüfen muss.</li>
+      <li><b>Der Captain bekommt ein Analysebudget</b> im Auftrag — Pod-Minuten, Token, Wanduhr. Er sieht
+      nie das Korpus, nur Aggregate, und arbeitet progressiv: ein billiger Durchgang über 100 %, ein teurer
+      nur über das Prozent, das der billige als unsicher markiert hat.</li>
+      <li><b>Tokenbudget ist ein Ressourcentopf</b> neben CPU, RAM und I/O. Bei dieser Poolgröße ist
+      Inferenz der teuerste und knappste Posten.</li>
+    </ul>
+    <div class="merk"><b>Amdahl setzt die Obergrenze, nicht die Poolgröße.</b> Sind 2 % der Arbeit die
+    serielle Architekturentscheidung, ist Faktor 50 das Maximum — bei zehn Pods wie bei zehntausend.
+    Und der Engpass ist erfahrungsgemäß nicht das Erzeugen der Änderungen, sondern das Landen: Review,
+    Build-Queue, Freigaben. Das ehrliche Ergebnis eines solchen Auftrags ist ein faktenbelegter
+    Migrationsplan plus der mechanisch verifizierbare Anteil ausgeführt — nicht „drück auf Merge".</div>
+  </div>
+</section>
+
+<!-- G-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-05</span>
+    <h2 class="tafel__t">Aktivitätszustände</h2>
+    <span class="tafel__sub">nach dem Vorbild des Genoms</span>
+  </div>
+  <div class="tafel__k">
+    <p>Tot oder lebendig ist zu grob. Der Zustand ist ein <b>Feld an jedem Fakt</b>, kein Ergebnis einer
+    einmaligen Phase — er verfällt mit dem Fakt und aktualisiert sich mit neuer Telemetrie.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Zustand</th><th>Im Genom</th><th>Im Code</th><th>Evidenz</th><th>Handlung</th></tr></thead>
+        <tbody>
+          <tr><td>active</td><td>exprimiert</td><td>erreichbar und beobachtet</td><td class="m">Coverage, Profil, ETW</td><td>nur mit Grund anfassen</td></tr>
+          <tr><td>dormant</td><td>bedingt exprimiert</td><td>erreichbar, praktisch nie ausgeführt</td><td class="m">statisch ja, Traces nein</td><td><b>niemals löschen</b> — Fehlerpfade, Recovery</td></tr>
+          <tr><td>silenced</td><td>Heterochromatin</td><td>hier ausgeschlossen, anderswo aktiv</td><td class="m">#ifdef, Flags, SKU-Matrix</td><td>nur in der Konfigurationsvereinigung</td></tr>
+          <tr><td>fossil</td><td>Pseudogen</td><td>in keiner Konfiguration erreichbar</td><td class="m">tot ∩ nie gebaut ∩ nie beobachtet</td><td>Kandidat für Ausbau</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der dritte Zustand ist das größte Korrektheitsrisiko.</b> Wer einen Build indiziert und daraus
+      auf Totsein schließt, löscht Code, der in einer anderen Variante lebt. Analyse läuft über die
+      Vereinigung aller Konfigurationen — teuer und nicht verhandelbar.</li>
+      <li><b>Exaptation prüfen.</b> Syncytin, das die Plazenta bildet, ist ein umfunktioniertes Hüllprotein
+      eines eingebauten Retrovirus: Zweck tot, Funktion essenziell. Nie nur fragen, ob der ursprüngliche
+      Aufrufer existiert — fragen, wer sich inzwischen darauf verlässt.</li>
+      <li><b>Churn als Fitness-Signal.</b> Was die Genetik als Konservierung misst, liest du aus
+      <code>git log</code>: Code, der viele Umbauten unverändert überlebt hat, ist tragend. Code, den man
+      wiederholt zu ändern versuchte und revertierte, ist eine Landmine.</li>
+      <li><b>Regulierung schlägt Struktur.</b> Mensch und Schimpanse sind kodierend nahezu identisch;
+      der Unterschied ist regulatorisch. Übertragen: der größte Gewinn liegt vermutlich im Build- und
+      Konfigurationsgraphen, nicht im Quelltext — billiger und reversibel obendrein.</li>
+    </ul>
+    <div class="merk"><b>Die historische Warnung wiegt schwerer als die Metapher.</b> Was als „Junk-DNA"
+    abgeschrieben wurde, erwies sich zu erheblichen Teilen als regulatorisch. Rechne damit, dass der
+    vermeintlich inaktive Anteil zu einem Drittel aus „Aufrufer noch nicht gefunden" besteht. Und die
+    Zwiebel hat das fünffache menschliche Genom: <b>kleiner ist nicht das Ziel, billiger ist das Ziel.</b></div>
+  </div>
+</section>
+
+<!-- G-06 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-06</span>
+    <h2 class="tafel__t">Werkzeugkasten</h2>
+    <span class="tafel__sub">was sich durchgesetzt hat</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Aufgabe</th><th>Bewährt</th></tr></thead>
+        <tbody>
+          <tr><td>Chunking, Dedup</td><td style="white-space:normal">FastCDC, BLAKE3, MinHash + LSH, Suffix-Automaten</td></tr>
+          <tr><td>Klon-Erkennung</td><td style="white-space:normal">SourcererCC, NiCad, Deckard (AST + LSH); Embeddings + HNSW für Typ-4</td></tr>
+          <tr><td>Faktenlager</td><td style="white-space:normal">Glean (Angle, inkrementell, Milliarden Fakten), Kythe, SCIP als Austauschformat — Festlegung: E-09</td></tr>
+          <tr><td>Abfrageschicht</td><td style="white-space:normal">Soufflé (Datalog nach C++ kompiliert), CodeQL, Doop für Points-to</td></tr>
+          <tr><td>Aufrufgraph</td><td style="white-space:normal">CHA/RTA billig, Steensgaard nahezu linear, Andersen nur auf Kandidaten</td></tr>
+          <tr><td>Partitionierung</td><td style="white-space:normal">Leiden statt Louvain, KaHyPar/METIS, Label Propagation; DSM und Martin-Metriken</td></tr>
+          <tr><td>Transformation</td><td style="white-space:normal">OpenRewrite (Lossless Semantic Trees), Coccinelle für C, Comby, ast-grep, clang-tidy im MapReduce</td></tr>
+          <tr><td>Verifikation</td><td style="white-space:normal">Reproduzierbare Builds + Artefakt-Diff, Mutationstests, Differential Testing</td></tr>
+          <tr><td>Ausführung</td><td style="white-space:normal">Bazel/Buck2 Remote Execution, CAS-Aktionscache, Work-Stealing je Welle</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:18px"><b>Reproduzierbare Builds sind das stärkste billige Orakel.</b>
+    Soll eine Transformation verhaltenserhaltend sein, muss das Artefakt bitgleich sein. Für die mechanischen
+    95 % ist das ein automatischer Beweis — schärfer und schneller als jede Testsuite.</div>
+
+    <h4 class="mini-h" style="margin-top:26px">Stoffwechselbudget</h4>
+    <p>Genomballast sammelt sich dort an, wo die Selektion zu schwach ist, um ihn zu entfernen — er ist
+    nicht nützlich, nur nicht teuer genug. Genau das gilt für den fossilen Anteil eines gewachsenen
+    Systems. Der wirksame Hebel ist deshalb kein Algorithmus, sondern Kostensichtbarkeit:</p>
+    <div class="kette">
+      <div class="knoten"><b>build seconds</b><span>je Modul, attribuiert</span></div>
+      <div class="knoten"><b>binary size</b><span>Beitrag zum Artefakt</span></div>
+      <div class="knoten"><b>attack surface</b><span>CVE-Exposition</span></div>
+      <div class="knoten"><b>analysis cost</b><span>Index- und Tokenaufwand</span></div>
+    </div>
+    <p>Ballast mit einer Zahl daneben wird entfernt. Ballast ohne Zahl liegt dreißig Jahre. Das ist der
+    einzige Mechanismus in diesem ganzen Dokument, der ohne Technik funktioniert — und vermutlich der
+    wirksamste.</p>
+  </div>
+</section>
+
+<!-- G-07 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">G-07</span>
+    <h2 class="tafel__t">Kontextmontage</h2>
+    <span class="tafel__sub">gilt für jeden Auftrag, nicht nur für große</span>
+  </div>
+  <div class="tafel__k">
+    <p>Ein deterministischer Schritt <em>vor</em> dem Agenten, mit Budget und Abbruchbedingung — kein
+    Verhalten, das man dem Modell überlässt.</p>
+    <div class="kette">
+      <div class="knoten"><b>1 · anchor</b><span>Intention → Symbole, per Abfrage</span></div>
+      <div class="knoten"><b>2 · hull</b><span>typisierte Traversierung</span></div>
+      <div class="knoten knoten--kalt"><b>3 · skeleton</b><span>Signaturen, breit</span></div>
+      <div class="knoten knoten--sig"><b>4 · body</b><span>nur für Überlebende</span></div>
+      <div class="knoten"><b>5 · manifest</b><span>was fehlt und warum</span></div>
+    </div>
+    <div class="tabhuelle" style="margin-top:6px">
+      <table class="tab">
+        <thead><tr><th>Kantenart</th><th>Tiefe</th><th>Begründung</th></tr></thead>
+        <tbody>
+          <tr><td>Aufgerufene Funktionen</td><td class="m">2–3</td><td>Verhalten des Ankers</td></tr>
+          <tr><td>Aufrufer</td><td class="m">1–2, bei Schnittstelle alle</td><td>Änderungsradius</td></tr>
+          <tr><td>Typen, Schnittstellen</td><td class="m">unbegrenzt</td><td>klein und tragend</td></tr>
+          <tr><td>Tests am Anker</td><td class="m">immer</td><td>ohne sie kein Selbstprüfen</td></tr>
+          <tr><td>Build und Konfiguration</td><td class="m">immer</td><td>entscheidet über Stilllegung</td></tr>
+          <tr><td>Bibliotheks-Interna</td><td class="m">0</td><td>Signaturen genügen</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Skelett kostet 5–10 % der Körper.</b> Also darf es zehn- bis zwanzigmal breiter gezogen werden.
+      Erst nach der Bewertung im Skelett werden Körper nachgeladen.</li>
+      <li><b>Die Map wird nie beschnitten.</b> Fossilien aus der Faktenbasis zu löschen macht „fossil" und
+      „nie indiziert" ununterscheidbar, tilgt die Frage „wer rief das früher auf", und trifft passiven Code —
+      Fehlerpfade und Recovery — der an einem normalen Tag genauso aussieht. Gefiltert wird der Kontext,
+      nie die Wissensebene.</li>
+      <li><b>Aktivitätszustand als Filter:</b> <code>active</code> mit Körper, <code>dormant</code> nur Signatur
+      und markiert, <code>silenced</code> nur bei passender Zielkonfiguration, <code>fossil</code> gar nicht — aber als Anzahl im Manifest,
+      damit der Agent nachfragen kann.</li>
+      <li><b>Drift als Frischemaß:</b> Commits am Code seit der letzten Änderung der Doku. Eine README mit
+      400 Commits Rückstand kommt markiert herein oder gar nicht. Anweisungen, die dem Ist-Zustand
+      widersprechen, werden vor dem Handeln gekennzeichnet.</li>
+      <li><b>Lückenbericht statt Raten.</b> Fehlt ein Index, fehlen Tests, fehlt Ownership — dann startet
+      der Pod nicht, sondern erzeugt einen Vorbereitungsauftrag oder fragt über den Adapter. Hartes Tor.</li>
+      <li><b>Nie still kürzen.</b> Sprengt die Hülle das Budget, meldet der Pod, dass der Auftrag zu breit
+      geschnitten ist, und schlägt eine Aufteilung vor. Ein Agent muss wissen, was er nicht gesehen hat.</li>
+    </ul>
+    <h4 class="mini-h" style="margin-top:24px">Dünner Kontext ändert die Pipeline</h4>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Befund</th><th>Konsequenz</th></tr></thead>
+        <tbody>
+          <tr><td>Keine Tests am Anker</td><td style="white-space:normal">Abnahme auf menschliches Review, oder Tests als eigener Auftrag zuerst</td></tr>
+          <tr><td>Keine Aufrufer gefunden</td><td style="white-space:normal">Lückenbericht — nicht indizierte Sprache ist wahrscheinlicher als „tot"</td></tr>
+          <tr><td>Keine Doku, hohe Komplexität</td><td style="white-space:normal">Auftrag als risikoreich: engerer Änderungsbereich, Plan verpflichtend</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:18px"><b>Das Kontextfenster ist der Notizzettel, die Wissensebene
+    ist das Gedächtnis.</b> Zwischen Aufträgen wird nichts mitgeschleppt — mitgetragener Kontext ist
+    unversionierter Zustand, den niemand für ungültig erklären kann. Stattdessen liefert jeder Pod am Ende
+    Urteilskandidaten mit Zitat auf ihre Fakten: „dieser Aufruf läuft über eine Registry", „dieses Flag ist
+    in allen SKUs tot". Der nächste Pod bekommt sie als billige Abfrage statt als teure Wiederentdeckung.
+    Dieser Rückschreibe-Pfad ist das Einzige, was das System über tausende Aufträge hinweg billiger macht,
+    statt gleich teuer zu bleiben.</div>
+  </div>
+</section>
+
+<div class="abschnitt">Auslieferung</div>
+
+<!-- A-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-01</span>
+    <h2 class="tafel__t">Das Systemabbild</h2>
+    <span class="tafel__sub">unveränderlich, nicht selbstgebaut</span>
+  </div>
+  <div class="tafel__k">
+    <p>Ein minimales Debian-Server-Abbild liegt bei rund 1 GB Platte und 120–150 MB RAM im Leerlauf,
+    ein hart minimiertes Eigenbau-Abbild bei etwa 250 MB und 80 MB. Die Ersparnis ist ein halbes Prozent
+    des Arbeitsspeichers auf einer kleinen Maschine — neben den Hebeln aus R-B und G-02 ist das Rauschen.</p>
+    <div class="merk"><b>Der Grund für ein eigenes Abbild ist nicht Speicherplatz, sondern Angriffsfläche,
+    Reproduzierbarkeit und Update-Disziplin.</b> Optimierst du auf Bytes, entfernst du Locales und Manpages
+    und gewinnst nichts. Optimierst du auf Angriffsfläche, baust du ein unveränderliches Wurzeldateisystem
+    ohne Paketmanager mit atomarem Rollback — und das ist viel wert.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Basis</th><th>Passt</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>Fedora CoreOS</td><td class="m">beste fertige Basis</td><td style="white-space:normal">Container als systemd-Units sind der vorgesehene Weg, nicht der geduldete; eigenes Update-Modell über rpm-ostree (siehe E-01)</td></tr>
+          <tr><td>Flatcar</td><td class="m">Alternative</td><td style="white-space:normal">setzt Kubernetes ebenso wenig voraus, /usr read-only; Kernel jedoch gesetzt — genau das Risiko, das E-01 vermeidet</td></tr>
+          <tr><td>NixOS</td><td class="m">bei eigenem Kernel</td><td style="white-space:normal">deklarativ bis in die Kernel-Konfiguration, reproduzierbar; höchste Lernkosten</td></tr>
+          <tr><td>Talos</td><td class="m">nein</td><td style="white-space:normal">läuft ausschließlich Kubernetes — widerspricht der containerd-direkt-Entscheidung</td></tr>
+          <tr><td>Bottlerocket</td><td class="m">nein</td><td style="white-space:normal">an AWS und EKS gebunden, Varianten je Kubernetes-Version</td></tr>
+          <tr><td>Eigene Distro</td><td class="m">nein</td><td style="white-space:normal">du erbst die CVE-Pipeline für jedes Paket. Sicherheitsverlust, kein Gewinn</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:18px"><b>Zuerst CRIU prüfen.</b> Die Auslagerungsstufe aus R-C
+    braucht <code>CONFIG_CHECKPOINT_RESTORE</code> und einige ptrace- und Namespace-Optionen. Flatcar und
+    FCOS liefern feste Kernel — fehlen die Optionen, verlierst du eine Eskalationsstufe. Dann ist NixOS die
+    Antwort, oder <code>mkosi</code>: ein Abbild von Hand zusammenstellen, aber aus Debian- oder
+    Fedora-Paketen, sodass deren Sicherheitspipeline hinter dir steht.</div>
+  </div>
+</section>
+
+<!-- A-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-02</span>
+    <h2 class="tafel__t">Ein Abbild, vier Rollen</h2>
+    <span class="tafel__sub">Einzel-VM und Cluster aus demselben Artefakt</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten"><b>role = all</b><span>Einzelknoten, vier Slices</span></div>
+      <div class="knoten knoten--sig"><b>role = control</b><span>Router, Scheduler, Leases</span></div>
+      <div class="knoten knoten--kalt"><b>role = knowledge</b><span>Faktenlager, repliziert</span></div>
+      <div class="knoten"><b>role = work</b><span>Workpods, Caches</span></div>
+    </div>
+    <p>Dasselbe Abbild, eine Boot-Variable — das Muster von Consul, Nomad und Vault. Skalieren heißt:
+    Knoten mit <code>role = work</code> dazustellen. Sie melden sich von selbst an, weil sie ausgehend
+    ziehen.</p>
+    <div class="gitter2" style="margin-top:20px">
+      <div>
+        <h4 class="mini-h">In den Kernel</h4>
+        <ul class="liste">
+          <li>cgroup v2 vereinheitlicht und PSI — <b>R-A, R-C</b></li>
+          <li>overlayfs, btrfs oder XFS mit Reflink — <b>T-04, G-03</b></li>
+          <li>User-Namespaces, seccomp, Landlock — <b>T-04</b></li>
+          <li>zram mit zstd, <code>CHECKPOINT_RESTORE</code> — <b>R-C</b></li>
+          <li>KVM für microVM-Runner, io_uring</li>
+          <li>Raus: ungenutzte Dateisysteme, Sound, Legacy-Treiber</li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="mini-h">In die Userland</h4>
+        <ul class="liste">
+          <li>systemd, containerd mit runc, optional runsc</li>
+          <li>btrfs-progs, nftables</li>
+          <li>das Plattform-Binary, die Zustandsdatenbank</li>
+          <li><b>Keine Toolchains.</b> Kein Compiler, kein Python, kein Node auf dem Host — die leben in
+          Container-Images, und das war von Anfang an der Sinn</li>
+          <li>Keine Editoren, keine Manpages, keine Locales außer <code>C.UTF-8</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="merk" style="margin-top:18px"><b>systemd nicht ersetzen.</b> Die Slice-Hierarchie, die
+    Socket-Aktivierung und die cgroup-Verwaltung, auf denen R-A und R-C vollständig aufbauen, kommen von
+    dort. Ein schlankeres Init spart 30 MB und kostet die halbe Ressourcensteuerung.</div>
+
+    <h4 class="mini-h" style="margin-top:26px">Das Update fällt aus dem Pull-Entwurf heraus</h4>
+    <p>Weil Worker ziehen statt gerufen zu werden, ist ein rollendes Update trivial: Der Worker hört auf zu
+    ziehen, läuft seine offenen Leases zu Ende, startet neu, meldet sich wieder an. <b>Kein Drain-Kommando
+    nötig</b> — der Gegendruck aus V-02 erledigt das von allein. Und die Steuerebene mit statischer
+    Stabilität kann neu starten, ohne dass ein laufender Pod es merkt. A/B-Partitionen, atomarer Wechsel,
+    Rollback bei fehlgeschlagenem Boot, Flottenupdate ohne Orchestrierung.</p>
+  </div>
+</section>
+
+<!-- A-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-03</span>
+    <h2 class="tafel__t">Der Abbildbau</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">zweimal gebaut, bitgleich</span>
+  </div>
+  <div class="tafel__k">
+    <div class="kette">
+      <div class="knoten"><b>source</b><span>Paketliste, Kernelkonfiguration, Units</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>build</b><span>mkosi oder Nix, ohne Netz</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--kalt"><b>seal</b><span>dm-verity, Signatur, SBOM</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten knoten--sig"><b>accept</b><span>A-06, sonst kein Kanal</span></div>
+      <div class="pfeil">→</div>
+      <div class="knoten"><b>formats</b><span>raw, qcow2, Cloud-Abbild</span></div>
+    </div>
+    <ul class="liste" style="margin-top:8px">
+      <li><b>Gebaut wird von der Plattform selbst.</b> Der Abbildbau ist ein Auftrag wie der Image-Bau in
+      T-03 — dieselbe Pipeline, dieselben Limits, dieselbe Isolation. Der einzige echte Sonderfall im
+      ganzen System ist der erste Knoten.</li>
+      <li><b>Reproduzierbar ist hier kein Ideal, sondern die Prüfung aus G-06</b>, angewandt auf das
+      Betriebssystem: zweimal gebaut, bitgleiches Artefakt. Ohne diese Eigenschaft ist die Frage „läuft auf
+      allen Knoten dasselbe&#8220; nicht beantwortbar.</li>
+      <li><b>Verity oder gar nichts.</b> Ein read-only gemountetes Wurzeldateisystem ohne Prüfsummenbaum
+      ist eine Mount-Option, kein Schutz. Der öffentliche Schlüssel liegt im Bootpfad, der private nicht auf
+      der Maschine.</li>
+      <li><b>A/B mit Bootzähler:</b> zweite Systempartition, atomarer Wechsel, Rückfall nach drei
+      Fehlstarts. <b>Und „gesund&#8220; meldet ein Knoten erst, wenn er einen Auftrag zu Ende gebracht hat</b> —
+      nicht, wenn systemd fertig ist. Sonst rollt ein defektes Abbild sauber durch die ganze Flotte.</li>
+      <li><b>Vier Rollen, ein Artefakt</b> (A-02): die Rolle darf den Inhalt nicht verändern, nur die
+      aktivierten Units. Sobald die Rolle den Bau beeinflusst, hast du vier Abbilder und drei davon sind
+      ungetestet.</li>
+      <li><b>Version ist eine Zahl, kein Zeitstempel</b>, und es gibt drei Kanäle: Kanarie, stabil,
+      gehalten. Ein Knoten weiß, in welchem er ist; ein Kanal ist eine Eigenschaft der Flotte, keine
+      Absprache.</li>
+    </ul>
+    <div class="merk"><b>SBOM und Signatur je Abbild, oder das Argument aus A-01 fällt.</b> Der Grund für ein
+    eigenes Abbild war Angriffsfläche, Reproduzierbarkeit und Update-Disziplin. Ohne Stückliste ist die
+    erste, ohne bitgleichen Neubau die zweite und ohne A/B mit Rückfall die dritte nicht eingelöst.</div>
+  </div>
+</section>
+
+<!-- A-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-04</span>
+    <h2 class="tafel__t">Der erste Start</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">fünf Größen von außen, nichts weiter</span>
+  </div>
+  <div class="tafel__k">
+    <p>Skalieren heißt in A-02: Knoten dazustellen. Damit das ein Kommando ist und keine Prozedur, muss
+    festliegen, was ein Abbild beim ersten Start von außen bekommt — und dass es sonst nichts braucht.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Größe</th><th>Quelle</th><th>Beispiel</th><th>Pflicht</th></tr></thead>
+        <tbody>
+          <tr><td>role</td><td class="m">Instanzdaten</td><td class="m">work</td><td class="m">ja</td></tr>
+          <tr><td>cell</td><td class="m">Instanzdaten</td><td class="m">eu-c1</td><td class="m">ja</td></tr>
+          <tr><td>control</td><td class="m">Instanzdaten oder DNS</td><td class="m">c1.intern:8443</td><td class="m">ja</td></tr>
+          <tr><td>enrollment_token</td><td class="m">Instanzdaten, einmalig</td><td class="m">kurzlebig</td><td class="m">ja, außer Steuerung</td></tr>
+          <tr><td>locality_group</td><td class="m">Instanzdaten</td><td class="m">monorepo-a</td><td class="m">nein</td></tr>
+          <tr><td>trust_anchor</td><td class="m">im Abbild</td><td class="m">Aussteller-Schlüssel</td><td class="m">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="kette" style="margin-top:20px">
+      <div class="knoten"><b>1 · verity</b><span>Abbild prüfen</span></div>
+      <div class="knoten"><b>2 · disk</b><span>finden, entschlüsseln, sonst anlegen</span></div>
+      <div class="knoten knoten--sig"><b>3 · enroll</b><span>Token gegen Zertifikat (B-01)</span></div>
+      <div class="knoten"><b>4 · role</b><span>Units aktivieren</span></div>
+      <div class="knoten knoten--kalt"><b>5 · selftest</b><span>Teilmenge von A-06</span></div>
+      <div class="knoten"><b>6 · register</b><span>ziehen beginnt</span></div>
+    </div>
+    <ul class="liste" style="margin-top:8px">
+      <li><b>Selbsttest fehlgeschlagen heißt: nicht anmelden.</b> Ein halb funktionierender Arbeitsknoten
+      ist teurer als ein fehlender — er nimmt Aufträge an, die er dann verliert, und verbraucht dabei
+      Leases, Budget und Vertrauen.</li>
+      <li><b>Nichts wird nachkonfiguriert.</b> Eine Änderung ist ein neues Abbild und ein neuer Start.
+      Das ist der Grund, warum es keinen SSH-Port gibt (B-02), und der einzige Weg, wie zehn oder tausend
+      Knoten dieselben bleiben.</li>
+      <li><b>Die Steuerung ist der einzige Knoten mit einer Sonderrolle beim Bootstrap</b> — sie erzeugt
+      den ersten Aussteller und den ersten Token. Ab dem zweiten Knoten ist alles derselbe Vorgang.</li>
+      <li><b>Uhrzeit vor Anmeldung.</b> Leases und Tokenablauf sind Zeitfunktionen (K-04); ein Knoten mit
+      falscher Uhr ist schlimmer als ein fehlender, weil er plausibel falsch handelt.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- A-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-05</span>
+    <h2 class="tafel__t">Platten</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">was den Neustart überlebt</span>
+  </div>
+  <div class="tafel__k">
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Bereich</th><th>Inhalt</th><th>Überlebt Update</th><th>Überlebt Neuinstallation</th></tr></thead>
+        <tbody>
+          <tr><td>System A/B</td><td style="white-space:normal">Abbild, read-only, verity</td><td class="m">wird getauscht</td><td class="m">nein</td></tr>
+          <tr><td>/var<div class="m">verschlüsselt</div></td><td style="white-space:normal">Knotenzertifikat, Worker-Zustand, Postausgang (K-03)</td><td class="m">ja</td><td class="m">nein</td></tr>
+          <tr><td>/data/work</td><td style="white-space:normal">Snapshots, Paket-Store, Build- und Layer-Cache</td><td class="m">ja</td><td class="m">nein, reproduzierbar</td></tr>
+          <tr><td>/data/db<div class="m">nur control</div></td><td style="white-space:normal">Zustandsdatenbank, Audit</td><td class="m">ja</td><td class="m">ja — das Einzige</td></tr>
+          <tr><td>zram</td><td style="white-space:normal">komprimierte Seiten eingefrorener Pods</td><td class="m">nein</td><td class="m">nein</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Reflink ist keine Vorliebe, sondern die Grundlage von T-04.</b> Ohne Snapshot in O(1) fällt
+      die Dichte, auf der dieses ganze Dokument beruht — btrfs oder XFS mit Reflink, geprüft in A-06.</li>
+      <li><b>Arbeitsplatte getrennt von der Datenplatte.</b> I/O-Druck aus Builds (R-C) trifft dann nicht
+      die Datenbank; auf der Steuerung liegen sie ohnehin nicht auf derselben Maschine (V-01, Stufe 2).</li>
+      <li><b>Verschlüsselt mit TPM-Bindung, nicht mit Passphrase.</b> Sonst startet kein Knoten ohne
+      Menschen — und eine Flotte, die zum Starten Menschen braucht, ist keine.</li>
+      <li><b>Platte ist der erste Verbrauch, der Alarm bekommt.</b> Snapshots und Caches wachsen mit der
+      Zahl gleichzeitiger Repos, nicht mit der Zahl der Pods; der Reaper (T-04) hält das im Rahmen, und wenn
+      er ausfällt, merkt man es hier zuerst.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- A-06 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">A-06</span>
+    <h2 class="tafel__t">Abnahme des Abbilds</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">fertig ist nicht bootet</span>
+  </div>
+  <div class="tafel__k">
+    <p>Jede Tafel dieses Dokuments setzt etwas voraus, das im Abbild vorhanden sein muss oder nicht. Diese
+    Liste ist die Rückseite davon: Sie prüft die Voraussetzungen einzeln, benennt die Tafel, die ausfällt,
+    wenn eine Prüfung rot ist, und ist damit zugleich der Bauplan und die Abnahme.</p>
+    <div class="tabhuelle">
+      <table class="tab">
+        <thead><tr><th>Prüfung</th><th>Nachweis</th><th>Fällt sonst aus</th></tr></thead>
+        <tbody>
+          <tr><td>cgroup v2 vereinheitlicht, PSI lesbar</td><td style="white-space:normal">Werte aus <code>cpu.pressure</code> in der Pods-Slice</td><td class="m">R-A, R-C</td></tr>
+          <tr><td>Reflink-Snapshot in O(1)</td><td style="white-space:normal">1 GB kopiert in Millisekunden, Platte wächst nicht</td><td class="m">T-04, G-03</td></tr>
+          <tr><td>User-Namespaces, seccomp, Landlock</td><td style="white-space:normal">Testpod ohne Rechte, Ausbruchsversuch scheitert</td><td class="m">T-04</td></tr>
+          <tr><td>Freezer und zram mit zstd</td><td style="white-space:normal">Pod eingefroren, Faktor <em>gemessen</em> statt angenommen</td><td class="m">R-C, R-D</td></tr>
+          <tr><td>CRIU: Dump und Restore</td><td style="white-space:normal">Beispielpod ausgelagert und wiederbelebt</td><td class="m">R-C, Stufe 4 (checkpoint)</td></tr>
+          <tr><td>Keine Toolchain, kein Paketmanager</td><td style="white-space:normal">Inventar gegen SBOM (A-03)</td><td class="m">A-01</td></tr>
+          <tr><td>Verity und Rückfall</td><td style="white-space:normal">absichtlich beschädigtes Abbild startet nicht, B übernimmt</td><td class="m">A-03</td></tr>
+          <tr><td>Keine eingehenden Ports</td><td style="white-space:normal">Scan von außen, auch nach Rollenwechsel</td><td class="m">B-02</td></tr>
+          <tr><td>role = all</td><td style="white-space:normal">ein Auftrag von Umschlag bis Patch, auf einer Maschine</td><td class="m">T-01 bis T-05</td></tr>
+          <tr><td>role = work, fremde Zelle</td><td style="white-space:normal">Aufnahme, Lease, Herzschlag, Fristablauf, Rückkehr des Auftrags</td><td class="m">V-02, V-03</td></tr>
+          <tr><td>Doppelausführung ohne Doppelwirkung</td><td style="white-space:normal">derselbe Auftrag zweimal, ein Push (K-03)</td><td class="m">V-02, K-03</td></tr>
+          <tr><td>Rollendes Update</td><td style="white-space:normal">zwei Versionen gleichzeitig, kein Auftrag verloren</td><td class="m">A-02, V-05</td></tr>
+          <tr><td>Kalibrierlauf</td><td style="white-space:normal">500 Pods angelegt, 20 aktiv; Zahlen aus R-D gegen die Messung</td><td class="m">R-D</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merk" style="margin-top:20px"><b>Das Abbild ist fertig, wenn diese Liste grün ist — nicht,
+    wenn es bootet.</b> Es ist dieselbe Regel, die Q-02 jedem Auftrag auferlegt, angewandt auf das Artefakt,
+    das die Aufträge ausführt: <em>Zuversicht ist kein Abnahmekriterium, Evidenz schon.</em> Ein Abbild ohne
+    Abnahmeprotokoll ist ein Vorschlag.</div>
+    <div class="merk" style="margin-top:14px"><b>Und die Reihenfolge ist umkehrbar.</b> Wer diese Liste
+    zuerst schreibt und danach baut, hat aus einem Architekturdokument einen Bauauftrag gemacht — genau die
+    Umformung, die Q-01 für jeden Prompt verlangt, den diese Plattform je entgegennimmt.</div>
+  </div>
+</section>
+
+<div class="abschnitt">Festlegungen</div>
+
+<!-- E-01 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-01</span>
+    <h2 class="tafel__t">Basis und Abbildwerkzeug</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">die Wahl, die die Messung überlebt</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> mkosi auf Fedora-Paketen mit dem
+    Fedora-Kernel. Wurzeldateisystem unter dm-verity, A/B über <code>systemd-sysupdate</code>,
+    Datenpartition über <code>systemd-repart</code>, die fünf Bootgrößen aus A-04 als Credentials.</div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Damit entscheidet CRIU nicht mehr die Basis.</b> Bei Fedora CoreOS und Flatcar ist der Kernel
+      gesetzt: fehlt eine Option, verlierst du die Auslagerungsstufe aus R-C und kannst nichts dagegen tun.
+      Bei mkosi ist die Kernelkonfiguration eine Datei — die Messung aus A-06 ändert dann eine Zeile statt
+      einer Architektur. Eine Entscheidung, die von einer noch nicht durchgeführten Messung abhängt, ist
+      keine; das ist der eigentliche Grund für diese Wahl.</li>
+      <li><b>Die Sicherheitspipeline bleibt bei Fedora</b> — genau das Argument, mit dem A-01 die eigene
+      Distribution ablehnt. CRIU liegt dort als Paket vor, cgroup v2, PSI, Landlock, btrfs und ein aktuelles
+      systemd ebenso.</li>
+      <li><b>A-03 bis A-05 beschreiben Punkt für Punkt systemds eigenes Abbildschema.</b> mkosi ist dessen
+      Bauwerkzeug. FCOS bringt mit rpm-ostree und Zincati ein zweites, konkurrierendes Update-Modell mit,
+      das gegen die Kanaldisziplin und den Bootzähler aus A-03 arbeitet.</li>
+      <li><b>Reproduzierbar über einen festgehaltenen Paket-Schnappschuss.</b> Ohne Pinning gibt es keinen
+      bitgleichen Neubau, und ohne den fällt die halbe Begründung aus A-01.</li>
+      <li><b>Keine Toolchain im Abbild</b> ist bei mkosi eine Paketliste, keine Nacharbeit — bei einer
+      allgemeinen Distribution ist es Rückbau.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> dauerhaften Bedarf an einem eigenen Kernel und zwei
+    Menschen im Haus, die Nix ohnehin beherrschen. Dann NixOS — die Lernkurve ist der einzige Grund, warum
+    es hier nicht steht.</p>
+  </div>
+</section>
+
+<!-- E-02 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-02</span>
+    <h2 class="tafel__t">Laufzeit und Sprache</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">ein Binary, vier Rollen, kein Interpreter</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> ein statisch gelinktes Go-Binary für
+    Steuerung, Scheduler, Worker, Adapter, beide Tore und den Agent-Harness. Postgres als einzige
+    Zustandsdatenbank, Warteschlange darin. containerd mit runc; gVisor ausschließlich für Pods der
+    Vollmachtsstufe <code>public</code>.</div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Ein Binary, keine Laufzeit auf dem Wirt</b> — die Forderung aus A-01 wörtlich. Node oder
+      Python bräuchten einen Interpreter im Abbild und widersprächen ihm damit im ersten Satz.</li>
+      <li><b>Go statt Rust:</b> die Fläche ist groß (Adapter, Scheduler, zwei Tore, Harness), die Arbeit ist
+      E/A- und datenbankgebunden, und containerd, OCI, gRPC, Postgres und nftables sind dort erstklassig
+      angebunden. Rust gewänne dort, wo fremde Formate geparst werden — die Tore prüfen Regeln, sie parsen
+      nichts.</li>
+      <li><b>Der Agent-Harness ist dasselbe Binary</b>, read-only in jeden Pod gemountet. Damit muss kein
+      Image den Agenten mitbringen, und ein Harness-Update ist ein Abbild-Update statt eines Neubaus aller
+      Images aus T-03.</li>
+      <li><b>Warteschlange in Postgres mit <code>SKIP LOCKED</code></b>, kein zweiter Broker. Bei den Raten
+      einer Zelle (V-03) ist ein Broker ein zusätzliches Ausfallteil ohne Gegenwert — und V-02 verlangt
+      ohnehin Leases, keine Zustellung.</li>
+      <li><b>gVisor an die Vollmachtsstufe gebunden, nicht an eine Einstellung.</b> Die teure Isolation
+      greift damit automatisch genau dort, wo T-01 den Text als unvertraut einstuft, und nirgends sonst.</li>
+      <li><b>4 Kerne und 16 GB für die Steuerebene</b> (V-01) sind mit Go und Postgres realistisch statt
+      optimistisch. Das ist die Zahl, an der die ganze Ökonomie aus V-01 hängt.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> ein Tor, das ein nichttriviales Format parsen muss — dann
+    Rust für dieses eine Tor. Oder gemessene Schreibraten über etwa 5.000 je Sekunde in einer Zelle — dann
+    ein Broker, und erst dann.</p>
+  </div>
+</section>
+
+<!-- E-03 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-03</span>
+    <h2 class="tafel__t">Zellzuschnitt</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">es war nie ein Entweder-oder</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> der Mandant schneidet die Zelle, die
+    Repo-Familie schneidet die Lokalitätsgruppe darin. Beide Kandidaten liegen auf verschiedenen Ebenen —
+    Datenhoheit und Vorfallradius sind Zelleigenschaften, Cache-Wärme ist eine Knoteneigenschaft.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Ebene</th><th>Schlüssel</th><th>Entscheidet über</th></tr></thead>
+        <tbody>
+          <tr><td>region</td><td style="white-space:normal">Mandant</td><td style="white-space:normal">Recht, Datenhoheit, Aufbewahrung (E-07)</td></tr>
+          <tr><td>cell</td><td style="white-space:normal">Mandant; kleine teilen sich eine</td><td style="white-space:normal">Vorfallradius, Sicherung, Wanderung (V-03)</td></tr>
+          <tr><td>locality group</td><td style="white-space:normal">Repo-Familie, Monorepo = eine</td><td style="white-space:normal">Cache-Wärme, Work-Stealing (V-02)</td></tr>
+          <tr><td>node</td><td style="white-space:normal">klebrige Zuordnung</td><td style="white-space:normal">Snapshot-Nähe, Paket-Store</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Ein Mandant überschreitet nie eine Zellgrenze.</b> Wird er zu groß, bekommt er mehrere Zellen —
+      und die werden dann nach Repo-Familie geschnitten. Die Regel bleibt dieselbe, sie greift eine Ebene
+      tiefer.</li>
+      <li><b>Ein Vorhaben liegt vollständig in einer Zelle</b> (V-03). Das ist der Satz, aus dem alles
+      Übrige folgt, und er wird nicht aufgeweicht.</li>
+      <li><b>Regulatorische Auflagen bekommen eine eigene Zelle, keine eigene Einstellung.</b> Eine
+      Einstellung, die Trennung verspricht, ist ein Konfigurationsfehler entfernt von keiner Trennung.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> nichts — der Fall, der die Regel scheinbar bricht, ist in
+    ihr bereits enthalten.</p>
+  </div>
+</section>
+
+<!-- E-04 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-04</span>
+    <h2 class="tafel__t">Zellgröße</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">voll ist, wo das eigene Versprechen bricht</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> die Zellgrenze ist die kleinere von
+    <b>500 aktiven Vorhaben</b> und der Knotenzahl, bei der p99 von <em>zugelassen → belegt</em> bei freien
+    Plätzen 2 Sekunden erreicht. Startwert 32 Arbeitsknoten. Eine neue Zelle wird bei 80 % geöffnet, nicht
+    bei 100 %.</div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Die zweite Zahl ist nicht geraten, sondern die eigene.</b> 2 Sekunden ist das Wartebudget
+      interaktiver Aufträge aus R-B. Eine Zelle ist genau dann voll, wenn ihre Zulassung anfängt, das
+      Versprechen der Plattform zu brechen — nicht, wenn die Datenbank schwitzt. Damit misst sich die
+      Skalierungsgrenze an der Erfahrung des Nutzers statt an einer Auslastungsanzeige, und das ist
+      dieselbe Unterscheidung, die R-C für den Speicher trifft.</li>
+      <li><b>Die erste Zahl kommt aus dem Radius:</b> 500 Vorhaben ist die Größenordnung, die in einer
+      Störung noch benennbar und benachrichtigbar ist. Sie wird fast immer die kleinere sein — genau wie
+      V-03 es voraussagt, und genau deshalb steht sie vorn.</li>
+      <li><b>80 % als Auslöser</b>, weil das Teilen einer Zelle Tage dauert und die Last in Sprüngen kommt:
+      ein einziges neues Vorhaben bringt zweihundert Teilaufträge mit.</li>
+      <li><b>Der technische Deckel liegt weit darüber</b> — ein Postgres-Primary trägt die Schreibraten
+      einer Zelle mühelos. Wer zuerst diesen Deckel sucht, baut Zellen zu groß und bekommt einen Vorfall,
+      den hinterher niemandem mehr erklären kann.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> eine Messung, die p99 auch bei deutlich mehr Knoten unter
+    2 Sekunden zeigt. Dann steigt die zweite Zahl — die erste nie.</p>
+  </div>
+</section>
+
+<!-- E-05 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-05</span>
+    <h2 class="tafel__t">Klassenmix und Konstanten</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">wo die Zahl wirkt, nicht wie sie lautet</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> die fünf Konstanten sind Planungswerte der
+    Belegungstafel, keine Betriebswerte. Zulassung und Verdrängung entscheiden ausschließlich über PSI und
+    gemessenes Spitzen-RSS (R-C). Der Mix hinter den Vorgaben ist <b>20/30/35/15</b> über
+    winzig/klein/mittel/groß.</div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Damit ist das Risiko falscher Konstanten vollständig eingegrenzt:</b> die Tafel plant
+      ungenau. Sie kann die Maschine nicht überbuchen, weil die Laufzeit sie nicht liest. Das ist der
+      eigentliche Abschluss dieses Punktes — nicht die Zahl, sondern der Ort, an dem sie wirkt.</li>
+    </ul>
+    <div class="tabhuelle" style="margin-top:14px">
+      <table class="tab">
+        <thead><tr><th>Konstante</th><th>Vorgabe</th><th>Ergibt sich aus</th><th>Gemessen in</th></tr></thead>
+        <tbody>
+          <tr><td>Host und Laufzeit</td><td class="m">12 GB Steuerung · 6 GB Arbeit</td><td style="white-space:normal">systemd, containerd, Tore; <code>memory.min</code> 4 GB</td><td class="m">A-06</td></tr>
+          <tr><td>Page Cache Basis</td><td class="m">8 GB</td><td style="white-space:normal">Zahl gleichzeitig genutzter Basis-Layer</td><td class="m">A-06</td></tr>
+          <tr><td>Eingefrorener Pod</td><td class="m">24 MB Seiten</td><td style="white-space:normal">Harness plus Laufzeit im Freezer</td><td class="m">A-06, je Image-Familie</td></tr>
+          <tr><td>zram-Faktor</td><td class="m">1,6</td><td style="white-space:normal">zstd auf Agentenspeicher; real meist besser</td><td class="m">A-06, je Image-Familie</td></tr>
+          <tr><td>Aktiver Pod</td><td class="m">0,8 Kerne · 960 MB</td><td style="white-space:normal">der Mix, gewichtet über R-A; beide Werte aufgerundet</td><td class="m">drei Läufe je Repo (R-C)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Mix rechnet sich auf:</b> 0,2·0,1 + 0,3·0,3 + 0,35·1,0 + 0,15·2,0 = <b>0,76 Kerne</b> und
+      0,2·128 + 0,3·384 + 0,35·1024 + 0,15·3072 = <b>960 MB</b>. Die Vorgaben der Tafel beschreiben also
+      einen <em>bauschweren</em> Betrieb — das war bisher nirgends gesagt und ist der eigentliche Befund.</li>
+      <li><b>Ein lese- und planlastiger Mix (30/40/25/5)</b> ergibt 0,5 Kerne und 600 MB und damit rund die
+      Hälfte mehr Plätze. Bei einer Plattform, deren Alltag Lesen, Planen und Zusammenfassen ist, wird sich
+      der Mix in diese Richtung bewegen — die Vorgabe ist bewusst die pessimistische.</li>
+      <li><b>Konservativ ist hier die richtige Richtung.</b> Zu wenig geplante Plätze kosten Geld. Zu viele
+      kosten den Nachweis aus R-C, und der ist teurer.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> den Kalibrierlauf aus A-06. Er ändert Zahlen, keine Regeln —
+    und trägt sie in die Tafel ein, statt sie zu diskutieren.</p>
+  </div>
+</section>
+
+<!-- E-06 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-06</span>
+    <h2 class="tafel__t">Modelle</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">Fähigkeit im Auftrag, Name in der Tabelle</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> drei Modellrollen, zwei unabhängige Anbieter,
+    Auflösung über eine Fähigkeitsangabe statt über einen Namen im Code. Der Prüfer läuft nie beim Anbieter
+    des Arbeiters. Der Anbieter ist je Vorhaben festgenagelt.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Rolle</th><th>Aufgabe</th><th>Anspruch</th><th>Anteil der Aufrufe</th></tr></thead>
+        <tbody>
+          <tr><td>classifier</td><td style="white-space:normal">Routen, Deduplizieren, Vorfiltern, Zusammenfassen</td><td style="white-space:normal">klein, billig, selbst betreibbar</td><td class="m">~90 %</td></tr>
+          <tr><td>worker</td><td style="white-space:normal">Planen, ändern, nachbessern</td><td style="white-space:normal">groß, werkzeugfähig, langer Kontext</td><td class="m">~9 %</td></tr>
+          <tr><td>reviewer</td><td style="white-space:normal">zweite Meinung auf Diff und Kriterium (Q-02)</td><td style="white-space:normal">groß, <b>anderer Anbieter</b></td><td class="m">~1 %, bei Irreversiblem immer</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Auftrag nennt Fähigkeiten und eine festgenagelte Version, keinen Anbieter</b> — dieselbe
+      Auflösung wie beim Anforderungs-Hash in T-03. Anbieter und Schlüssel setzt der Egress-Proxy ein
+      (T-04). Ein Anbieterwechsel ist damit eine Tabellenzeile und kein Eingriff in Prompts oder Code.</li>
+      <li><b>Anbieter je Vorhaben festgenagelt</b>, weil sonst bei jedem Wechsel der Prompt-Präfix-Cache
+      verfällt — bei dieser Poolgröße der größte Einzelposten (G-03).</li>
+      <li><b>Der Klassifizierer wird selbst betreibbar gewählt.</b> Er trägt das Volumen; damit ist die
+      Plattform bei einer Anbieterstörung nicht handlungsunfähig, sondern langsamer und teurer — und die
+      dritte Zeile von B-04 wird ausführbar statt hypothetisch.</li>
+      <li><b>Budgets laufen in Token, die Eurokappe reserviert zum teuersten zulässigen Anbieter</b>
+      (V-04). Dann sprengt ein Ausweichen nach B-04 nie eine Kappe, und niemand muss im Vorfall rechnen.</li>
+      <li><b>Deshalb steht in diesem Dokument kein Anbietername.</b> Die Anbieter- und Preistabelle ändert
+      sich monatlich; Namen im Entwurf werden zu Namen im Code, und Code hält länger als Preise.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> nichts an der Regel. Die Tabelle wird bei Inbetriebnahme
+    gefüllt und danach fortgeschrieben — sie ist Konfiguration, kein Entwurf.</p>
+  </div>
+</section>
+
+<!-- E-07 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-07</span>
+    <h2 class="tafel__t">Regionen und Aufbewahrung</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">global nur Kennungen, nie Inhalte</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> eine Region je Mandant, Vorgabe EU. Die
+    globale Ebene führt ausschließlich Kennungen — extern→Prinzipal, Vorhaben→Zelle, Abbild-Index,
+    Kostenkonten. Inhalte verlassen ihre Zelle nie.</div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Die zweite Festlegung trägt die erste.</b> Weil global keine Inhalte liegen (V-03), ist
+      weltweiter Betrieb möglich, ohne dass ein einziger Datensatz seine Region verlässt. Ohne diese
+      Eigenschaft wird jede Zellzuordnung zur Übermittlung.</li>
+    </ul>
+    <div class="tabhuelle" style="margin-top:14px">
+      <table class="tab">
+        <thead><tr><th>Datenart</th><th>Vorgabefrist</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>envelope<div class="m">Rohtext, Anhänge</div></td><td class="m">30 Tage</td><td style="white-space:normal">Angriffsfläche; der Verweis bleibt, der Inhalt geht</td></tr>
+          <tr><td>model_io<div class="m">Ein- und Ausgaben</div></td><td class="m">30 Tage</td><td style="white-space:normal">Aufklärung von Vorfällen; nie zum Anbietertraining</td></tr>
+          <tr><td>traces, logs<div class="m">Auftrag und Pod</div></td><td class="m">90 Tage</td><td style="white-space:normal">Betriebsfenster (B-03)</td></tr>
+          <tr><td>facts, judgments</td><td class="m">an den Inhalts-Hash gebunden</td><td style="white-space:normal">verfallen mit ihm (G-01) — eine Frist wäre die falsche Mechanik</td></tr>
+          <tr><td>specs, decisions</td><td class="m">Vorhaben + 12 Monate</td><td style="white-space:normal">das Einzige, was dem Menschen gehört (Q-01)</td></tr>
+          <tr><td>audit</td><td class="m">12 Monate, je Mandant verlängerbar</td><td style="white-space:normal">Nachweis; getrennt gespeichert (B-03)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Löschung ist ein Auftrag mit Frist von 30 Tagen</b> und ausführbar, weil jedes Objekt sein
+      Vorhaben trägt (K-01). In der Auditspur bleibt der Löschbeleg, nicht der Inhalt.</li>
+      <li><b>Gesetzliche Aufbewahrungspflichten setzt der Mandant selbst.</b> Das ist eine Rechtsfrage
+      seines Hauses; die Architektur beantwortet sie mit „je Mandant einstellbar&#8220; statt mit einer Zahl —
+      und macht die Einstellung zur Zelleigenschaft, damit sie nicht umgangen werden kann.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> eine Auflage, die Inhalte in der globalen Ebene verlangt.
+    Dann fällt die globale Ebene, nicht die Frist.</p>
+  </div>
+</section>
+
+<!-- E-08 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-08</span>
+    <h2 class="tafel__t">Der Leitstandführer</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">allein anhalten, nie allein erweitern</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> eine Rolle in Rufbereitschaft, mindestens
+    zwei geschulte Personen, eine davon aktiv. Sie darf allein anhalten und niemals allein erweitern.
+    Der Halt ist ein Zustand mit Ablauf, kein Kommando mit Wirkung.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Handlung</th><th>Wer</th><th>Regel</th></tr></thead>
+        <tbody>
+          <tr><td>halt.set</td><td class="m">eine Person</td><td style="white-space:normal">Begründung Pflicht, wird über alle Adapter gemeldet</td></tr>
+          <tr><td>halt.renew</td><td class="m">eine Person</td><td style="white-space:normal">alle 60 Minuten erneut, sonst läuft er aus</td></tr>
+          <tr><td>halt.clear</td><td class="m">eine Person</td><td style="white-space:normal">protokolliert, mit Lagebericht</td></tr>
+          <tr><td>cap.raise<div class="m">authority.extend</div></td><td class="m">zwei Personen</td><td style="white-space:normal">alles, was Rechte oder Geld vergrößert</td></tr>
+          <tr><td>project.freeze</td><td class="m">Schwellwert oder eine Person</td><td style="white-space:normal">(B-04)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Der Ablauf nach 60 Minuten ist der wichtigste Teil.</b> Ein vergessener Halt ist sonst der
+      zweite Vorfall des Tages. Ein Zustand, der Aufmerksamkeit braucht, um zu bestehen, verschwindet von
+      selbst, sobald niemand mehr hinsieht — und das ist genau richtig herum.</li>
+      <li><b>Der Halt hat einen zweiten Weg:</b> ein Feld in der Zulassung <em>und</em> eine Datei auf dem
+      Steuerknoten, die bei jeder Zulassungsentscheidung gelesen wird. Damit wirkt er auch dann, wenn die
+      API nicht mehr antwortet — der Fall, in dem man ihn braucht.</li>
+      <li><b>Anhalten ist einseitig, Erweitern nie.</b> Das ist die einzige Asymmetrie, die eine
+      Betriebsrolle braucht: die sichere Richtung darf schnell sein, die unsichere nicht.</li>
+      <li><b>Zwei Personen sind das Minimum, nicht das Ziel.</b> Eine Rolle mit einem Menschen ist keine
+      Rolle, sondern ein Urlaub vom Betrieb.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> nichts. Die Zahl der Personen wächst mit der Flotte, die
+    Regel nicht.</p>
+  </div>
+</section>
+
+<!-- E-09 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-09</span>
+    <h2 class="tafel__t">Faktenlager</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">Dateien statt Dienst, Format statt Produkt</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> SCIP als Erzeugerformat — je Sprache der
+    vorhandene Indexer. Ablage spaltenweise als Parquet, partitioniert nach Build-Ziel, Schlüssel
+    Dateiinhalt + Indexer-Version (G-03). Abfrage eingebettet im Harness, read-only im Pod — kein Dienst,
+    kein Netz. Abgeleitete Relationen rechnet Soufflé in Wartungsaufträgen und schreibt sie als weitere
+    Partitionen zurück.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Teil</th><th>Festlegung</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>Erzeuger</td><td class="m">SCIP-Indexer je Sprache</td><td style="white-space:normal">vorhanden, gepflegt, offen lizenziert; ein fehlender Indexer ist ein Auftrag (F-05), kein Projekt</td></tr>
+          <tr><td>Ablage</td><td class="m">Parquet, je Build-Ziel</td><td style="white-space:normal">„spaltenweise, partitioniert nach Build-Ziel, als CoW-Snapshot read-only im Pod" (G-01) — wörtlich genommen</td></tr>
+          <tr><td>Abfrage</td><td class="m">eingebettet (DuckDB)</td><td style="white-space:normal">Pods haben kein Netz (T-04); <code>fact.query</code> ist ein Dateilesen, kein Aufruf</td></tr>
+          <tr><td>Ableitung</td><td class="m">Soufflé, maintenance</td><td style="white-space:normal">transitiver Aufrufgraph, Erreichbarkeit, Points-to auf Kandidaten (G-06) — deterministisch, im Batch (V-01, R-B)</td></tr>
+          <tr><td>Schreiber</td><td class="m">genau einer</td><td style="white-space:normal">der Indexer der Wissensebene; Pods lesen — dieselbe Regel wie beim Cache-Daemon (G-03)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Warum kein Glean:</b> ein zustandsbehafteter Dienst je Zelle, eine zweite Speichertechnik und
+      eine eigene Betriebsfläche. Sein Gewinn — inkrementell bei Milliarden Fakten — zahlt sich erst
+      jenseits der größten Repo-Familie aus, die diese Plattform am ersten Tag trägt. Und er bleibt
+      erreichbar: hinter demselben Griff, nicht statt seiner.</li>
+      <li><b>Warum kein CodeQL:</b> die Lizenz bindet den kommerziellen Einsatz an GitHub-Bedingungen.
+      Eine Engine, die man nicht ausliefern darf, ist keine Option — unabhängig davon, wie gut sie ist.</li>
+      <li><b>Warum kein Kythe:</b> an Bazel gebunden, Pflegezustand offen. SCIP ist das, was aus dieser
+      Linie als Austauschformat in der Praxis übrig geblieben ist (G-06) — und ein Format überlebt seine
+      Werkzeuge.</li>
+      <li><b>Dasselbe eine Binary.</b> Die Abfrage liegt als eingebettete Bibliothek im Harness aus E-02 —
+      statisch gelinkt, nur größer. Ein Abfragedienst wäre ein zweiter Prozess mit eigenem Ausfall, den
+      V-01 der Wissensebene gerade erspart hat.</li>
+      <li><b>Dateien haben die Eigenschaften, die V-05 verlangt:</b> Sicherung ist ein Tagesschnappschuss,
+      Wanderung eine Kopie (V-03), Verteilung ein CoW-Snapshot mit warmem Page Cache. Fakten verlassen die
+      Zelle nie (E-07) — bei Dateien ist das ein Mount, keine Firewall-Regel.</li>
+      <li><b>Urteile bleiben, wo sie sind:</b> im Append-only-Log der Zelle (G-01, E-02). Diese Festlegung
+      betrifft die Fakten; die Verfallsmechanik über den Inhalts-Hash ändert sich nicht.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> eine Messung — sprengt der inkrementelle Neubau der größten
+    Repo-Familie das Wartungsfenster oder bricht die Snapshot-Verteilung die Lokalität (V-02), kommt Glean
+    hinter dieselbe Abfrage. Der Griff bleibt, der Speicher wechselt — genau dafür ist
+    <code>fact.query</code> eine Fähigkeit und kein Durchgriff.</p>
+  </div>
+</section>
+
+<!-- E-10 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-10</span>
+    <h2 class="tafel__t">Vollmacht und Schnittstellen</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">Abschwächung als Kryptografie, Vertrag als Schema</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> die Vollmacht aus K-04 ist ein Biscuit-Token.
+    Alle Schnittstellen — Steuerungs-API, Worker-Pull, Tore, Ereignisse — sind Protobuf über gRPC, mTLS
+    mit den Knotenzertifikaten aus B-01. Der Draht ist Protobuf, der Zustand bleibt relational (E-02): in
+    Postgres liegen Spalten, keine serialisierten Blobs.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Frage</th><th>Festlegung</th><th>Warum</th></tr></thead>
+        <tbody>
+          <tr><td>Tokenformat</td><td class="m">Biscuit</td><td style="white-space:normal">jeder Block darf nur einschränken — „nur Abschwächung, nie Erweiterung" (K-04) als Eigenschaft der Kryptografie, nicht der Disziplin</td></tr>
+          <tr><td>Prüfung</td><td class="m">öffentlicher Schlüssel</td><td style="white-space:normal">liegt im Abbild beim <code>trust_anchor</code> (A-04); die Tore brauchen kein Geheimnis — B-01 wörtlich</td></tr>
+          <tr><td>Widerruf</td><td class="m">Revocation-ID je Block</td><td style="white-space:normal">Sperrliste je Vorhaben, verteilt auf der Leitung der Egress-Allowlist, statisch stabil (K-04, V-02)</td></tr>
+          <tr><td>Draht</td><td class="m">Protobuf über gRPC</td><td style="white-space:normal">der Grund steht in E-02; Streams tragen Pull, Herzschlag und Ereignisse (V-02, T-02)</td></tr>
+          <tr><td>Entwicklung</td><td class="m">nur additive Felder</td><td style="white-space:normal">die Migrationsregel aus V-05, vom Schema erzwungen: Feldnummern sterben, sie werden nie neu vergeben</td></tr>
+          <tr><td>Identität · Vollmacht</td><td class="m">mTLS · Biscuit</td><td style="white-space:normal">das Zertifikat sagt <em>wer</em>, das Token sagt <em>was darf</em> — ein kompromittierter Knoten hat Rechenzeit, keine Rechte über seine Leases hinaus (B-01)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Warum kein JWT:</b> keine Offline-Abschwächung. Ein Captain, der Teilaufträge erzeugt, müsste
+      für jede neue Vollmacht die Steuerung anrufen — K-04 sagt, er schwächt selbst ab, und genau das kann
+      ein JWT nicht.</li>
+      <li><b>Warum keine Macaroons:</b> Abschwächung ja, aber die Prüfung braucht das Ausgangsgeheimnis —
+      ein geteiltes Dauergeheimnis in jedem Tor, das B-01 gerade verboten hat.</li>
+      <li><b>Caveats sind Daten, kein Code.</b> <code>targets</code>, <code>budget</code> und
+      <code>expires</code> aus K-04 stehen als Fakten im Token; die Auswertung an den Toren ist
+      deterministisch und begrenzt. Ein Tor führt nichts aus, es prüft (B-02).</li>
+      <li><b>Ein Schema, mehrere Darstellungen.</b> Exporte (V-05) und die Auditspur (B-03) rendern aus
+      denselben Protobuf-Definitionen; es gibt kein zweites, menschengepflegtes Format, das driften
+      könnte.</li>
+      <li><b>Auch im Pod derselbe Vertrag.</b> Harness und Worker sprechen dasselbe Schema über den lokalen
+      Socket (T-04) — vom Adapter bis ins Tor genau ein Schnittstellenschema im System.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> für das Token nichts an der Eigenschaft — ein Standard, der
+    Offline-Abschwächung mit öffentlicher Prüfung bietet, wäre ein Bibliothekswechsel, keine Umkehr. Für
+    den Draht: Drittclients erster Klasse im Browser — dann gRPC-Web als zweite Darstellung desselben
+    Schemas, nie eine zweite API.</p>
+  </div>
+</section>
+
+<!-- E-11 -->
+<section class="tafel">
+  <div class="tafel__kopf">
+    <span class="tafel__nr">E-11</span>
+    <h2 class="tafel__t">Reihenfolge</h2>
+    <span class="neu">neu</span>
+    <span class="tafel__sub">womit angefangen wird, ist auch eine Entscheidung</span>
+  </div>
+  <div class="tafel__k">
+    <div class="merk" style="margin-top:0"><b>Festgelegt:</b> gebaut wird in dieser Reihenfolge, und jeder
+    Schritt endet mit einer Messung statt mit einer Meinung. Kein Schritt beginnt, bevor der vorige seine
+    Zahl geliefert hat.</div>
+    <div class="tabhuelle" style="margin-top:20px">
+      <table class="tab">
+        <thead><tr><th>Schritt</th><th>Ergebnis</th><th>Misst</th></tr></thead>
+        <tbody>
+          <tr><td>1<div class="m">A-06 als Skript</div></td><td style="white-space:normal">gegen eine nackte mkosi-VM; die Basis steht, oder E-01 fällt</td><td class="m">die fünf Konstanten (E-05)</td></tr>
+          <tr><td>2<div class="m">K-01, K-02, E-10</div></td><td style="white-space:normal">Schema, Migrationen, Worker-Schnittstelle — der Vertrag, gegen den alles Weitere gebaut wird</td><td class="m">nichts, das ist der Punkt</td></tr>
+          <tr><td>3<div class="m">kleinstes System</div></td><td style="white-space:normal"><code>role = all</code>, ein Adapter (CLI), eine Pipeline, ein Runner — <b>ohne Captain</b>, Aufträge von Hand</td><td class="m">T-04, T-05, R-A, K-02, K-03</td></tr>
+          <tr><td>4<div class="m">Griffe aus F-03</div></td><td style="white-space:normal">die zehn Griffe zuerst — sie brauchen kein Modell und sind vor jeder Agentenfrage prüfbar; <code>fact.query</code> liest dabei den Speicher aus E-09</td><td class="m">Erfolgsquote je Griff</td></tr>
+          <tr><td>5<div class="m">Q-01, dann Captain</div></td><td style="white-space:normal">Absichtsvertrag vor dem Modell, das ihn benutzt</td><td class="m">Anteil ohne Rückfrage</td></tr>
+          <tr><td>6<div class="m">zweiter Knoten</div></td><td style="white-space:normal"><code>role = work</code>: Aufnahme, Lease, Fristablauf, rollendes Update</td><td class="m">V-02, dann erst V-03</td></tr>
+          <tr><td>7<div class="m">Q-04</div></td><td style="white-space:normal">Regressionskorpus <em>vor</em> dem ersten Modellwechsel</td><td class="m">escape_rate</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="liste" style="margin-top:18px">
+      <li><b>Schritt 3 ohne Captain ist kein Umweg.</b> Ein System, dessen Mechanik erst zusammen mit einem
+      Modell zum ersten Mal läuft, hat zwei unbekannte Fehlerquellen und keine Möglichkeit, sie zu trennen.</li>
+      <li><b>Schritt 4 vor Schritt 5</b>, weil Griffe kein Modell brauchen: sie sind die einzige Schicht,
+      die man vollständig beweisen kann, bevor irgendetwas geraten wird.</li>
+      <li><b>Der Sprung auf mehrere Zellen ist danach klein</b> — dieselbe Software ein zweites Mal,
+      vorausgesetzt K-01 führt von Anfang an die Zellkennung. Das ist der einzige Grund, warum dieses eine
+      Feld an zwei Stellen dieses Dokuments erwähnt wird.</li>
+    </ul>
+    <p class="hinweis"><b>Umgestoßen durch:</b> ein rotes Ergebnis in Schritt 1. Dann ändert sich die Basis,
+    nicht die Reihenfolge.</p>
+  </div>
+</section>
+
+<p class="fuss">
+Die Zahlen der Belegungstafel sind eine Überschlagsrechnung, kein Kapazitätsplan: je Knoten 12 GB für
+Host und Laufzeit — bewusst der konservative Wert aus E-05, der auch <code>role = all</code> trägt; ein
+reiner Arbeitsknoten liegt bei 6 GB —, 8 GB für den geteilten Page Cache der Basis-Layer, 24 MB Seiten
+je eingefrorenem Pod bei zram-Faktor 1,6 — also 15 MB echter Speicher —, 0,8 Kerne und 960 MB je aktivem
+Pod, Richtwert 32 Arbeitsknoten je Zelle. Aktive Pods gehen ungekürzt ein, weil ihre Seiten heiß sind. Alle fünf sind Planungswerte, keine
+Betriebswerte — die Zulassung liest sie nicht (E-05). Der Klassenmix dahinter ist 20/30/35/15; der
+Kalibrierlauf aus A-06 ersetzt die Vorgaben durch gemessene Zahlen.
+</p>
+
+</div>
+
+<script>
+(function(){
+  var HOST_GB = 12, CACHE_GB = 8, FROST_MB = 24, ZRAM = 1.6, CPU_JE_POD = 0.8;
+  var KNOTEN_JE_ZELLE = 32;
+  var MAX_FELDER = 468;
+
+  var el = function(id){ return document.getElementById(id); };
+  var regler = ['r-ram','r-cpu','r-knoten','r-flotte','r-andrang','r-pod'].map(el);
+  var raster = el('raster');
+  var felder = [];
+
+  function fmt(n){ return n.toLocaleString('de-DE'); }
+
+  function bauRaster(anz){
+    while(felder.length < anz){
+      var d = document.createElement('span');
+      d.className = 'z';
+      raster.appendChild(d);
+      felder.push(d);
+    }
+    while(felder.length > anz){
+      raster.removeChild(felder.pop());
+    }
+  }
+
+  function rechne(){
+    var ramGB   = +el('r-ram').value;
+    var cpu     = +el('r-cpu').value;
+    var knoten  = +el('r-knoten').value;
+    var flotte  = +el('r-flotte').value;
+    var andrang = +el('r-andrang').value;
+    var podMB   = +el('r-pod').value;
+
+    el('w-ram').textContent     = ramGB + ' GB';
+    el('w-cpu').textContent     = cpu;
+    el('w-knoten').textContent  = knoten;
+    el('w-flotte').textContent  = fmt(flotte);
+    el('w-andrang').textContent = andrang + ' %';
+    el('w-pod').textContent     = podMB + ' MB';
+
+    // Eingefrorene Pods liegen komprimiert in zram, aktive Pods liegen heiss im Speicher.
+    var frostMB    = FROST_MB / ZRAM;
+    var jeKnoten   = flotte / knoten;
+    var verfuegbar = Math.max(0, ramGB - HOST_GB - CACHE_GB) * 1024;
+    var grundlast  = jeKnoten * frostMB;
+    var rest       = verfuegbar - grundlast;
+    var aufpreis   = Math.max(1, podMB - frostMB);
+
+    var ramPlätzeK = Math.max(0, Math.floor(rest / aufpreis));
+    var cpuPlätzeK = Math.max(0, Math.floor(cpu / CPU_JE_POD));
+    var plaetzeK    = Math.min(ramPlätzeK, cpuPlätzeK, Math.ceil(jeKnoten));
+    var plaetze     = Math.min(plaetzeK * knoten, flotte);
+
+    var wollen = Math.round(flotte * andrang / 100);
+    var aktiv  = Math.min(wollen, plaetze);
+    var warte  = wollen - aktiv;
+    var frost  = flotte - aktiv - warte;
+    var zellen = Math.ceil(knoten / KNOTEN_JE_ZELLE);
+
+    el('k-slots').textContent = fmt(plaetze);
+    el('k-aktiv').textContent = fmt(aktiv);
+    el('k-warte').textContent = fmt(warte);
+    el('k-frost').textContent = fmt(frost);
+    el('k-jek').textContent   = fmt(plaetzeK);
+
+    var engpass, notiz;
+    if(rest <= 0){
+      engpass = 'Flotte';
+      notiz = 'Die Flotte allein frisst den Speicher auf: ' + fmt(Math.round(grundlast/1024)) +
+              ' GB je Knoten nur fürs Eingefrorensein. Ab hier muss ausgelagert werden — Zustand auf ' +
+              'Platte dumpen und RAM vollständig freigeben (R-C, Stufe 4 · checkpoint), oder die Flotte auf mehr ' +
+              'Knoten verteilen.';
+    } else if(ramPlätzeK < cpuPlätzeK){
+      engpass = 'Speicher';
+      notiz = 'Speicher ist knapper als Rechenzeit. Je Knoten wären ' + fmt(cpuPlätzeK - ramPlätzeK) +
+              ' Plätze an Kernen noch zu vergeben, aber kein Platz dafür. Hebel: kleinere Images, ' +
+              'geteilte Paket-Caches statt eigener node_modules, Prüfschritte serialisieren.';
+    } else if(cpuPlätzeK < ramPlätzeK){
+      engpass = 'Kerne';
+      notiz = 'Rechenzeit ist knapper als Speicher. Je Knoten wären ' + fmt(ramPlätzeK - cpuPlätzeK) +
+              ' Plätze bezahlbar, aber keine Kerne frei. Hebel: Testläufe entzerren, Build-Caches ' +
+              'teilen, Aufträge niedriger Priorität nach hinten schieben.';
+    } else {
+      engpass = 'im Lot';
+      notiz = 'Speicher und Kerne laufen gleich aus. Selten, aber das ist die Auslegung, die man anstrebt.';
+    }
+
+    if(warte === 0 && aktiv > 0 && rest > 0){
+      notiz = 'Alle ' + fmt(aktiv) + ' Anfragen bekommen sofort einen Platz, ' + fmt(plaetze - aktiv) +
+              ' bleiben frei. ' + fmt(frost) + ' Pods warten eingefroren und kosten dabei ' +
+              fmt(Math.round(frost * frostMB / 1024)) + ' GB — genau darum ist eine Flotte von ' +
+              fmt(flotte) + ' überhaupt tragbar.';
+    } else if(warte > 0 && rest > 0){
+      notiz = fmt(warte) + ' Aufträge stehen in der Warteschlange. Das ist kein Fehler, sondern die ' +
+              'Zulassungskontrolle bei der Arbeit: lieber ' + fmt(aktiv) + ' Pods, die zügig fertig ' +
+              'werden, als ' + fmt(wollen) + ', die sich gegenseitig ausbremsen. ' + notiz;
+    }
+
+    if(knoten > 1){
+      notiz += ' Waagerecht: ' + fmt(knoten) + ' Knoten tragen ' + fmt(plaetze) + ' Plätze, ' +
+               fmt(plaetzeK) + ' je Knoten.';
+    }
+    if(zellen > 1){
+      notiz += ' ' + fmt(knoten) + ' Knoten liegen über dem Richtwert je Zelle — ab hier ' +
+               fmt(zellen) + ' Zellen statt einer größeren (V-03).';
+    }
+
+    el('k-eng').textContent = engpass;
+    el('notiz').innerHTML = '<b>' + engpass + '.</b> ' + notiz;
+
+    var anz = Math.min(flotte, MAX_FELDER);
+    var teiler = flotte / anz;
+    bauRaster(anz);
+    var fAktiv = Math.round(aktiv / teiler);
+    var fWarte = Math.round(warte / teiler);
+    for(var i = 0; i < anz; i++){
+      var k = 'z';
+      if(i < fAktiv) k += ' z--aktiv';
+      else if(i < fAktiv + fWarte) k += ' z--warte';
+      else k += ' z--frost';
+      if(felder[i].className !== k) felder[i].className = k;
+    }
+    raster.setAttribute('aria-label',
+      'Flotte: ' + fmt(aktiv) + ' aktiv, ' + fmt(warte) + ' wartend, ' + fmt(frost) + ' eingefroren.');
+  }
+
+  regler.forEach(function(r){ r.addEventListener('input', rechne); });
+  rechne();
+})();
+</script>
+</body>
+</html>
