@@ -102,7 +102,7 @@ echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
 # is started at all.
 timeout --foreground "$TIMEOUT" \
   mkosi --directory "$HERE" --output-directory "$OUTPUT" \
-        --ephemeral --console=native --firmware=uefi \
+        --ephemeral=yes --console=native --firmware=uefi \
         --credential "$CREDS" \
         --kernel-command-line-extra \
           "systemd.run=\"/bin/bash /run/credentials/@system/workpod.check\" systemd.run_success_action=poweroff systemd.run_failure_action=poweroff" \
