@@ -7,9 +7,9 @@
 # It runs in a Fedora container because mkosi builds Fedora images with Fedora's own package
 # tooling, and E-01 rules that the security pipeline stays with Fedora.
 #
-# mkosi itself is pinned to the version in image/mkosi.version and taken from its own repository,
+# mkosi itself is pinned to the version in image/tool-version and taken from its own repository,
 # not from `dnf install mkosi`. Two reasons, and the second is the important one:
-#   1. Fedora 43 ships 25.3, which has no `Snapshot=` — the setting the package pin depends on.
+#   1. Fedora 43 ships 25.3, which lacks settings this configuration uses.
 #   2. The build tool is an input to the artifact. A distribution update to mkosi would change the
 #      output and break the very claim this leg exists to make. Pinning the packages while leaving
 #      the tool floating would be half a pin.
@@ -46,10 +46,10 @@ jobs:
       - name: Trust the checkout
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Pin mkosi to the version in image/mkosi.version
+      - name: Pin mkosi to the version in image/tool-version
         run: |
           set -eu
-          v="$(cat image/mkosi.version)"
+          v="$(cat image/tool-version)"
           git clone --depth 1 --branch "v$v" https://github.com/systemd/mkosi /opt/mkosi
           echo /opt/mkosi/bin >> "$GITHUB_PATH"
 
