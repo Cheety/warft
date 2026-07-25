@@ -105,9 +105,10 @@ there are more files**. A row turns green through a run, never through an explan
 `make acceptance` is that instrument. `acceptance/registry.tsv` holds the state of all 212 checks;
 `03-acceptance-matrix.md` stays the source of which checks exist, and the two are kept in step —
 drift is an error, not a silent omission. A check has three states: `red` (not evidenced, the
-starting state of every check), `green` (evidenced through a run, set by the work package that owns
-it), and `open` (deliberately open, and only with a justification naming a file in `decisions/`).
-Never set a row green by hand to mean "done" — the run is what sets it.
+starting state of every check), `green` (evidenced through a run, **and the evidence column names
+that run**), and `open` (deliberately open, with the evidence column naming the file in
+`decisions/` that justifies it). The registry rejects a green row without a run, so "done" cannot be
+asserted into the instrument — which is Q-02 applied to the thing that measures Q-02.
 
 ## Layout
 
