@@ -13,9 +13,10 @@ that owns them (A-06, Q-02).
 
 States
   red      not evidenced. The starting state of every check.
-  green    evidenced through a run. Set by the work package that owns the check.
-  open     deliberately open, and only with a justification pointing at a file in decisions/.
-           Section D of the matrix: a row that cannot turn green is not left out, but justified.
+  green    evidenced through a run — and the run is named in the evidence column. A row set green
+           without one is the explanation Q-02 rejects, wearing the colour of a result.
+  open     deliberately open, and the evidence column names the file in decisions/ that justifies
+           it. Section D: a row that cannot turn green is not left out, but justified.
 """
 
 import re
@@ -26,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MATRIX = ROOT / "03-acceptance-matrix.md"
 REGISTRY = Path(__file__).resolve().parent / "registry.tsv"
 
-COLUMNS = ["id", "kind", "state", "work_package", "justification"]
+COLUMNS = ["id", "kind", "state", "work_package", "evidence"]
 STATES = {"red", "green", "open"}
 KINDS = {"S", "M", "D", "P"}
 
@@ -64,7 +65,9 @@ def read_registry():
         row = dict(zip(COLUMNS, f))
         if row["state"] not in STATES:
             sys.exit(f"{row['id']}: unknown state {row['state']!r}")
-        if row["state"] == "open" and not row["justification"]:
+        if row["state"] == "green" and not row["evidence"]:
+            sys.exit(f"{row['id']}: state 'green' needs the run that evidenced it")
+        if row["state"] == "open" and not row["evidence"]:
             sys.exit(f"{row['id']}: state 'open' needs a justification in decisions/")
         rows[row["id"]] = row
     return rows
@@ -89,7 +92,7 @@ def sync():
         old = have.get(ident, {})
         rows[ident] = {**m,
                        "state": old.get("state", "red"),
-                       "justification": old.get("justification", "")}
+                       "evidence": old.get("evidence", "")}
     write_registry(rows)
     for i in added:
         print(f"  + {i}")
@@ -118,8 +121,10 @@ def report():
     kinds = {k: sum(1 for r in rows.values() if r["kind"] == k) for k in sorted(KINDS)}
     print("\n  by kind  " + "   ".join(f"{k} {n}" for k, n in kinds.items())
           + "     S script · M measurement · D drill · P probe")
+    for r in sorted(green, key=lambda r: natkey(r["id"])):
+        print(f"\n  green: {r['id']} ({r['work_package']}) -> {r['evidence']}")
     for r in sorted(open_, key=lambda r: natkey(r["id"])):
-        print(f"\n  open: {r['id']} ({r['work_package']}) -> {r['justification']}")
+        print(f"\n  open:  {r['id']} ({r['work_package']}) -> {r['evidence']}")
 
     if red:
         print(f"\nNot accepted. {len(red)} of {len(rows)} checks are red.")

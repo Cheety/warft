@@ -1,8 +1,8 @@
-id	kind	state	work_package	justification
+id	kind	state	work_package	evidence
 AB-A01-1	S	red	AP-1.2	
 AB-A02-1	P	red	AP-1.1	
 AB-A02-5	S	red	AP-6.4	
-AB-A03-2	S	red	AP-0.2	
+AB-A03-2	S	green	AP-0.2	https://github.com/Cheety/warft/actions/runs/30173899670
 AB-A03-3	P	red	AP-1.2	
 AB-A03-4	P	red	AP-6.4	
 AB-A03-6	S	red	AP-6.4	
@@ -49,7 +49,7 @@ AB-B04-3	S	red	AP-7.5
 AB-B04-4	P	red	AP-7.5	
 AB-B04-5	D	red	AP-7.5	
 AB-E01-1	S	red	AP-1.1	
-AB-E01-2	S	red	AP-0.2	
+AB-E01-2	S	green	AP-0.2	https://github.com/Cheety/warft/actions/runs/30173899670
 AB-E02-1	S	red	AP-3.1	
 AB-E02-2	P	red	AP-3.7	
 AB-E02-3	P	red	AP-5.7	
