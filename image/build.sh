@@ -165,9 +165,25 @@ while read -r f; do
   fi
   cmp -s "$A/$f" "$B/$f" && continue
   size=$(stat -c%s "$A/$f")
-  first=$(cmp "$A/$f" "$B/$f" 2>/dev/null | sed 's/.*differ: //' || true)
-  ndiff=$(cmp -l "$A/$f" "$B/$f" 2>/dev/null | wc -l || true)
-  printf '    %-28s %s of %s bytes differ, first at %s\n' "$f" "$ndiff" "$size" "$first" >&2
+  bytes=$(cmp -l "$A/$f" "$B/$f" 2>/dev/null || true)
+  ndiff=$(printf '%s\n' "$bytes" | grep -c . || true)
+  first=$(printf '%s\n' "$bytes" | awk 'NR==1{print $1}')
+  printf '    %-28s %s of %s bytes differ, first at byte %s\n' "$f" "$ndiff" "$size" "${first:-?}" >&2
+
+  # Below a handful, the difference is one field of one structure rather than a layout that moved.
+  # Then print every byte and the 64 around the first from both passes: a FAT directory entry shows
+  # its filename beside the timestamp that slipped, a PE header its section names. That is the
+  # difference between "the image is not reproducible" and knowing which tool wrote the clock down.
+  if [ -n "$first" ] && [ "$ndiff" -le 16 ]; then
+    printf '%s\n' "$bytes" | while read -r off o1 o2; do
+      printf '      byte %10d  0x%08x   %02x -> %02x\n' "$off" "$((off - 1))" "$((8#$o1))" "$((8#$o2))"
+    done >&2
+    ctx=$(( (first - 1) / 64 * 64 ))
+    for pass in "$A" "$B"; do
+      printf '      %s from 0x%x:\n' "$(basename "$pass")" "$ctx" >&2
+      dd if="$pass/$f" bs=1 skip="$ctx" count=64 status=none | od -A d -t x1z -v | sed 's/^/        /' >&2
+    done
+  fi
 done < <(cd "$A" && find . -type f | sort)
 echo >&2
 
