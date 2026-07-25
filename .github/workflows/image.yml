@@ -39,9 +39,14 @@ jobs:
       # for it by name when a repository signature cannot be checked. erofs-utils provides
       # mkfs.erofs, which the root partition definition needs.
       - name: Install the build dependencies
-        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys erofs-utils
+        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys erofs-utils openssl
 
+      # fetch-depth: 0 because build.sh dates the image from the last commit that touched image/,
+      # not from HEAD. A shallow checkout has one commit, and on a run triggered by a change to this
+      # workflow that commit does not touch image/ — the build would then have no date at all.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Trust the checkout
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -56,6 +61,23 @@ jobs:
       - name: Build twice and compare
         run: ./image/build.sh
 
+      # No signing key is available here and none is wanted: decisions/signing-key.md keeps the
+      # private half off every build machine, so this leg verifies with the committed certificate
+      # alone. Exit 2 means the revision has not been sealed yet, which is the normal state while
+      # the image is still being built (AP-1.1) — it is reported, not failed. Exit 1 means a seal
+      # exists and does not hold, and that must stop the run.
+      - name: Verify the seal
+        run: |
+          set +e
+          ./image/verify.sh
+          rc=$?
+          set -e
+          case "$rc" in
+            0) echo "::notice::AB-A03-7 evidenced by this run — SBOM and signature verified" ;;
+            2) echo "::warning::image unsealed for this revision — AB-A03-7 stays red (image/seal.sh)" ;;
+            *) echo "::error::the seal does not hold"; exit 1 ;;
+          esac
+
       - name: Collect the SBOM
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,7 +86,9 @@ jobs:
           path: image/.build/pass1/*.manifest
           if-no-files-found: warn
 
-      - name: Collect the artifact hashes
+      # image.seal is here so it can be downloaded and signed off the build machine — that download
+      # is step 2 of the seal flow in image/seal.sh.
+      - name: Collect the artifact hashes and the seal record
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -73,4 +97,5 @@ jobs:
             image/.build/pass1.sha256
             image/.build/pass2.sha256
             image/.build/diff.txt
+            image/.build/image.seal
           if-no-files-found: warn
