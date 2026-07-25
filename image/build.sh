@@ -50,18 +50,32 @@ if [ "$HAVE" != "$WANT" ]; then
   exit 1
 fi
 
-# The image's revision is the last commit that touched image/, not the repository's HEAD. Taken from
-# HEAD, a commit to a document moved SOURCE_DATE_EPOCH and with it every artifact hash — which would
-# unseal the image (AB-A03-7) on commits that cannot have changed it.
-REVISION="$(git -C "$HERE" log -1 --pretty=%H -- . 2>/dev/null || true)"
+# The image's revision is the last commit that touched a *build input* — not the repository's HEAD,
+# and not the whole of image/ either.
+#
+# Not HEAD, because a commit to a document would move SOURCE_DATE_EPOCH and with it every artifact
+# hash, unsealing an image (AB-A03-7) that nothing had changed.
+#
+# Not image/ as a whole, because the seal itself lives in image/seal/ and the certificate in
+# image/signing.crt. Committing a seal would change the revision it was made for, so the seal would
+# invalidate itself the moment it was recorded — a fixed point that can never be reached. The same
+# holds, less dramatically, for this directory's README and for genkey.sh, seal.sh and verify.sh:
+# none of them can change the artifact, so none of them may unseal it.
+#
+# What remains is the list below, and it is deliberately an allowlist. A new build input that is not
+# added here is a seal that stops noticing changes — so the failure mode of forgetting is visible
+# (the artifact changes, the hashes stop matching, verify.sh exits 1) rather than silent.
+INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart tool-version build.sh)
+
+REVISION="$(git -C "$HERE" log -1 --pretty=%H -- "${INPUTS[@]}" 2>/dev/null || true)"
 # An uncommitted change is a different image than any commit describes, and no seal can honestly
 # match it. Saying so here beats a verification failure nobody can explain.
-if [ -n "$REVISION" ] && [ -n "$(git -C "$HERE" status --porcelain -- . 2>/dev/null)" ]; then
+if [ -n "$REVISION" ] && [ -n "$(git -C "$HERE" status --porcelain -- "${INPUTS[@]}" 2>/dev/null)" ]; then
   REVISION="$REVISION-dirty"
 fi
 
 if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
-  SOURCE_DATE_EPOCH="$(git -C "$HERE" log -1 --pretty=%ct -- . 2>/dev/null || true)"
+  SOURCE_DATE_EPOCH="$(git -C "$HERE" log -1 --pretty=%ct -- "${INPUTS[@]}" 2>/dev/null || true)"
   [ -n "$SOURCE_DATE_EPOCH" ] || { echo "no commit to take SOURCE_DATE_EPOCH from; set it" >&2; exit 1; }
 fi
 export SOURCE_DATE_EPOCH
