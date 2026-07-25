@@ -36,10 +36,17 @@ jobs:
       # Weak dependencies are installed deliberately: mkosi's recommends are its toolchain, and this
       # is the build container, not the image. SP-A02-3's "no toolchains" is a property of what is
       # built, not of what builds it. distribution-gpg-keys is named explicitly because mkosi asks
-      # for it by name when a repository signature cannot be checked. erofs-utils provides
-      # mkfs.erofs, which the root partition definition needs.
+      # for it by name when a repository signature cannot be checked.
+      #
+      # The rest are the tools the partitions and the boot path need, each for one file of the
+      # image: erofs-utils for the root filesystem, dosfstools and mtools for the ESP,
+      # systemd-ukify to assemble the unified kernel image mkosi puts the verity roothash into.
+      # qemu and edk2-ovmf are for the checks that boot the result (AP-1.1's "done when").
       - name: Install the build dependencies
-        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys erofs-utils openssl
+        run: >
+          dnf -y install mkosi git-core systemd-udev distribution-gpg-keys openssl
+          erofs-utils dosfstools mtools systemd-ukify
+          qemu-system-x86-core edk2-ovmf
 
       # fetch-depth: 0 because build.sh dates the image from the last commit that touched image/,
       # not from HEAD. A shallow checkout has one commit, and on a run triggered by a change to this
@@ -77,6 +84,18 @@ jobs:
             2) echo "::warning::image unsealed for this revision — AB-A03-7 stays red (image/seal.sh)" ;;
             *) echo "::error::the seal does not hold"; exit 1 ;;
           esac
+
+      # AP-1.1's two rows. Both boot the image that was just built, ephemerally, and run their check
+      # inside it — E-11's "A-06 as a script against a bare mkosi VM", one work package early. The
+      # image is not modified: the seal above is over these same bytes.
+      #
+      # Whether /dev/kvm is reachable inside this container decides only how long they take; mkosi
+      # falls back to software emulation on its own.
+      - name: AB-E01-1 — the kernel against image/kernel-requirements.conf
+        run: ./acceptance/e01-kernel.sh
+
+      - name: AB-A02-1 — four roles, one artifact
+        run: ./acceptance/a02-roles.sh
 
       - name: Collect the SBOM
         if: always()

@@ -1,13 +1,18 @@
-# image/ — the build environment (AP-0.2)
+# image/ — the system image
 
-Answers one question: **does the image build reproducibly?** No roles, no units, no kernel
-requirements — those are AP-1.1.
+AP-0.2 answered one question here: **does the image build reproducibly?** AP-1.1 added the content —
+the kernel requirements from SP-A02-2, the userland from SP-A02-3, and a bootable disk whose root is
+read-only under dm-verity.
 
 ```
 mkosi.conf                        distribution, output, content, build
 mkosi.conf.d/10-package-pin.conf  the pinned Fedora release tree (SP-E01-2)
+mkosi.repart/                     the partitions: ESP, erofs root, verity hash
+mkosi.extra/                      what is copied into the image: the role generator, four targets
+kernel-requirements.conf          the kernel configuration as a file (SP-A02-2, AB-E01-1)
 tool-version                      the pinned mkosi version
 build.sh                          builds twice, second pass offline, compares — this is AB-A03-2
+vm.sh                             runs a script inside the built image; the door A-06 comes through
 genkey.sh                         generates the signing pair, once, off the build machines
 seal.sh                           signs a build's seal record — the only step that needs the key
 verify.sh                         checks a build against the seal — needs no key. This is AB-A03-7
@@ -16,8 +21,10 @@ seal/image.seal[.sig]             what was sealed, and the signature over it
 ```
 
 ```
-./image/build.sh        # or: make image
-./image/verify.sh       # or: make verify
+./image/build.sh              # or: make image
+./image/verify.sh             # or: make verify
+acceptance/e01-kernel.sh      # or: make image-acceptance — boots the build and checks it
+acceptance/a02-roles.sh
 ```
 
 ## What makes a rebuild identical
@@ -68,6 +75,63 @@ image version and the first green run produced `workpod_26.raw`, `workpod_26.man
 is a number the platform assigns per SP-A03-6, not the version of the program that built it. The
 artifacts are now named `workpod.*` and stay that way until AP-6.4 gives them a real version.
 
+## The content (AP-1.1)
+
+### The kernel is checked, not written
+
+E-01 takes the Fedora kernel, so `kernel-requirements.conf` is not a `.config` that gets compiled: it
+is the list of options the image is held to, and `acceptance/e01-kernel.sh` reads the kernel's own
+configuration out of the booted image and compares. That reading of `AB-E01-1` is ruled in
+[`decisions/kernel-configuration.md`](../decisions/kernel-configuration.md), together with the
+second half — SP-A02-2's "Out: unused filesystems, sound, legacy drivers", which with a distribution
+kernel is a matter of which modules reach the image rather than which options were set.
+
+The mechanism for "Out" is `KernelModules=` in `mkosi.conf` plus the package list, which takes
+`kernel-core` and `kernel-modules-core` and leaves `kernel-modules` and `kernel-modules-extra`
+out. Requirement and mechanism live in two files on purpose: when the mechanism forgets one, the
+module is in the image and the check says so.
+
+### Verity, and what the ESP is for
+
+The root is erofs with a verity hash partition next to it (`mkosi.repart/10-root.conf`,
+`20-root-verity.conf`). mkosi puts the resulting roothash on the kernel command line of the unified
+kernel image, so the boot path carries the hash of the content it is about to mount, and every block
+is checked as it is read. The ESP is the only writable partition and cannot be used to change what
+runs: a modified root stops matching the hash.
+
+The third file of the usual triple — a verity **signature** partition — is deliberately absent. It
+needs the private key at build time, and by
+[`decisions/signing-key.md`](../decisions/signing-key.md) that key is on no build machine. `AP-1.2`
+signs the roothash and puts `signing.crt` into the boot path.
+
+### Four roles, one artifact
+
+`SP-A02-1` gives a node one boot variable. It arrives as a systemd credential — the form E-01 rules
+for all five values from A-04 — and `workpod-role-generator` turns it into a single symlink under
+`/run/systemd/generator`, wanting `workpod-<role>.target` and nothing else. That is the whole of
+SP-A04-2's `role` step, and it is what SP-A03-5 means by "the role may not change the content, only
+the activated units": the generator writes to `/run`, and `/usr` is read-only under verity, so a
+role that tried to write to the image would fail against the kernel rather than against a rule.
+
+`acceptance/a02-roles.sh` boots the same artifact as `control` and as `work` and holds the two
+against each other — same roothash, different target active, `/usr` unwritable in both.
+
+### Booting a check into the image
+
+`vm.sh` runs a script inside the built image and hands back its exit code. The script travels as a
+systemd credential over SMBIOS, the same door a node's boot values come through, and
+`systemd.run=` on the runtime-appended command line starts it. Nothing is added to the image to
+make this work, which is the point: the artifact under test does not carry its own test. AP-1.2
+brings `a06-acceptance.sh` in the same way.
+
+Two consequences show up in the guest: the boot stops short of `multi-user.target`, because
+`systemd-run-generator` points `default.target` at its own target, and the image is booted
+ephemerally so the firmware's writes to the ESP never touch the sealed artifact.
+
+Until AP-3.1 builds the disk layout from A-05, the image has no data partition and boots with
+`systemd.volatile=state` — `/var` on tmpfs, the root still read-only. A node keeps nothing across a
+reboot yet.
+
 ## What the runs have established
 
 This configuration was written on a host with no mkosi, no dnf, no rpm and no root, so nothing here
@@ -81,7 +145,7 @@ having the run at all.
 | 3 | GPG key not found | `--setopt=install_weak_deps=False` had removed mkosi's own toolchain. SP-A02-3 governs the image, not the container building it. |
 | 4 | `Snapshot= is only supported for rawhide` | The package pin had to be a frozen release tree via `LocalMirror=`, not a koji snapshot. |
 
-Checked without a run, before the first push:
+Checked without a run, before the first push of AP-0.2:
 
 - Every option name and its config section against mkosi's own reference, not from memory:
   `LocalMirror=`, `CacheOnly=`, `ManifestFormat=`, `SourceDateEpoch=`, and the CLI spellings
@@ -90,12 +154,28 @@ Checked without a run, before the first push:
 - `build.sh` parses (`bash -n`); the missing-mkosi and version-mismatch paths behave.
 - `.github/workflows/image.yml` parses as YAML.
 
+And before the first push of AP-1.1, against the pinned tree and mkosi v26's own source rather than
+from memory:
+
+- Every symbol in `kernel-requirements.conf` against Fedora's `kernel-x86_64-fedora.config`. All are
+  set; `CONFIG_SECCOMP_FILTER` is the one that is selected rather than written, and appears only in
+  the built configuration the image ships.
+- Which subpackage each required module comes from: all of them are in `kernel-modules-core`, and
+  `kernel-core` carries no modules at all — which is why the package list names both.
+- That every package named exists in the pinned release tree, not only in `updates`.
+- `KernelModules=` semantics: a list of nothing but exclusions would empty the module tree, because
+  mkosi keeps what a positive pattern matched. Hence the leading `*`.
+- `Credentials=` takes a directory and names each credential after its file — and runs the file
+  instead of reading it when it is executable, which is why `vm.sh` writes them mode 0644.
+- That `systemd.run="…"` is quoted the way `systemd-run-generator(8)` documents, that the generator
+  redirects `default.target`, and that generators are given `$CREDENTIALS_DIRECTORY`.
+- The check scripts parse (`bash -n`), and `e01-kernel.sh` was run against a synthetic module tree
+  in both directions: a missing alternative and a module that should not be there both fail it.
+
 Still not established:
 
-- That two passes are bit-identical. **That is the whole point of AP-0.2**, and it is a property of
-  a run. `AB-A03-2` stays red until the CI leg is green once.
-- That the Fedora 43 package set suffices. The list is deliberately minimal; AP-1.1 sets the real
-  content from SP-A02-2 and SP-A02-3.
+- That the image boots, that the two rows of AP-1.1 are green, and that adding a kernel, a
+  bootloader and a verity pair left the build bit-identical. All three are properties of a run.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
