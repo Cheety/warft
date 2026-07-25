@@ -54,6 +54,9 @@ echo "   private -> $KEY   (passphrase-encrypted, stays here)"
 echo "   public  -> $CERT  (committed, and in the boot path from AP-1.2)"
 echo
 
+# umask 077 so the key is never briefly world-readable between being written and being chmod'ed.
+# It catches the certificate in the same net, which is wrong in the other direction: that half is
+# public, belongs in Git, and goes into the boot path in AP-1.2. Hence the explicit modes after.
 ( umask 077
   openssl req -x509 -newkey rsa:4096 -sha256 -days "$DAYS" \
     -keyout "$KEY" -out "$CERT" \
@@ -63,6 +66,7 @@ echo
     -addext "extendedKeyUsage=codeSigning" )
 
 chmod 600 "$KEY"
+chmod 644 "$CERT"
 
 echo
 echo "== certificate"
