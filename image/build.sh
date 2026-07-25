@@ -100,15 +100,19 @@ echo >&2
 # "They differ" is not actionable for a 198M blob. How *much* differs says what kind of problem it
 # is: a handful of bytes is metadata that was not seeded, megabytes is layout or ordering.
 echo "  where:" >&2
-( cd "$A" && find . -type f | sort ) | while read -r f; do
-  [ -f "$B/$f" ] || { printf '    %-28s only in pass 1\n' "$f" >&2; continue; }
-  if ! cmp -s "$A/$f" "$B/$f"; then
-    size=$(stat -c%s "$A/$f")
-    first=$(cmp "$A/$f" "$B/$f" 2>/dev/null | sed 's/.*differ: //')
-    ndiff=$(cmp -l "$A/$f" "$B/$f" 2>/dev/null | wc -l)
-    printf '    %-28s %s of %s bytes differ, first at %s\n' "$f" "$ndiff" "$size" "$first" >&2
+# cmp exits 1 when files differ, which is the normal case here. Under `set -e` with `pipefail` a
+# command substitution wrapping it takes the script down with it, so each one ends in `|| true`.
+while read -r f; do
+  if [ ! -f "$B/$f" ]; then
+    printf '    %-28s only in pass 1\n' "$f" >&2
+    continue
   fi
-done
+  cmp -s "$A/$f" "$B/$f" && continue
+  size=$(stat -c%s "$A/$f")
+  first=$(cmp "$A/$f" "$B/$f" 2>/dev/null | sed 's/.*differ: //' || true)
+  ndiff=$(cmp -l "$A/$f" "$B/$f" 2>/dev/null | wc -l || true)
+  printf '    %-28s %s of %s bytes differ, first at %s\n' "$f" "$ndiff" "$size" "$first" >&2
+done < <(cd "$A" && find . -type f | sort)
 echo >&2
 echo "AB-A03-2 stays red. A build that is not reproducible cannot answer whether the same thing" >&2
 echo "runs on every node (SP-A03-2, SP-E01-2)." >&2
