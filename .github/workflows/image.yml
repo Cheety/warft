@@ -36,9 +36,10 @@ jobs:
       # Weak dependencies are installed deliberately: mkosi's recommends are its toolchain, and this
       # is the build container, not the image. SP-A02-3's "no toolchains" is a property of what is
       # built, not of what builds it. distribution-gpg-keys is named explicitly because mkosi asks
-      # for it by name when a repository signature cannot be checked.
+      # for it by name when a repository signature cannot be checked. erofs-utils provides
+      # mkfs.erofs, which the root partition definition needs.
       - name: Install the build dependencies
-        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys
+        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys erofs-utils
 
       - uses: actions/checkout@v4
 
