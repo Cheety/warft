@@ -6,7 +6,7 @@ requirements — those are AP-1.1.
 ```
 mkosi.conf                        distribution, output, content, build
 mkosi.conf.d/10-package-pin.conf  the pinned Fedora release tree (SP-E01-2)
-mkosi.version                     the pinned mkosi version
+tool-version                      the pinned mkosi version
 build.sh                          builds twice, second pass offline, compares — this is AB-A03-2
 ```
 
@@ -22,7 +22,7 @@ Three mechanisms, and none is optional:
 |---|---|---|
 | `LocalMirror=` pins the package set to one frozen Fedora release tree | `mkosi.conf.d/10-package-pin.conf` | a rebuild resolves whatever is current; "does the same thing run on every node" is unanswerable |
 | `SOURCE_DATE_EPOCH` clamps modification times to the commit being built | `build.sh` | the artifact depends on the day it was built |
-| the mkosi version is pinned and checked before either pass | `mkosi.version`, enforced in `build.sh` | the build tool floats; a newer mkosi can lay out the same packages differently, and the comparison then says nothing |
+| the mkosi version is pinned and checked before either pass | `tool-version`, enforced in `build.sh` | the build tool floats; a newer mkosi can lay out the same packages differently, and the comparison then says nothing |
 
 The third one was not in the first draft. Fedora 43 ships mkosi 25.3, which has no `Snapshot=` at
 all, so a CI run failed with `Unknown setting Snapshot`. Pinning the packages while leaving the tool
@@ -52,8 +52,15 @@ Point the URL in `10-package-pin.conf` at the new release tree, rebuild twice, c
 it **with the comparison in the message**. A bump changes the package set, so it changes the
 artifact — that is expected. What must not change is that two builds of the same pin are identical.
 
-The same holds for `mkosi.version`: bumping the tool is a bump like any other, and `build.sh`
+The same holds for `tool-version`: bumping the tool is a bump like any other, and `build.sh`
 refuses to run when the version on PATH is not the pinned one.
+
+That pin is deliberately **not** in a file called `mkosi.version`, which is where it started. mkosi
+treats that filename as magic and reads it as `ImageVersion=`, so the pinned tool version became the
+image version and the first green run produced `workpod_26.raw`, `workpod_26.manifest` and
+`workpod_26.root-x86-64.raw`. Nothing broke — the two passes still matched — but the image version
+is a number the platform assigns per SP-A03-6, not the version of the program that built it. The
+artifacts are now named `workpod.*` and stay that way until AP-6.4 gives them a real version.
 
 ## What the runs have established
 

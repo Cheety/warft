@@ -29,18 +29,23 @@ B="$WORK/pass2"
 
 if ! command -v mkosi >/dev/null 2>&1; then
   echo "mkosi is not installed. It is the one build dependency of this repository (E-01)." >&2
-  echo "  git clone --branch v$(cat "$HERE/mkosi.version") https://github.com/systemd/mkosi" >&2
+  echo "  git clone --branch v$(cat "$HERE/tool-version") https://github.com/systemd/mkosi" >&2
   echo "  and put its bin/ on PATH" >&2
   exit 1
 fi
 
 # The build tool is an input to the artifact. Pinning the packages while leaving mkosi floating
 # would be half a pin: a newer mkosi can lay out the same packages differently and the comparison
-# would then say nothing. Fedora 43 ships 25.3, which has no Snapshot= at all.
-WANT="$(cat "$HERE/mkosi.version")"
+# would then say nothing. Fedora 43 ships 25.3, which lacks settings this configuration uses.
+#
+# The pin does NOT live in `mkosi.version`, which reads like its natural home. That filename is
+# magic to mkosi: it sets ImageVersion=. With the tool pin in it, the tool version silently became
+# the image version and the artifacts came out named `workpod_26.raw`. The image version is a
+# number the platform assigns (SP-A03-6, AP-6.4), not the version of the program that built it.
+WANT="$(cat "$HERE/tool-version")"
 HAVE="$(mkosi --version 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)*' | head -1)"
 if [ "$HAVE" != "$WANT" ]; then
-  echo "mkosi $WANT is pinned in image/mkosi.version, but mkosi $HAVE is on PATH." >&2
+  echo "mkosi $WANT is pinned in image/tool-version, but mkosi $HAVE is on PATH." >&2
   echo "Two builds made with different tools prove nothing about reproducibility (SP-A03-2)." >&2
   exit 1
 fi
