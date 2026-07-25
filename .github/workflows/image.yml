@@ -33,8 +33,12 @@ jobs:
       # profile denies.
       options: --privileged
     steps:
+      # Weak dependencies are installed deliberately: mkosi's recommends are its toolchain, and this
+      # is the build container, not the image. SP-A02-3's "no toolchains" is a property of what is
+      # built, not of what builds it. distribution-gpg-keys is named explicitly because mkosi asks
+      # for it by name when a repository signature cannot be checked.
       - name: Install the build dependencies
-        run: dnf -y install --setopt=install_weak_deps=False mkosi git-core systemd-udev
+        run: dnf -y install mkosi git-core systemd-udev distribution-gpg-keys
 
       - uses: actions/checkout@v4
 
