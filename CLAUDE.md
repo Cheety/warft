@@ -88,6 +88,13 @@ Confidence is not an acceptance criterion, evidence is. That holds for every job
 and for the platform itself. Progress means rows in the acceptance matrix turn green — **not that
 there are more files**. A row turns green through a run, never through an explanation.
 
+`make acceptance` is that instrument. `acceptance/registry.tsv` holds the state of all 212 checks;
+`03-acceptance-matrix.md` stays the source of which checks exist, and the two are kept in step —
+drift is an error, not a silent omission. A check has three states: `red` (not evidenced, the
+starting state of every check), `green` (evidenced through a run, set by the work package that owns
+it), and `open` (deliberately open, and only with a justification naming a file in `decisions/`).
+Never set a row green by hand to mean "done" — the run is what sets it.
+
 ## Layout
 
 ```
@@ -96,7 +103,9 @@ there are more files**. A row turns green through a run, never through an explan
 03-acceptance-matrix.md  213 checks; the actual instrument. Green here means the platform was hit
 04-issues.md             the 66 tracker issues in long form, with a boundary each
 contract/                platform.proto (E-10) · schema.sql (K-01, K-02)
-acceptance/              a06-acceptance.sh — thirteen checks, written before the image
+acceptance/              registry.py · registry.tsv — the 212 checks and their state (AP-0.3)
+                         a06-acceptance.sh — thirteen checks, written before the image
+Makefile                 make acceptance — the instrument; fails while anything is red
 skills/                  SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/                 issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
 decisions/               empty until AP-0.1: rulings E-01…E-11, open points OP-1…OP-10
