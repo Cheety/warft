@@ -53,8 +53,8 @@ export SOURCE_DATE_EPOCH
 rm -rf "$A" "$B"
 mkdir -p "$A" "$B" "$CACHE"
 
-echo "== snapshot"
-grep -h '^Snapshot=' "$HERE"/mkosi.conf.d/*.conf | sed 's/^/  /'
+echo "== pin"
+grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | sed 's/^/  /'
 echo "  SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
 
 echo "== pass 1 (network allowed, fills the package cache)"
