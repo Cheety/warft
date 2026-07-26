@@ -197,6 +197,9 @@ probe-main)
     /system.slice/*) pass "the plane under the reservation" "$cg" ;;
     *)               fail "the plane under the reservation" "ControlGroup=$cg" ;;
   esac
+  planemin="$(cat "/sys/fs/cgroup$cg/memory.min" 2>/dev/null)"
+  [ "$planemin" = max ] && pass "the plane claims the reservation" "memory.min=max, clamped by the slice's 4 GB" \
+                        || fail "the plane claims the reservation" "memory.min=$planemin"
 
   # ---- the pressure drama (AB-RC-4, behavioral half) --------------------------------------------
   # A sleeper and a hog share one pod slice. `workpod podslice arm` sets memory.oom.group=1 on it;
