@@ -33,6 +33,8 @@ on:
       - 'acceptance/k02-state.sh'
       - 'acceptance/k04-authority.sh'
       - 'acceptance/k04-authority.py'
+      - 'contract/identity.md'
+      - 'acceptance/b01-identity.sh'
       - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   pull_request:
@@ -47,6 +49,8 @@ on:
       - 'acceptance/k02-state.sh'
       - 'acceptance/k04-authority.sh'
       - 'acceptance/k04-authority.py'
+      - 'contract/identity.md'
+      - 'acceptance/b01-identity.sh'
       - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   workflow_dispatch:
@@ -129,3 +133,15 @@ jobs:
       # shape as the state-machine leg reaching for a Postgres. ubuntu-latest carries docker.
       - name: The authority token and its probes
         run: ./acceptance/k04-authority.sh
+
+  identity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # AP-2.5's leg (AB-B01-3): the node certificate's name is checked as a statement — chain,
+      # exactly one workpod URI SAN, then the certified name beats every claim beside it — and the
+      # mTLS handshake is exercised in both directions. Runs on openssl alone; every key is
+      # ephemeral, minted inside the probe's scratch directory.
+      - name: The node identity and its probes
+        run: ./acceptance/b01-identity.sh
