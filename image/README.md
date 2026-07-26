@@ -223,11 +223,11 @@ the journal is for people.** vm.sh's exit trailer learned this from run 21; the 
 the machine and a host that could not see it. Both markers now write to the console with a journal
 fallback, and both host-side matchers tolerate a prefix, so the fallback path is still read.
 
-Still not established:
-
-- That `AB-A02-1` is green. Everything it probes has now held in a run — same roothash under both
-  roles, `/usr` unwritable, verity on the root — but the run that shows its script saying so is the
-  next one.
+[Run 23](https://github.com/Cheety/warft/actions/runs/30181410890) closed AP-1.1: `AB-E01-1` at
+52 met, 0 not — the four `absent` rows among them, `parport` gone — and `AB-A02-1` with both roles
+at 8 met, 0 not, the identical roothash on both boots, and the host now able to read it. The image
+boots in a VM with / read-only under dm-verity, which is the work package's "done when", said by a
+run rather than by this file.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
