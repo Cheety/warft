@@ -80,13 +80,22 @@ fi
 
 # The wrapper is what systemd.run= starts. It exists so the guest's exit code has somewhere to go,
 # and it carries the arguments so the command line stays free of nested quoting.
+#
+# The trailer goes to /dev/console rather than to stdout. A service's stdout is the journal, and the
+# journal reaches the serial line only by being forwarded — which rewrites every line with a
+# timestamp and a syslog identifier, and is rate limited. Run 21 is what that costs: the check ran,
+# printed its verdict, and the run still failed 125 because the line the host was looking for had
+# arrived as `[    6.956905] bash[378]: WORKPOD-EXIT: 1`. Diagnostics can afford the journal; the
+# verdict cannot. The fallback keeps a machine whose console cannot be opened diagnosable instead of
+# silent.
 {
   echo '# written by image/vm.sh'
   echo 'export CREDENTIALS_DIRECTORY=/run/credentials/@system'
   printf 'bash "$CREDENTIALS_DIRECTORY/workpod.script"'
   for a in "$@"; do printf ' %q' "$a"; done
   echo
-  echo 'echo "WORKPOD-EXIT: $?"'
+  echo 'rc=$?'
+  echo 'echo "WORKPOD-EXIT: $rc" > /dev/console 2>/dev/null || echo "WORKPOD-EXIT: $rc"'
 } > "$CREDS/workpod.check"
 chmod 0644 "$CREDS/workpod.check"
 
@@ -168,7 +177,10 @@ if [ "$rc" = 124 ]; then
   exit 124
 fi
 
-STATUS="$(tr -d '\r' < "$CONSOLE" | sed -n 's/^WORKPOD-EXIT: \([0-9]\{1,3\}\)$/\1/p' | tail -1)"
+# Anything may precede the trailer on its line: a kernel message that printk left without a newline,
+# or the journal's own prefix when the console could not be opened and the fallback above ran. The
+# number ends the line either way, and it is the last such line the guest wrote.
+STATUS="$(tr -d '\r' < "$CONSOLE" | sed -n 's/.*WORKPOD-EXIT: \([0-9]\{1,3\}\)$/\1/p' | tail -1)"
 if [ -z "$STATUS" ]; then
   echo "vm.sh: the guest never reported an exit code — the boot did not reach the check (qemu exited $rc)" >&2
   exit 125
