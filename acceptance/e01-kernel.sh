@@ -111,14 +111,25 @@ while read -r keyword a b c d; do
       ;;
 
     exclude)
-      found=0
+      # Name what is there, not only how many. A count says the mechanism failed; a name says which
+      # module to trace, and with mkosi the answer is usually that something outside this directory
+      # depends on it and dragged it back in.
+      found=()
       for p in "${MODULE_PATHS[@]}"; do
-        case "$p" in "$a"/*) found=$((found+1)) ;; esac
+        case "$p" in "$a"/*) name="${p##*/}"; found+=("${name%%.ko*}") ;; esac
       done
-      if [ "$found" -eq 0 ]; then
+      if [ "${#found[@]}" -eq 0 ]; then
         pass "out: $a" "no module"
       else
-        fail "out: $a" "$found modules still in the image"
+        fail "out: $a" "${found[*]}"
+      fi
+      ;;
+
+    absent)
+      if [ -z "${MODULE_PRESENT[${a//-/_}]:-}" ]; then
+        pass "absent: $a" "not in the image"
+      else
+        fail "absent: $a" "still in the image"
       fi
       ;;
 
