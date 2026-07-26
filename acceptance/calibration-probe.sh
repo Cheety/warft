@@ -82,10 +82,24 @@ kb() { awk -v k="$1:" '$1 == k { print $2; exit }' /proc/meminfo; }
 mb() { awk -v v="$1" 'BEGIN { printf "%.0f", v / 1024 }'; }
 now_ms() { date +%s%3N; }
 
-PODS_CG=/sys/fs/cgroup/workpod-pods.slice
-BARE_CG="$PODS_CG/workpod-pods-bare.slice"
-STATE_CG="$PODS_CG/workpod-pods-state.slice"
-ACTIVE_CG="$PODS_CG/workpod-pods-active.slice"
+PODS_UNIT=workpod-pods.slice
+BARE_UNIT=workpod-pods-bare.slice
+STATE_UNIT=workpod-pods-state.slice
+ACTIVE_UNIT=workpod-pods-active.slice
+
+# Where a unit's cgroup is, asked rather than assembled. systemd puts a slice under every level of
+# its own dashed name, so `workpod-pods-bare.slice` lives at
+# /sys/fs/cgroup/workpod.slice/workpod-pods.slice/workpod-pods-bare.slice — and run 27 measured a
+# fleet of nothing for exactly that reason: 500 pods existed, 541 rounds of work ran, and every
+# reading came back empty because the path had one level too few. a06-acceptance.sh asks systemd for
+# the path; that is why it never had this defect, and it is what this does now.
+#
+# Empty when the unit has no cgroup, which is the state of a slice nobody has put anything into yet.
+cg() {  # $1 = unit
+  local p; p="$(systemctl show -p ControlGroup --value "$1" 2>/dev/null)"
+  case "${p:-}" in ""|"/") return 1 ;; esac
+  printf '/sys/fs/cgroup%s' "$p"
+}
 
 CREDENTIALS="${CREDENTIALS_DIRECTORY:-/run/credentials/@system}"
 ROLE="$(tr -d '[:space:]' < "$CREDENTIALS/workpod.role" 2>/dev/null)"
@@ -124,9 +138,9 @@ mark role "$ROLE"
 #    pod's state, not a shared base layer, and the constant is about "the number of simultaneously
 #    used base layers" — of which there are none until container images arrive in AP-3.3.
 # -------------------------------------------------------------------------------------------------
-slice_mb() {  # $1 = cgroup path under /sys/fs/cgroup
-  local f="/sys/fs/cgroup$1/memory.current"
-  if [ -r "$f" ]; then mb "$(( $(cat "$f") / 1024 ))"; else printf '?'; fi
+slice_mb() {  # $1 = unit
+  local d; d="$(cg "$1")" || { printf '?'; return; }
+  if [ -r "$d/memory.current" ]; then mb "$(( $(cat "$d/memory.current") / 1024 ))"; else printf '?'; fi
 }
 
 at_rest() {
@@ -142,7 +156,7 @@ at_rest() {
   mark page_cache_mb "$cache"
   mark "page_cache_${ROLE}_mb" "$cache"
   mark host_runtime_detail \
-    "slab $(mb "$slab") MB · page tables $(mb "$tables") MB · kernel stacks $(mb "$stack") MB · system.slice $(slice_mb /system.slice) MB"
+    "slab $(mb "$slab") MB · page tables $(mb "$tables") MB · kernel stacks $(mb "$stack") MB · system.slice $(slice_mb system.slice) MB"
   say "at rest as $ROLE: $held MB held, $cache MB page cache, $(mb "$shmem") MB shmem"
 }
 
@@ -237,15 +251,24 @@ POD
 chmod +x "$WORK/pod.sh"
 rm -f "$WORK/go" "$WORK/stop" "$WORK/stop-psi" "$WORK/stop-pressure"
 
-pods_kb() {  # anon + shmem of a slice — the pages that go to zram when the slice is reclaimed
-  local f="$1/memory.stat"
+pods_kb() {  # $1 = unit. anon + shmem of a slice — the pages that go to zram when it is reclaimed
+  local d f
+  d="$(cg "$1")" || { printf '0'; return; }
+  f="$d/memory.stat"
   if [ -r "$f" ]; then
     awk '$1 == "anon" || $1 == "shmem" { s += $2 } END { printf "%d", s / 1024 }' "$f"
   else
     printf '0'
   fi
 }
-count_pods() { ls -d "$1"/cal-pod-*.service 2>/dev/null | wc -l; }
+count_pods() {  # $1 = unit
+  local d; d="$(cg "$1")" || { printf '0'; return; }
+  ls -d "$d"/cal-pod-*.service 2>/dev/null | wc -l
+}
+tasks_in() {  # $1 = unit. pids.current aggregates the whole subtree, which is the fleet's task count
+  local d; d="$(cg "$1")" || { printf '0'; return; }
+  cat "$d/pids.current" 2>/dev/null || printf '0'
+}
 
 t_fleet=$(now_ms)
 
@@ -257,7 +280,7 @@ for c in 0 1 2 3; do
   set_mb=$(( CLASS_RAM_MB[c] / ACTIVE_SCALE ))
   mix_shape="$mix_shape${mix_shape:+ · }${CLASSES[$c]}×$n at ${set_mb} MB"
   for _ in $(seq 1 "$n"); do
-    systemd-run --quiet --unit="cal-pod-$idx" --slice=workpod-pods-active.slice \
+    systemd-run --quiet --unit="cal-pod-$idx" --slice="$ACTIVE_UNIT" \
       --property=MemoryAccounting=yes --property=CPUAccounting=yes --property=TasksMax=64 \
       --property="CPUWeight=${CLASS_WEIGHT[$c]}" --property="MemoryHigh=${CLASS_LIMIT_MB[$c]}M" \
       "$WORK/pod.sh" "pod-$idx" 0 active "$set_mb" 2>/dev/null \
@@ -283,22 +306,22 @@ create_frozen() {  # $1 = slice, $2 = first index, $3 = last index, $4 = state K
 
 bare_from=$(( POD_ACTIVE + 1 ))
 bare_to=$(( POD_ACTIVE + (POD_TOTAL - POD_ACTIVE) / 2 ))
-bare_before="$(pods_kb "$BARE_CG")"
-create_frozen workpod-pods-bare.slice "$bare_from" "$bare_to" 0
+bare_before="$(pods_kb "$BARE_UNIT")"
+create_frozen "$BARE_UNIT" "$bare_from" "$bare_to" 0
 sleep 3
-bare_after="$(pods_kb "$BARE_CG")"
+bare_after="$(pods_kb "$BARE_UNIT")"
 bare_n=$(( bare_to - bare_from + 1 ))
 
-state_before="$(pods_kb "$STATE_CG")"
-create_frozen workpod-pods-state.slice $(( bare_to + 1 )) "$POD_TOTAL" "$FROZEN_STATE_KB"
+state_before="$(pods_kb "$STATE_UNIT")"
+create_frozen "$STATE_UNIT" $(( bare_to + 1 )) "$POD_TOTAL" "$FROZEN_STATE_KB"
 sleep 3
-state_after="$(pods_kb "$STATE_CG")"
+state_after="$(pods_kb "$STATE_UNIT")"
 state_n=$(( POD_TOTAL - bare_to ))
 
 fleet_s=$(( ($(now_ms) - t_fleet) / 1000 ))
-n_bare="$(count_pods "$BARE_CG")"; n_state="$(count_pods "$STATE_CG")"
-n_active="$(count_pods "$ACTIVE_CG")"
-tasks="$(cat "$PODS_CG/pids.current" 2>/dev/null || echo 0)"
+n_bare="$(count_pods "$BARE_UNIT")"; n_state="$(count_pods "$STATE_UNIT")"
+n_active="$(count_pods "$ACTIVE_UNIT")"
+tasks="$(tasks_in "$PODS_UNIT")"
 
 mark pods_created "$(( n_bare + n_state + n_active ))"
 mark pods_active "$n_active"
@@ -326,26 +349,25 @@ say "frozen pod: $frozen_bare_kb KB bare, $frozen_state_kb KB with ${FROZEN_STAT
 #    which makes "freeze the fleet" a single decision instead of 480 of them. The kernel reports
 #    `frozen 1` a moment after the write returns, so it is polled rather than assumed.
 # -------------------------------------------------------------------------------------------------
-freeze_slice() {  # $1 = unit, $2 = its cgroup
+freeze_slice() {  # $1 = unit
+  local d i; d="$(cg "$1")" || { say "$1 has no cgroup to freeze"; return 1; }
   # `systemctl freeze` first, because that is how the platform will ask for it — and the kernel
   # interface underneath as the fallback, because not every systemd version will freeze a slice on
   # request. What is checked either way is `cgroup.events`, which is the kernel answering.
   if ! systemctl freeze "$1" >/dev/null 2>&1; then
     say "systemctl freeze $1 was refused — writing cgroup.freeze directly"
-    echo 1 > "$2/cgroup.freeze" 2>/dev/null
+    echo 1 > "$d/cgroup.freeze" 2>/dev/null
   fi
-  local i
   for i in $(seq 1 30); do
-    grep -q '^frozen 1' "$2/cgroup.events" 2>/dev/null && return 0
+    grep -q '^frozen 1' "$d/cgroup.events" 2>/dev/null && return 0
     sleep 1
   done
   return 1
 }
 froze=1
-freeze_slice workpod-pods-bare.slice "$BARE_CG"   || froze=0
-freeze_slice workpod-pods-state.slice "$STATE_CG" || froze=0
-alive=$(( $(cat "$BARE_CG/pids.current" 2>/dev/null || echo 0)
-        + $(cat "$STATE_CG/pids.current" 2>/dev/null || echo 0) ))
+freeze_slice "$BARE_UNIT"  || froze=0
+freeze_slice "$STATE_UNIT" || froze=0
+alive=$(( $(tasks_in "$BARE_UNIT") + $(tasks_in "$STATE_UNIT") ))
 [ "$alive" -gt 0 ] || froze=0
 mark frozen_held "$froze"
 mark frozen_detail "$alive tasks frozen and still alive across $(( n_bare + n_state )) pods"
@@ -382,19 +404,20 @@ zram_field() {  # $1 = field of mm_stat, 1-based; falls back to the per-value fi
 }
 orig0="$(zram_field 1)"; compr0="$(zram_field 2)"; used0="$(zram_field 3)"; same0="$(zram_field 6)"
 
-reclaim() {  # $1 = cgroup, $2 = KB to ask for
-  if [ -w "$1/memory.reclaim" ] && echo $(( $2 * 1024 )) > "$1/memory.reclaim" 2>/dev/null; then
+reclaim() {  # $1 = unit, $2 = KB to ask for
+  local d high; d="$(cg "$1")" || { say "$1 has no cgroup to reclaim"; return 1; }
+  if [ -w "$d/memory.reclaim" ] && echo $(( $2 * 1024 )) > "$d/memory.reclaim" 2>/dev/null; then
     return 0
   fi
   # Without memory.reclaim: squeeze with memory.high, let the kernel do the same work, then let go
   # again. Throttled, not shot — SP-RA-2's rule holds for this script as well.
-  local high; high="$(cat "$1/memory.high" 2>/dev/null)"
-  echo $(( 8 * 1024 * 1024 )) > "$1/memory.high" 2>/dev/null || return 1
+  high="$(cat "$d/memory.high" 2>/dev/null)"
+  echo $(( 8 * 1024 * 1024 )) > "$d/memory.high" 2>/dev/null || return 1
   sleep 5
-  echo "${high:-max}" > "$1/memory.high" 2>/dev/null
+  echo "${high:-max}" > "$d/memory.high" 2>/dev/null
 }
-reclaim "$BARE_CG"  "$(pods_kb "$BARE_CG")"
-reclaim "$STATE_CG" "$(pods_kb "$STATE_CG")"
+reclaim "$BARE_UNIT"  "$(pods_kb "$BARE_UNIT")"
+reclaim "$STATE_UNIT" "$(pods_kb "$STATE_UNIT")"
 sleep 5
 
 orig1="$(zram_field 1)"; compr1="$(zram_field 2)"; used1="$(zram_field 3)"; same1="$(zram_field 6)"
@@ -423,14 +446,18 @@ say "zram: factor $zram_factor (ratio $zram_ratio), $zram_orig_mb MB → $zram_u
 # -------------------------------------------------------------------------------------------------
 cpu_usec() { awk '$1 == "usage_usec" { u = $2 } END { printf "%d", u + 0 }' "$1/cpu.stat" 2>/dev/null; }
 
+# The one file R-C reads (SP-RC-1), resolved now that the slice exists and it has a cgroup.
+PRESSURE="$(cg "$PODS_UNIT")/memory.pressure"
+[ -r "$PRESSURE" ] || say "no memory.pressure on $PODS_UNIT — the pressure numbers will be empty"
+
 # The PSI sampler, beside the load and beside the pressure event after it. One line per sample, so
 # the dynamics can be read afterwards instead of being asserted during.
 psi_sample() {
   local interval; interval="$(awk -v ms="$SAMPLE_MS" 'BEGIN { printf "%.3f", ms / 1000 }')"
   while [ ! -e "$WORK/stop-psi" ]; do
     printf '%s %s %s %s\n' "$(now_ms)" \
-      "$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub(/avg10=/, "", $i); print $i } }' "$PODS_CG/memory.pressure" 2>/dev/null)" \
-      "$(awk '/^full/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub(/avg10=/, "", $i); print $i } }' "$PODS_CG/memory.pressure" 2>/dev/null)" \
+      "$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub(/avg10=/, "", $i); print $i } }' "$PRESSURE" 2>/dev/null)" \
+      "$(awk '/^full/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub(/avg10=/, "", $i); print $i } }' "$PRESSURE" 2>/dev/null)" \
       "$(awk '$1 == "pgmajfault" { print $2 }' /proc/vmstat)"
     sleep "$interval"
   done
@@ -450,7 +477,7 @@ mark psi_noise_pct "$(tail -12 "$WORK/psi.log" \
 
 declare -A CPU_BEFORE
 for i in $(seq 1 "$POD_ACTIVE"); do
-  CPU_BEFORE[$i]="$(cpu_usec "$ACTIVE_CG/cal-pod-$i.service")"
+  CPU_BEFORE[$i]="$(cpu_usec "$(cg "cal-pod-$i.service")")"
 done
 
 t_window=$(now_ms)
@@ -461,9 +488,9 @@ window_ms=$(( $(now_ms) - t_window ))
 declare -A CORES_SUM RAM_SUM CLASS_N
 for cl in "${CLASSES[@]}"; do CORES_SUM[$cl]=0; RAM_SUM[$cl]=0; CLASS_N[$cl]=0; done
 for i in $(seq 1 "$POD_ACTIVE"); do
-  cg="$ACTIVE_CG/cal-pod-$i.service"
-  after="$(cpu_usec "$cg")"
-  peak="$(cat "$cg/memory.peak" 2>/dev/null || cat "$cg/memory.current" 2>/dev/null || echo 0)"
+  pod_cg="$(cg "cal-pod-$i.service")"
+  after="$(cpu_usec "$pod_cg")"
+  peak="$(cat "$pod_cg/memory.peak" 2>/dev/null || cat "$pod_cg/memory.current" 2>/dev/null || echo 0)"
   cl="${POD_CLASS[$i]}"
   CORES_SUM[$cl]="$(awk -v s="${CORES_SUM[$cl]}" -v a="$after" -v b="${CPU_BEFORE[$i]}" -v w="$window_ms" \
                       'BEGIN { printf "%.4f", s + (a - b) / 1000 / w }')"
@@ -532,7 +559,7 @@ chmod +x "$WORK/pressure.sh"
 
 psi_now() {
   awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub(/avg10=/, "", $i); print $i + 0 } }' \
-      "$PODS_CG/memory.pressure" 2>/dev/null
+      "$PRESSURE" 2>/dev/null
 }
 over() { awk -v p="${1:-0}" -v t="$2" 'BEGIN { print (p + 0 > t) ? 1 : 0 }'; }
 faults() { awk '$1 == "pgmajfault" { print $2 }' /proc/vmstat; }
@@ -587,8 +614,8 @@ say "pressure: crossed 10 % after ${cross_ms} ms, back under 1 % ${d1} ms after 
 # the poweroff that follows this script is what takes the units down. Thawing first is what keeps
 # that from waiting for 480 stop jobs it cannot deliver.
 # -------------------------------------------------------------------------------------------------
-for cg in "$BARE_CG" "$STATE_CG"; do
-  systemctl thaw "$(basename "$cg")" >/dev/null 2>&1 || echo 0 > "$cg/cgroup.freeze" 2>/dev/null
+for u in "$BARE_UNIT" "$STATE_UNIT"; do
+  systemctl thaw "$u" >/dev/null 2>&1 || echo 0 > "$(cg "$u")/cgroup.freeze" 2>/dev/null
 done
 
 printf '\n  the run is complete; the table is composed on the host\n'
