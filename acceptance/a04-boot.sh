@@ -200,11 +200,13 @@ probe-main)
 
   # ---- the pressure drama (AB-RC-4, behavioral half) --------------------------------------------
   # A sleeper and a hog share one pod slice. `workpod podslice arm` sets memory.oom.group=1 on it;
-  # the hog then eats the machine in ~50 MB bites of incompressible pages (urandom, NULs stripped
-  # so bash keeps it) — bite-sized so no single allocation trips the overcommit heuristic, and
-  # incompressible so zram cannot quietly absorb the pressure. The kernel reclaims everywhere but
-  # the protected slices, OOMs, and must take sleeper and hog together — while the plane answers
-  # over the very path registering used.
+  # the hog is `tail` holding the last 15 GB of a 16 GB stream — one process whose buffer grows in
+  # small allocations until the machine is eaten. One process on purpose: an eater that forks per
+  # bite stalls just short of OOM the moment fork() is refused under pressure, which the first CI
+  # run demonstrated. zram cannot save it either: the device's logical size caps what swap can
+  # absorb at a quarter of RAM. The kernel reclaims everywhere but the protected slices, OOMs, and
+  # must take sleeper and hog together — while the plane answers over the very path registering
+  # used.
   systemd-run --quiet --unit=podprobe-hold --slice=workpod-work-podprobe.slice /usr/bin/sleep 600 \
     && pass "pod slice up" "workpod-work-podprobe.slice, nested under the work layer" \
     || fail "pod slice up" "systemd-run failed"
@@ -214,16 +216,16 @@ probe-main)
     fail "memory.oom.group=1 armed" "$out"
   fi
   systemd-run --quiet --unit=podprobe-hog --slice=workpod-work-podprobe.slice \
-    /bin/bash -c 'c=(); while :; do c+=("$(head -c 50M /dev/urandom | tr -d "\\0")"); done' \
+    /bin/bash -c 'head -c 16G /dev/zero | tail -c 15G > /dev/null' \
     || fail "hog started" "systemd-run failed"
 
   pings=0; ping_fail=0; hog_result=""
-  for _ in $(seq 1 240); do
+  for _ in $(seq 1 300); do
     if workpod ping --deadline 5s >/dev/null 2>&1; then pings=$((pings+1)); else ping_fail=$((ping_fail+1)); fi
     hog_result="$(systemctl show -p Result --value podprobe-hog.service 2>/dev/null)"
     [ "$hog_result" = oom-kill ] && break
     st="$(systemctl is-active podprobe-hog.service 2>/dev/null)"
-    [ "$st" = failed ] && break
+    case "$st" in active|activating) ;; *) break ;; esac
     sleep 1
   done
   hog_result="$(systemctl show -p Result --value podprobe-hog.service 2>/dev/null)"
