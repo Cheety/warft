@@ -91,6 +91,15 @@ The mechanism for "Out" is `KernelModules=` in `mkosi.conf` plus the package lis
 out. Requirement and mechanism live in two files on purpose: when the mechanism forgets one, the
 module is in the image and the check says so.
 
+Excluding a directory does not exclude everything in it. mkosi filters the module tree and then
+resolves dependencies over what survived, and that second pass puts a filtered-out module straight
+back when a survivor depends on it. Run 21 found `parport` in an image that excludes
+`kernel/drivers/parport`: `lp`, `ppdev`, `i2c-parport` and `pps_parport` sit in three other
+directories and each names it. The requirements file therefore has a second keyword — `absent
+<module>`, which says about one driver what `exclude` says about a place — and the four are named
+there as well as excluded in `mkosi.conf`. With the last dependent gone, `parport` is dropped
+instead of dragged back.
+
 ### Verity, and what the ESP is for
 
 The root is erofs with a verity hash partition next to it (`mkosi.repart/10-root.conf`,
@@ -172,10 +181,45 @@ from memory:
 - The check scripts parse (`bash -n`), and `e01-kernel.sh` was run against a synthetic module tree
   in both directions: a missing alternative and a module that should not be there both fail it.
 
+Then the runs that boot it. AP-1.1's "done when" is a boot, so every one of these is a correction
+that only a booted machine could have produced:
+
+| Run | Failure | What it established |
+|---|---|---|
+| 16 | `2 of 536870912 bytes differ` | Adding a kernel and a verity pair reopened reproducibility — and a comparison that counts bytes cannot say what to fix. |
+| 17 | the same two bytes, now dumped | They were the creation and write times of the ESP's `EFI` volume label entry. dosfstools 4.2 ignores `SOURCE_DATE_EPOCH`; `--invariant` is its own answer. |
+| 18 | `--ephemeral: expected one argument` | The boot never started. |
+| 19, 20 | ten minutes, no output at all | `mkosi vm` registers the machine with systemd-machined, and a build container runs no systemd. Nothing was listening to the console either. |
+| 21 | exit 125 after a clean check | The image boots, and both defects below were only visible because it does. |
+
+Run 21 is where the image first ran a check of its own. It established three things:
+
+- **The image boots.** The machine came up under dm-verity, took the check in as a credential, ran
+  it, printed 48 results and powered itself off — in seven seconds.
+- **The build survived its content.** Pass 1 and pass 2 stayed bit-identical with a kernel, a
+  bootloader and a verity hash partition in the image, which run 16 had shown was not free.
+- **47 of 48 requirements were met**, and the one that was not is a real finding rather than a
+  broken check: `parport`, dragged back past its own exclusion by four dependents in other
+  directories.
+
+Two defects, both fixed since:
+
+| Defect | Why it mattered |
+|---|---|
+| The exit trailer went through the journal, which prefixes and rate limits it. The host looked for the line at the start of a line and found `[    6.956905] bash[378]: WORKPOD-EXIT: 1`. | A check that runs correctly and reports correctly still failed the run. The verdict now goes to `/dev/console` directly; only diagnostics use the journal. |
+| The failing exclude said "1 modules still in the image" and not which one. | The mechanism was three directories away from where it looked. Naming it is the same correction run 17 made for the byte comparison. |
+
+The module fix was checked before it was pushed, the same way everything else here is checked
+without a build machine: mkosi v26's own `filter_kernel_modules` and its dependency walk, replayed
+over `kernel-modules-core` and `kernel-core` as the pinned tree ships them. Unfixed it reproduces
+run 21 exactly — 2177 modules survive the filter, 2178 reach the image, and the extra one is
+`parport`. With the four dependents excluded it is 2173 and 2173, and nothing is dragged back past
+the filter at all.
+
 Still not established:
 
-- That the image boots, that the two rows of AP-1.1 are green, and that adding a kernel, a
-  bootloader and a verity pair left the build bit-identical. All three are properties of a run.
+- That the two rows of AP-1.1 are green. `AB-A02-1` has not run at all yet — run 21 stopped at
+  `AB-E01-1`, which is the step before it.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
