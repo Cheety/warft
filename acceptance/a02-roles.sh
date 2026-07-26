@@ -44,7 +44,9 @@ if [ "$MODE" = drive ]; then
     if ! "$ROOT/image/vm.sh" --role "$role" "$HERE/a02-roles.sh" probe 2>&1 | tee "$LOG/$role"; then
       failed=1
     fi
-    h="$(sed -n 's/^WORKPOD-ROOTHASH: //p' "$LOG/$role" | tail -1)"
+    # Tolerant of anything before the marker — a printk fragment on the same line, or the journal's
+    # prefix when the guest's console write fell back to stdout. Same shape as vm.sh's exit trailer.
+    h="$(sed -n 's/.*WORKPOD-ROOTHASH: \([0-9a-f]*\)$/\1/p' "$LOG/$role" | tail -1)"
     if [ -z "$h" ]; then
       echo "  the run as '$role' reported no roothash" >&2
       failed=1
@@ -114,7 +116,7 @@ fi
 #     The login prompts are masked first, at runtime only, in /run. multi-user.target wants them,
 #     and a getty would open the same console this check reports over and take it — the machine has
 #     no other channel back (SP-A04-4: no SSH). Masking is undone by the poweroff that follows.
-systemctl mask --runtime getty.target serial-getty@hvc0.service >/dev/null 2>&1
+systemctl mask --runtime getty.target serial-getty@ttyS0.service >/dev/null 2>&1
 systemctl start --no-block multi-user.target
 for _ in $(seq 1 60); do
   [ "$(systemctl is-active "workpod-$ROLE.target" 2>/dev/null)" = active ] && break
@@ -173,6 +175,10 @@ else
   fail "/ is mounted read-only" "$(findmnt -no OPTIONS /)"
 fi
 
-echo "WORKPOD-ROOTHASH: $ROOTHASH"
+# To the console, not to stdout. Stdout is the journal, and the journal reaches the serial line
+# prefixed — run 22 lost this line to exactly that: both roles reported the same roothash and the
+# host read neither, because `[    6.60] bash[382]: ` stood in front of the marker it anchored on.
+# The roothash is not diagnostics, it is half the verdict: the host compares it across roles.
+echo "WORKPOD-ROOTHASH: $ROOTHASH" > /dev/console 2>/dev/null || echo "WORKPOD-ROOTHASH: $ROOTHASH"
 printf '\n  %d met, %d not\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
