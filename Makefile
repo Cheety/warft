@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -18,6 +18,7 @@ help:
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
 	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1, AB-A06-* (AP-1.2)"
 	@echo "make calibration      500 pods, 20 active, the five constants — AB-A06-13, AB-E05-1 (AP-1.3)"
+	@echo "make contract         the schema, its probes, and the working tree against HEAD — AB-E10-* (AP-2.1)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -46,6 +47,16 @@ image-acceptance:
 	@acceptance/e01-kernel.sh
 	@acceptance/a02-roles.sh
 	@acceptance/a06-acceptance.sh
+
+# AP-2.1. The probes prove the linter bites; the comparison holds the working tree to SP-E10-3
+# before a commit exists for CI to hold it. CI compares against the pre-push contract instead —
+# the same tool, a different baseline.
+contract:
+	@acceptance/e10-schema.sh
+	@old="$$(mktemp)"; \
+	git show HEAD:contract/platform.proto > "$$old" && \
+	acceptance/e10-additive.py "$$old" contract/platform.proto; \
+	rc=$$?; rm -f "$$old"; exit $$rc
 
 # AP-1.3. A-06's last row, and the measurement stage 1 ends with: a fleet of 500 pods on a machine
 # larger than a check needs, and the five constants of E-05 measured on it. It is its own target

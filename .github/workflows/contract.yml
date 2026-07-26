@@ -1,0 +1,66 @@
+# AP-2.1 — the leg that holds the contract to its own rule (AB-E10-1, AB-E10-3, AB-E10-5,
+# AB-T04-4).
+#
+# SP-E10-3 says the migration rule is enforced by a schema linter in CI — this is that
+# enforcement, in two halves:
+#   1. The probes: a scratch copy of the contract is mutated and the linter must reject it. That
+#      is AB-E10-3, and it runs on every change so the linter cannot rot unnoticed.
+#   2. The baseline comparison: the pushed contract against the contract as it stood before the
+#      push. Each step being additive against its predecessor is only transitive because the
+#      linter also forbids lifting a reservation — a number cannot be laundered back over two
+#      pushes.
+#
+# The acceptance scripts are trigger paths because they decide this run's verdict: a change to a
+# check must re-run the check, or the registry row it feeds rests on a run of the old one.
+
+name: contract
+
+on:
+  push:
+    paths:
+      - 'contract/platform.proto'
+      - 'acceptance/e10-additive.py'
+      - 'acceptance/e10-schema.sh'
+      - '.github/workflows/contract.yml'
+  pull_request:
+    paths:
+      - 'contract/platform.proto'
+      - 'acceptance/e10-additive.py'
+      - 'acceptance/e10-schema.sh'
+      - '.github/workflows/contract.yml'
+  workflow_dispatch:
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The baseline comparison reaches into history; a shallow clone would have none.
+          fetch-depth: 0
+
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: The schema and its probes
+        run: ./acceptance/e10-schema.sh
+
+      - name: Additive against the baseline
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            # A forced or freshly created ref has no before-commit to stand against. The probes
+            # above still ran; only the baseline half has nothing to compare.
+            echo "no baseline commit ($BASE) — nothing to compare against"
+            exit 0
+          fi
+          if ! git cat-file -e "$BASE:contract/platform.proto" 2>/dev/null; then
+            echo "the contract did not exist at $BASE — its first version is additive by definition"
+            exit 0
+          fi
+          git show "$BASE:contract/platform.proto" > "$RUNNER_TEMP/platform-baseline.proto"
+          ./acceptance/e10-additive.py "$RUNNER_TEMP/platform-baseline.proto" contract/platform.proto

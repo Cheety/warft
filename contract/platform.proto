@@ -293,6 +293,46 @@ message ResolvedSkill {
 }
 
 // ---------------------------------------------------------------------------
+// B-03 / V-05 — one schema, several renderings (SP-E10-5)
+//
+// Exports and the audit trail render from the definitions above. There is no second,
+// human-maintained format that could drift — a rendering wraps the message the system already
+// speaks, it never restates its fields.
+// ---------------------------------------------------------------------------
+
+message HumanAcceptance {            // Q-01: a human standing behind an acceptance is a fact, not chat
+  string order_id = 1;
+  string acceptance_id = 2;          // the Acceptance in the spec that was accepted
+  string principal = 3;
+}
+
+message AuditRecord {                // B-03: separate and immutable, its own retention per tenant (SP-B03-5)
+  string id = 1;                     // UUID v7, from the producer
+  string cell = 2;
+  string project = 3;
+  google.protobuf.Timestamp at = 4;
+  string principal = 5;              // who — stated by the certificate, not claimed (SP-E10-2)
+  // The three facts SP-B03-5 names, each carried as the message that produced it.
+  oneof fact {
+    Lease authority_received = 6;    // who received which authority when
+    Receipt gate_passed = 7;         // which gate let what through
+    HumanAcceptance human_accepted = 8;  // which human accepted what
+  }
+}
+
+message ExportChunk {                // V-05: specs and control state are exportable — as themselves
+  oneof object {
+    Spec spec = 1;
+    Envelope envelope = 2;
+    Order order = 3;
+    OutboxEntry outbox = 4;
+    Receipt receipt = 5;
+    Report report = 6;
+    AuditRecord audit = 7;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Services
 // ---------------------------------------------------------------------------
 
