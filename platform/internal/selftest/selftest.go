@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -151,17 +152,20 @@ func checkMemoryMin(add func(string, bool, string)) {
 }
 
 func checkLayout(v boot.Values, add func(string, bool, string)) {
-	varDisk, varFS := underlyingDisk(mountSource("/var"))
+	varSrc, varFS := mountEntry("/var")
+	varDisk := underlyingDisk(varSrc)
 	add("/var mounted", varFS == "btrfs", fmt.Sprintf("fstype %q on disk %q (SP-A05-1)", varFS, varDisk))
 
-	workDisk, workFS := underlyingDisk(mountSource("/data/work"))
+	workSrc, workFS := mountEntry("/data/work")
+	workDisk := underlyingDisk(workSrc)
 	add("/data/work mounted", workFS == "btrfs", fmt.Sprintf("fstype %q on disk %q (SP-A05-1)", workFS, workDisk))
 
 	sep := varDisk != "" && workDisk != "" && varDisk != workDisk
 	add("work disk separate", sep, fmt.Sprintf("work on %q, data on %q — the work disk separate from the data disk (SP-A05-3)", workDisk, varDisk))
 
 	if v.NeedsDB() {
-		dbDisk, dbFS := underlyingDisk(mountSource("/data/db"))
+		dbSrc, dbFS := mountEntry("/data/db")
+		dbDisk := underlyingDisk(dbSrc)
 		add("/data/db mounted", dbFS != "", fmt.Sprintf("fstype %q on disk %q — the only area that survives a reinstall (SP-A05-1)", dbFS, dbDisk))
 		sepDB := dbDisk != "" && workDisk != "" && dbDisk != workDisk
 		add("db off the work disk", sepDB, "state does not share a spindle with snapshots (SP-A05-3)")
@@ -197,76 +201,71 @@ func checkClock(add func(string, bool, string)) {
 		fmt.Sprintf("chronyd active, synchronized=%s — the clock before enrollment (SP-A04-5); reaching a server needs a network and is reported, not demanded", strings.TrimSpace(string(sync))))
 }
 
-// mountSource returns the major:minor of the device mounted at target, or "" when nothing is.
-func mountSource(target string) string {
+// mountEntry returns the source device path and filesystem type mounted at target — the LAST
+// mountinfo entry wins, which is what makes an over-mounted volatile /var read as the disk, not
+// the tmpfs. The source is taken as a path, not as mountinfo's major:minor: btrfs reports an
+// anonymous device number there (0:xx, one per superblock), and /sys knows no such block device
+// — the first CI run of AP-3.1 measured every disk as "" through exactly that hole.
+func mountEntry(target string) (src, fstype string) {
 	b, err := os.ReadFile("/proc/self/mountinfo")
+	if err != nil {
+		return "", ""
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		f := strings.Fields(l)
+		if len(f) < 5 || f[4] != target {
+			continue
+		}
+		for i, tok := range f {
+			if tok == "-" && i+2 < len(f) {
+				fstype, src = f[i+1], f[i+2]
+			}
+		}
+	}
+	return src, fstype
+}
+
+// underlyingDisk walks a device path down to the whole disk that carries it, through device
+// mapper (an encrypted /var) and partitions alike.
+func underlyingDisk(src string) string {
+	if !strings.HasPrefix(src, "/dev/") {
+		return ""
+	}
+	resolved, err := filepath.EvalSymlinks(src)
 	if err != nil {
 		return ""
 	}
-	src := ""
-	for _, l := range strings.Split(string(b), "\n") {
-		f := strings.Fields(l)
-		// mountinfo: id parent major:minor root target options ... — the LAST mount on a target
-		// wins, which is what makes an over-mounted volatile /var read as the disk, not the tmpfs.
-		if len(f) > 4 && f[4] == target {
-			src = f[2]
-		}
+	fi, err := os.Stat(resolved)
+	if err != nil {
+		return ""
 	}
-	return src
-}
-
-// underlyingDisk walks a major:minor down to the whole disk that carries it, through device
-// mapper (an encrypted /var) and partitions alike. Returns the disk's kernel name and the
-// filesystem type mounted from the original device.
-func underlyingDisk(majmin string) (disk, fstype string) {
-	if majmin == "" {
-		return "", ""
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return ""
 	}
-	fstype = fsTypeOf(majmin)
-	seen := 0
-	for majmin != "" && seen < 8 {
-		seen++
-		sys := filepath.Join("/sys/dev/block", majmin)
-		resolved, err := filepath.EvalSymlinks(sys)
+	majmin := fmt.Sprintf("%d:%d", unix.Major(uint64(st.Rdev)), unix.Minor(uint64(st.Rdev)))
+	for range 8 {
+		sys, err := filepath.EvalSymlinks(filepath.Join("/sys/dev/block", majmin))
 		if err != nil {
-			return "", fstype
+			return ""
 		}
 		// device mapper: descend into the (single) slave underneath.
-		slaves, _ := os.ReadDir(filepath.Join(resolved, "slaves"))
+		slaves, _ := os.ReadDir(filepath.Join(sys, "slaves"))
 		if len(slaves) > 0 {
-			b, err := os.ReadFile(filepath.Join(resolved, "slaves", slaves[0].Name(), "dev"))
+			b, err := os.ReadFile(filepath.Join(sys, "slaves", slaves[0].Name(), "dev"))
 			if err != nil {
-				return "", fstype
+				return ""
 			}
 			majmin = strings.TrimSpace(string(b))
 			continue
 		}
 		// partition: the parent directory is the disk.
-		if _, err := os.Stat(filepath.Join(resolved, "partition")); err == nil {
-			return filepath.Base(filepath.Dir(resolved)), fstype
+		if _, err := os.Stat(filepath.Join(sys, "partition")); err == nil {
+			return filepath.Base(filepath.Dir(sys))
 		}
-		return filepath.Base(resolved), fstype
+		return filepath.Base(sys)
 	}
-	return "", fstype
-}
-
-func fsTypeOf(majmin string) string {
-	b, err := os.ReadFile("/proc/self/mountinfo")
-	if err != nil {
-		return ""
-	}
-	typ := ""
-	for _, l := range strings.Split(string(b), "\n") {
-		f := strings.Fields(l)
-		if len(f) > 4 && f[2] == majmin {
-			for i, tok := range f {
-				if tok == "-" && i+1 < len(f) {
-					typ = f[i+1]
-				}
-			}
-		}
-	}
-	return typ
+	return ""
 }
 
 // reflinkWorks proves SP-A05-2 by doing it: write a file, clone it with FICLONE, and let the

@@ -26,10 +26,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	"github.com/Cheety/warft/platform/internal/boot"
 )
@@ -133,7 +130,9 @@ func Reinstall() error {
 	}
 	// /var is always a mount (the image boots it volatile), so the question is whether the DISK
 	// step's /var stands there — tmpfs means it does not, and the reinstall may proceed.
-	if fsAt(mountVar) == "btrfs" || mountedSource(mountWork) != "" {
+	_, varFS := mountEntry(mountVar)
+	workSrc, _ := mountEntry(mountWork)
+	if varFS == "btrfs" || workSrc != "" {
 		return fmt.Errorf("the layout is mounted; a reinstall happens before the disk step, not beside it")
 	}
 	// wipefs on the LUKS or btrfs signature is the erase: for an encrypted /var it destroys the
@@ -329,11 +328,17 @@ func ensureFS(part, label string) error {
 }
 
 // mount puts dev on target unless that exact device already stands there. The comparison is by
-// device, not by path: /var is always a mount (the image boots it volatile), and the whole point
-// of this step is to put the disk over the tmpfs — a target-only check would skip it.
+// the mount's source path, not by target: /var is always a mount (the image boots it volatile),
+// and the whole point of this step is to put the disk over the tmpfs — a target-only check would
+// skip it. mountinfo's major:minor field would not do either: btrfs reports an anonymous device
+// there, so the source path is the one identity both sides share.
 func mount(dev, target string) error {
-	if src := mountedSource(target); src != "" && src == devMajMin(dev) {
-		return nil
+	if src, _ := mountEntry(target); src != "" {
+		a, err1 := filepath.EvalSymlinks(src)
+		b, err2 := filepath.EvalSymlinks(dev)
+		if err1 == nil && err2 == nil && a == b {
+			return nil
+		}
 	}
 	if err := run("mount", "-t", "btrfs", dev, target); err != nil {
 		return err
@@ -342,53 +347,25 @@ func mount(dev, target string) error {
 	return nil
 }
 
-// mountedSource returns the major:minor mounted at target — the last mountinfo entry wins, so an
-// over-mounted /var reads as the disk, not the tmpfs beneath it. Empty when nothing is mounted.
-func mountedSource(target string) string {
+// mountEntry returns the source and filesystem type of the last mount at target — the last entry
+// wins, so an over-mounted /var reads as the disk, not the tmpfs beneath it.
+func mountEntry(target string) (src, fstype string) {
 	b, err := os.ReadFile("/proc/self/mountinfo")
 	if err != nil {
-		return ""
+		return "", ""
 	}
-	src := ""
 	for _, l := range strings.Split(string(b), "\n") {
 		f := strings.Fields(l)
-		if len(f) > 4 && f[4] == target {
-			src = f[2]
+		if len(f) < 5 || f[4] != target {
+			continue
 		}
-	}
-	return src
-}
-
-// fsAt returns the filesystem type mounted at target, last entry winning.
-func fsAt(target string) string {
-	b, err := os.ReadFile("/proc/self/mountinfo")
-	if err != nil {
-		return ""
-	}
-	typ := ""
-	for _, l := range strings.Split(string(b), "\n") {
-		f := strings.Fields(l)
-		if len(f) > 4 && f[4] == target {
-			for i, tok := range f {
-				if tok == "-" && i+1 < len(f) {
-					typ = f[i+1]
-				}
+		for i, tok := range f {
+			if tok == "-" && i+2 < len(f) {
+				fstype, src = f[i+1], f[i+2]
 			}
 		}
 	}
-	return typ
-}
-
-func devMajMin(dev string) string {
-	fi, err := os.Stat(dev)
-	if err != nil {
-		return ""
-	}
-	st, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return ""
-	}
-	return fmt.Sprintf("%d:%d", unix.Major(uint64(st.Rdev)), unix.Minor(uint64(st.Rdev)))
+	return src, fstype
 }
 
 func waitFor(path string, timeout time.Duration) (string, error) {
