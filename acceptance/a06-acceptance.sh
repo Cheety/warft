@@ -156,20 +156,27 @@ if [ "$MODE" = drive ]; then
       dd if=/dev/urandom of="$LOG/damaged.raw" bs=512 count=1 \
          seek=$(( start_sector + 2 )) conv=notrunc status=none
       echo "== drill: 512 bytes overwritten at sector $(( start_sector + 2 )) of a copy" >&2
-      "$ROOT/image/vm.sh" --role work --image "$LOG/damaged.raw" --timeout 180 \
+      # 120 seconds: the healthy image reaches the check in seven, and a machine that cannot mount
+      # its root never finishes at all, so the rest of the budget is spent waiting for the timeout.
+      "$ROOT/image/vm.sh" --role work --image "$LOG/damaged.raw" --timeout 120 \
           "$HERE/a06-acceptance.sh" probe > "$LOG/damaged" 2>&1
       damaged_rc=$?
+      # The console of the damaged boot, always. It is the evidence when the drill passes and the
+      # only diagnosis when it does not; the first run of this drill swallowed it and left a verdict
+      # nobody could check.
+      echo "== drill: the last 40 lines the damaged machine said (vm.sh exited $damaged_rc)" >&2
+      tail -40 "$LOG/damaged" | sed 's/^/   | /' >&2
+
+      # `device-mapper: verity` on its own is not evidence: the module logs that string when it
+      # loads, on every healthy boot too. What has to be found is the refusal.
+      corruption="$(grep -aoiE '(device-mapper: )?verity[^|]*corrupt[a-z]*' "$LOG/damaged" | head -1)"
       if grep -q 'WORKPOD-EXIT:' "$LOG/damaged"; then
         drill_text="the damaged image booted and ran the check — verity did not stop it"
-      elif grep -qiE 'verity|corrupt' "$LOG/damaged"; then
+      elif [ -n "$corruption" ]; then
         drill_state=PASS
-        # vm.sh has already stripped the carriage returns a serial console leaves behind, so `.*`
-        # runs to the end of the kernel's line.
-        drill_text="did not start: $(grep -aoE 'device-mapper: verity.*' "$LOG/damaged" | head -1)"
-        [ "$drill_text" = "did not start: " ] && drill_text="did not start; the console names verity"
+        drill_text="did not start: $corruption"
       else
-        drill_text="the boot failed (vm.sh $damaged_rc) but the console does not name verity — see above"
-        sed -n '$p' "$LOG/damaged" >&2
+        drill_text="the boot did not finish (vm.sh $damaged_rc) but nothing named a corrupted block"
       fi
     fi
   fi
@@ -282,13 +289,25 @@ printf '\n\033[1mA-06 — in the machine\033[0m\n\n'
 # default.target at the check, so multi-user.target has to be asked for — and the login prompts are
 # masked first, at runtime only, because a getty would take the console this check reports over
 # (a02-roles.sh does the same, for the same reason).
+#
+# What is waited on is multi-user.target, not `systemctl is-system-running`. The latter cannot
+# become `running` here by construction: it reports `starting` until the initial transaction is
+# done, and this check is a unit inside that transaction, so it would be waiting for itself. The
+# first run of this script spent its whole ninety-second budget that way and then ran anyway.
 systemctl mask --runtime getty.target serial-getty@ttyS0.service >/dev/null 2>&1
 systemctl start --no-block multi-user.target
 for _ in $(seq 1 90); do
-  case "$(systemctl is-system-running 2>/dev/null)" in running|degraded) break ;; esac
+  [ "$(systemctl is-active multi-user.target 2>/dev/null)" = active ] && break
   sleep 1
 done
-printf '  boot: %s · %s\n\n' "$(systemctl is-system-running 2>&1)" "$(uname -r)"
+BOOT="$(systemctl is-active multi-user.target 2>&1)"
+printf '  boot: multi-user.target %s · %s\n' "$BOOT" "$(uname -r)"
+if [ "$BOOT" != active ]; then
+  # A wait that runs out says nothing on its own. What is still queued says which unit to look at.
+  echo "  it did not settle in 90 s; the jobs still queued:"
+  systemctl list-jobs 2>&1 | sed 's/^/    /'
+fi
+echo
 
 # -------------------------------------------------------------------------------------------------
 # 1  cgroup v2 unified, PSI readable                       → otherwise R-A and R-C fall
@@ -375,8 +394,11 @@ check_reflink() {
   # 64 MB of slack for the metadata the copy does write; a gigabyte of data would not fit in it.
   [ "$snapshot_growth" -lt 64 ] || { note "the snapshot cost ${snapshot_growth} MB — that is a copy"; ok=0; }
   [ "$copy_growth" -gt 900 ]    || { note "a real copy cost only ${copy_growth} MB — the measurement cannot see a gigabyte"; ok=0; }
-  [ "$reflink_ms" -lt 1000 ]    || { note "${reflink_ms} ms is not O(1)"; ok=0; }
-  [ $(( reflink_ms * 10 )) -lt "$copy_ms" ] \
+  [ "$reflink_ms" -lt 1000 ] || { note "${reflink_ms} ms is not O(1)"; ok=0; }
+  # An order of magnitude faster than the copy it replaces, or fast enough that the comparison is
+  # measuring process startup rather than the filesystem. Without the second clause an emulated
+  # runner could fail this by being uniformly slow, which is not a fact about reflink.
+  [ "$reflink_ms" -lt 200 ] || [ $(( reflink_ms * 10 )) -lt "$copy_ms" ] \
     || { note "the snapshot is not an order of magnitude faster than the copy it replaces"; ok=0; }
 
   umount "$mnt"
@@ -527,6 +549,9 @@ check_criu() {
   # because setsid forks, so the shell's $! is the wrong one.
   setsid bash -c "echo \$\$ > $dir/pid; n=0; while :; do n=\$((n+1)); printf %s \"\$n\" > $counter; sleep 0.2; done" \
     < /dev/null > "$dir/log" 2>&1 &
+  # Out of the job table: the sample is meant to be killed — first by criu, then by this check — and
+  # a shell that still owns it prints "Killed" into the middle of the results.
+  disown %% 2>/dev/null
   sleep 2
   local pid; pid="$(cat "$dir/pid" 2>/dev/null)"
   [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || { note "the sample process did not start"; return 1; }
