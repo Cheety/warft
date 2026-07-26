@@ -1,0 +1,26 @@
+# The state database — Postgres on /data/db, the queue inside it, no second broker (SP-E02-2,
+# E-02). It lives in the control layer's slice (SP-V01-1) and on the one area of the disk layout
+# that survives a reinstall (SP-A05-1).
+#
+# The socket is the only door: listen_addresses is empty, peer authentication on the Unix socket
+# in /run/workpod-db. Wanted by the roles that carry the control layer (`all`, `control`) — a
+# work node has no /data/db to put it on.
+
+[Unit]
+Description=Workpod state database (Postgres on /data/db)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-disk.service
+After=workpod-disk.service
+
+[Service]
+Type=notify
+User=postgres
+Group=postgres
+RuntimeDirectory=workpod-db
+Slice=workpod-control.slice
+# db-init runs once, privileged (the "+"): it creates the cluster and hands it to postgres.
+ExecStartPre=+/usr/bin/workpod db-init
+ExecStart=/usr/bin/postgres -D /data/db/pg -k /run/workpod-db -c listen_addresses=
+TimeoutStartSec=120
+Restart=on-failure
+RestartSec=2

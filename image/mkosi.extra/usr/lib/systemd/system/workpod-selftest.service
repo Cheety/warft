@@ -1,0 +1,20 @@
+# The `selftest` step of the A-04 start sequence — a subset of A-06, run by the node on itself
+# (SP-A04-2). A failed selftest means: do not enroll (SP-A04-3). That rule stands twice: the
+# register step Requires= this unit, and the binary refuses to register without the marker this
+# step writes. Neither guard trusts the other to be enough.
+#
+# After= the layer slices so that what it checks — the slices of V-01 — has had its chance to
+# come up; After= the database for the same reason on the roles that carry one.
+
+[Unit]
+Description=Workpod A-04 selftest (a subset of A-06)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-disk.service
+After=workpod-disk.service workpod-db.service
+After=workpod-control.slice workpod-captain.slice workpod-knowledge.slice workpod-work.slice
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/workpod selftest
+TimeoutStartSec=120

@@ -1,0 +1,7 @@
+# The parent of the four layer slices (SP-V01-1, AP-3.1). V-01's layers are logically constant
+# and physically variable: on a small machine they are the four slices under this one, in a
+# cluster they are nodes of their own — the same units either way (SP-A02-1).
+
+[Unit]
+Description=Workpod platform layers
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

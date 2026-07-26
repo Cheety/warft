@@ -5,10 +5,12 @@
 # role = work" — and the one SP-A02-5 updates without a drain command: the worker stops pulling,
 # runs its open leases to completion, restarts and enrolls again.
 #
-# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
-# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
-# first services here.
+# The sequence here ends at the worker, whose registration against a remote control plane needs
+# the certificate name of contract/identity.md — enrollment, AP-6.1. Until then a lone work node
+# runs its sequence to the selftest and refuses the plaintext hop, by name.
 
 [Unit]
 Description=Workpod node role: work
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Wants=workpod-work.slice
+Wants=workpod-disk.service workpod-selftest.service workpod-worker.service

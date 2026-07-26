@@ -1,0 +1,7 @@
+# The knowledge layer as a slice (SP-V01-1): the fact store, scaling for reading. Its first
+# occupant arrives with stage 4 (G-01, E-09); until then the layer exists as capacity, not as a
+# process.
+
+[Unit]
+Description=Workpod knowledge layer
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

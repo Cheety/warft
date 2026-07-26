@@ -69,7 +69,11 @@ fi
 # mkosi.extra/ is on the list because its contents are copied into the image verbatim — the role
 # generator and the four role targets from AP-1.1 live there. kernel-requirements.conf is not: it is
 # what the image is checked against, and a check cannot change what it checks.
-INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart mkosi.extra tool-version build.sh)
+#
+# ../platform is on the list since AP-3.1: the platform binary is image content (SP-A02-3), so a
+# change to its source is a change to the artifact — the seal has to notice it and
+# SOURCE_DATE_EPOCH has to move with it.
+INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart mkosi.extra tool-version build.sh ../platform)
 
 REVISION="$(git -C "$HERE" log -1 --pretty=%H -- "${INPUTS[@]}" 2>/dev/null || true)"
 # An uncommitted change is a different image than any commit describes, and no seal can honestly
@@ -86,6 +90,26 @@ export SOURCE_DATE_EPOCH
 
 rm -rf "$A" "$B"
 mkdir -p "$A" "$B" "$CACHE" "$BUILDCACHE"
+
+# The platform binary (SP-E02-1) is built once, before either pass, and staged where mkosi.conf's
+# ExtraTrees= picks it up — both passes then embed the identical file, so the comparison below
+# still measures mkosi and the package set, not Go. Go is a dependency of the build environment
+# like mkosi itself, never of the image (SP-A02-3: no toolchains on the host); its version is
+# printed with the pin so a binary is never a number without the tool that made it.
+if ! command -v go >/dev/null 2>&1; then
+  echo "go is not installed. The platform binary is image content since AP-3.1 (SP-E02-1)." >&2
+  exit 1
+fi
+PLATFORM_TREE="$HERE/.build/platform-tree"
+rm -rf "$PLATFORM_TREE"
+mkdir -p "$PLATFORM_TREE/usr/bin"
+echo "== platform binary ($(go version))"
+( cd "$HERE/../platform" && \
+  CGO_ENABLED=0 go build -trimpath -buildvcs=false \
+    -ldflags "-X main.revision=${REVISION:-unknown}" \
+    -o "$PLATFORM_TREE/usr/bin/workpod" ./cmd/workpod )
+chmod 0755 "$PLATFORM_TREE/usr/bin/workpod"
+sha256sum "$PLATFORM_TREE/usr/bin/workpod" | sed 's/^/  /'
 
 PIN="$(grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | cut -d= -f2-)"
 

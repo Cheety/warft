@@ -1,0 +1,19 @@
+# The `disk` step of the A-04 start sequence (SP-A04-2): find, decrypt, otherwise create — the
+# layout of SP-A05-1 on the disks the machine was given. It also holds the head of the sequence:
+# the five boot values are validated here, before anything is touched, so a node that was handed
+# less than SP-A04-1's five values refuses in one named place.
+#
+# Everything after this step Requires= it: no layout, no selftest, no registration. That is the
+# sequence as a dependency chain rather than as a convention.
+
+[Unit]
+Description=Workpod A-04 disk step (find, decrypt, otherwise create)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+After=systemd-udevd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/workpod disk
+# Device patience (30 s) plus the first boot's mkfs and TPM enrollment fit well inside this.
+TimeoutStartSec=180

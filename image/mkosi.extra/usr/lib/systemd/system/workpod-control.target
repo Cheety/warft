@@ -5,10 +5,12 @@
 # E-02 rules is the only one. It is also the only role whose disk keeps something across a
 # reinstall (`/data/db`, SP-A05-1) and the only one that needs no enrollment token (SP-A04-1).
 #
-# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
-# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
-# first services here.
+# Wants=, not Requires=: the role names what belongs to it, and the sequence's own Requires-chain
+# (disk → selftest → serve) is what enforces A-04.
 
 [Unit]
 Description=Workpod node role: control
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Wants=workpod-control.slice
+Wants=workpod-disk.service workpod-db.service workpod-selftest.service
+Wants=workpod-control.service

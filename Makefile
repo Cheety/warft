@@ -8,17 +8,20 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform boot proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
 	@echo "make acceptance-sync  take new checks over from 03-acceptance-matrix.md into the registry"
 	@echo
-	@echo "make image            build the image twice and compare — AB-A03-2 (AP-0.2)"
+	@echo "make image            build the platform binary and the image twice, compare — AB-A03-2 (AP-0.2)"
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
 	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1, AB-A06-* (AP-1.2)"
 	@echo "make calibration      500 pods, 20 active, the five constants — AB-A06-13, AB-E05-1 (AP-1.3)"
 	@echo "make contract         both schemas, their probes, the state machine, the authority token and the node identity, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-B01-3, AB-V05-2 (AP-2.1 through AP-2.5)"
+	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
+	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
+	@echo "make proto            regenerate platform/api/workpodv1 from contract/platform.proto"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -73,3 +76,26 @@ contract:
 # prints are read by a person before they land in decisions/E-05.md.
 calibration:
 	@acceptance/calibration.sh
+
+# AP-3.1. The platform as one artifact: control plane, scheduler, worker, adapter, both gates and
+# harness out of one statically linked Go binary — built parts serving, unbuilt parts refusing by
+# the name of the package that builds them.
+platform:
+	@acceptance/e02-binary.sh
+
+# AP-3.1. The A-04 start sequence against the image `make image` built: four boots — the sequence
+# to a registered node, the reinstall that only /data/db survives, the withheld boot value, and
+# the failed selftest that must not register.
+boot:
+	@acceptance/a04-boot.sh
+
+# The generated bindings are committed; this regenerates them after a (decided, additive) change
+# to contract/platform.proto. The import path is mapped on the command line so the contract file
+# itself stays free of Go concerns — it changes only through a decision (E-10).
+proto:
+	@protoc -I contract \
+	  --go_out=platform --go_opt=module=github.com/Cheety/warft/platform \
+	  --go_opt=Mplatform.proto=github.com/Cheety/warft/platform/api/workpodv1 \
+	  --go-grpc_out=platform --go-grpc_opt=module=github.com/Cheety/warft/platform \
+	  --go-grpc_opt=Mplatform.proto=github.com/Cheety/warft/platform/api/workpodv1 \
+	  contract/platform.proto

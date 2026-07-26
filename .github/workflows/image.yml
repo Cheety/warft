@@ -26,9 +26,12 @@ on:
   push:
     paths:
       - 'image/**'
+      - 'platform/**'
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
       - 'acceptance/a06-acceptance.sh'
+      - 'acceptance/a04-boot.sh'
+      - 'acceptance/e02-binary.sh'
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
@@ -37,9 +40,12 @@ on:
   pull_request:
     paths:
       - 'image/**'
+      - 'platform/**'
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
       - 'acceptance/a06-acceptance.sh'
+      - 'acceptance/a04-boot.sh'
+      - 'acceptance/e02-binary.sh'
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
@@ -69,11 +75,16 @@ jobs:
       # util-linux is named for AB-A06-7's drill: the damage has to go into the root partition, and
       # `sfdisk` is what says where that partition begins. The base container ships util-linux-core,
       # which does not carry it.
+      #
+      # golang builds the platform binary (SP-E02-1) — a dependency of the build environment, never
+      # of the image (SP-A02-3: no toolchains on the host). swtpm gives the boot checks' machine a
+      # TPM 2.0, so the disk step's binding of /var (SP-A05-4) runs against a real device instead
+      # of falling back.
       - name: Install the build dependencies
         run: >
           dnf -y install mkosi git-core systemd-udev distribution-gpg-keys openssl
           erofs-utils dosfstools mtools systemd-ukify util-linux
-          qemu-system-x86-core edk2-ovmf
+          qemu-system-x86-core edk2-ovmf golang swtpm
 
       # fetch-depth: 0 because build.sh dates the image from the last commit that touched image/,
       # not from HEAD. A shallow checkout has one commit, and on a run triggered by a change to this
@@ -123,6 +134,16 @@ jobs:
 
       - name: AB-A02-1 — four roles, one artifact
         run: ./acceptance/a02-roles.sh
+
+      # AP-3.1's two host-side and four boot-side checks. The binary check reads the artifact
+      # build.sh staged for mkosi; the boots run the A-04 sequence in the machine — to a
+      # registered node, through a reinstall, against a withheld boot value, and past a selftest
+      # that must refuse.
+      - name: AB-E02-1 — one Go binary
+        run: ./acceptance/e02-binary.sh
+
+      - name: AB-A04-*, AB-A05-1, AB-RC-4, AB-V01-1 — the A-04 sequence in the machine
+        run: ./acceptance/a04-boot.sh
 
       # AP-1.2. A-06 in full: the list runs in the machine, the SBOM is read next to the artifact,
       # and a deliberately damaged copy of the image is booted to see it refuse. Eight rows green,

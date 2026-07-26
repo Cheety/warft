@@ -39,6 +39,21 @@
 #   --memory MB   RAM of the guest, default 2048
 #   --cpus N      vCPUs of the guest, default 2
 #
+# AP-3.1 added two more, for the disk layout of A-05 and the A-04 sequence over it:
+#
+#   --persist-disk PATH:SERIAL:SIZE   attach PATH as a virtio disk with the given serial, creating
+#                 it (sparse) if missing, and keep it afterwards. Repeatable. This is how the disk
+#                 step's find-or-create and AB-A05-1's reinstall are exercised: two boots that see
+#                 the same disks, which the throwaway --disk can never provide. The caller owns
+#                 the files. The disk step addresses disks by ID, so SERIAL is what it looks for
+#                 (workpod-data, workpod-work).
+#   --tpm         attach an emulated TPM 2.0 through swtpm, when swtpm is installed. The disk step
+#                 binds /var's encryption to a TPM where one exists (SP-A05-4) and says so when
+#                 none does — this flag is what makes the CI machine have one. TPM state lives in
+#                 this script's temporary directory: a fresh TPM per boot, which is right for a
+#                 sequence that formats; a boot that must re-open yesterday's /var is AP-6.1's
+#                 concern, with a persistent machine to match.
+#
 # Two things about the guest are worth knowing before reading its output:
 #
 #   * systemd-run-generator points default.target at its own target, so the boot stops short of
@@ -66,6 +81,8 @@ SCRATCH=""
 IMAGE=""
 MEMORY=2048
 CPUS=2
+PERSIST=()
+TPM=0
 
 usage() { sed -n '3p' "$0" | sed 's/^# *//' >&2; exit 2; }
 
@@ -78,6 +95,8 @@ while [ $# -gt 0 ]; do
     --timeout) TIMEOUT="${2:?}"; shift 2 ;;
     --memory)  MEMORY="${2:?}"; shift 2 ;;
     --cpus)    CPUS="${2:?}"; shift 2 ;;
+    --persist-disk) PERSIST+=("${2:?}"); shift 2 ;;
+    --tpm)     TPM=1; shift ;;
     --output)  OUTPUT="${2:?}"; shift 2 ;;
     --)        shift; break ;;
     -*)        echo "vm.sh: unknown option $1" >&2; usage ;;
@@ -207,6 +226,40 @@ if [ -n "$SCRATCH" ]; then
   DISKS+=(-drive "if=none,id=scratch,format=raw,file=$WORK/scratch.raw"
           -device virtio-blk-pci,drive=scratch,serial=workpod-scratch)
 fi
+pd_n=0
+for spec in ${PERSIST+"${PERSIST[@]}"}; do
+  case "$spec" in
+    *:*:*) ;;
+    *) echo "vm.sh: --persist-disk wants PATH:SERIAL:SIZE, got '$spec'" >&2; exit 2 ;;
+  esac
+  pd_path="${spec%%:*}"; rest="${spec#*:}"
+  pd_serial="${rest%%:*}"; pd_size="${rest#*:}"
+  if [ -z "$pd_path" ] || [ -z "$pd_serial" ] || [ -z "$pd_size" ]; then
+    echo "vm.sh: --persist-disk wants PATH:SERIAL:SIZE, got '$spec'" >&2; exit 2
+  fi
+  [ -f "$pd_path" ] || truncate -s "$pd_size" "$pd_path" \
+    || { echo "vm.sh: cannot create $pd_path" >&2; exit 2; }
+  pd_n=$((pd_n + 1))
+  DISKS+=(-drive "if=none,id=persist$pd_n,format=raw,file=$pd_path"
+          -device "virtio-blk-pci,drive=persist$pd_n,serial=$pd_serial")
+done
+
+# The TPM is a socket to swtpm; qemu is only its transport. --tpm2 because SP-A05-4 means TPM 2.0
+# — systemd-cryptenroll speaks nothing older.
+TPMDEV=()
+if [ "$TPM" = 1 ]; then
+  if command -v swtpm >/dev/null 2>&1; then
+    mkdir -p "$WORK/tpm"
+    swtpm socket --tpm2 --tpmstate "dir=$WORK/tpm" \
+      --ctrl "type=unixio,path=$WORK/swtpm.sock" --terminate --daemon \
+      || { echo "vm.sh: swtpm did not start" >&2; exit 2; }
+    TPMDEV=(-chardev "socket,id=chrtpm,path=$WORK/swtpm.sock"
+            -tpmdev emulator,id=tpm0,chardev=chrtpm
+            -device tpm-tis,tpmdev=tpm0)
+  else
+    echo "vm.sh: --tpm asked for but swtpm is not installed — the guest boots without one" >&2
+  fi
+fi
 
 CONSOLE="$WORK/console.log"
 echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
@@ -233,6 +286,7 @@ timeout --foreground "$TIMEOUT" \
     -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE" \
     -drive "if=pflash,unit=1,format=raw,file=$WORK/vars.fd" \
     "${DISKS[@]}" \
+    ${TPMDEV+"${TPMDEV[@]}"} \
     -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 \
     -serial stdio \
     "${SMBIOS[@]}" > "$CONSOLE" 2>&1

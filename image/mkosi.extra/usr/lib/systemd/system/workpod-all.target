@@ -1,14 +1,17 @@
 # One of the four roles from SP-A02-1. Which one a node takes is the boot value `role`, read from
 # a credential by workpod-role-generator; the image is the same artifact either way (AB-A02-1).
 #
-# `all` is a single node carrying every slice at once — the shape a small installation runs in, and
-# the one A-06 exercises with `role=all`: an envelope arriving at intake and leaving as a patch, on
-# one machine.
+# `all` is a single node carrying every slice at once — the shape a small installation runs in:
+# the four layers of V-01 as the four slices of AP-3.1, and the whole A-04 sequence on one
+# machine. An envelope arriving at intake and leaving as a patch, with no second node involved.
 #
-# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
-# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
-# first services here.
+# What hangs here is Wants=, not Requires=: the role names what belongs to it, and the sequence's
+# own Requires-chain (disk → selftest → register) is what enforces A-04. A failed step leaves the
+# role standing and the failure named, instead of tearing the role down over it.
 
 [Unit]
 Description=Workpod node role: all
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Wants=workpod-control.slice workpod-captain.slice workpod-knowledge.slice workpod-work.slice
+Wants=workpod-disk.service workpod-db.service workpod-selftest.service
+Wants=workpod-control.service workpod-worker.service
