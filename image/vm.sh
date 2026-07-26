@@ -52,7 +52,8 @@
 # firmware write to its ESP, and the seal from AB-A03-7 is over exactly those bytes.
 #
 # Exit:  the guest script's exit code, or
-#        124 on timeout · 125 when the guest never reported one · 2 on a usage error
+#        124 on timeout · 125 when the guest never reported one · 2 on a usage error, which
+#        includes a payload too large for the SMBIOS table to carry (see the check further down)
 
 set -uo pipefail
 
@@ -153,6 +154,29 @@ EXTRA='systemd.run="/bin/bash /run/credentials/@system/workpod.check"'
 EXTRA="$EXTRA systemd.run_success_action=poweroff systemd.run_failure_action=poweroff"
 EXTRA="${EXTRA//,/,,}"
 SMBIOS+=(-smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$EXTRA")
+
+# And the limit that carries all of this: an SMBIOS structure is addressed with a 16-bit length, so
+# the OEM string table cannot exceed 64 KB — and when it does, nothing is dropped selectively and
+# nothing complains. qemu builds the table, the firmware refuses it whole, and the machine boots
+# without credentials, without a role and without the appended command line: straight past
+# default.target to a login prompt, where it sits until the timeout kills it.
+#
+# Run 26 is what that costs. `calibration.sh` carried both its halves in one file, 64,948 bytes in
+# base64, and spent fifteen minutes at a getty. The check was correct, the payload could not arrive,
+# and nothing in the log said so — the kernel command line in the boot header was simply missing its
+# tail. So the size is checked here, before a machine is started, and the message names the file to
+# split. A check that cannot be delivered is not a red row, it is a silent one.
+payload=0
+for f in "$SMB"/*; do payload=$(( payload + $(wc -c < "$f") )); done
+payload=$(( payload + ${#EXTRA} + 64 ))     # the appended command line, plus the structure itself
+if [ "$payload" -gt 63488 ]; then           # 62 KB, leaving room for the tables qemu adds itself
+  echo "vm.sh: the credentials come to $payload bytes of SMBIOS OEM strings, and the table holds 64 KB." >&2
+  echo "        The largest is $(ls -S "$SMB" | head -1) at $(wc -c < "$SMB/$(ls -S "$SMB" | head -1)") bytes." >&2
+  echo "        Nothing would arrive in the machine and it would boot to a login prompt (run 26)." >&2
+  echo "        Split the check: the half that drives stays on the host, the half that probes travels." >&2
+  exit 2
+fi
+echo "   credentials $payload bytes of 63488" >&2
 
 # The firmware. A UEFI machine needs the code half read-only and a writable copy of the variables,
 # and the paths differ by distribution, so they are searched rather than assumed.

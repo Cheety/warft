@@ -197,6 +197,60 @@ syscall succeeds unfiltered. Landlock is applied by a sandboxed process to itsel
 which SP-A02-3 intends. What the run does establish is that the kernel has it active in its LSM
 list, which a configuration symbol alone does not say.
 
+## The calibration (AP-1.3)
+
+`acceptance/calibration.sh` is A-06's last row and the measurement stage 1 ends with: 500 pods
+created, 20 of them active, and the five constants of E-05 measured instead of assumed. It boots the
+same artifact through the same door as the other three checks, and it is the first one that needs a
+different machine — `vm.sh --memory` and `--cpus` exist for it. 2048 MB and two cores hold a check;
+they do not hold a fleet.
+
+**A pod at this stage is a cgroup with a shell in it,** created through `systemd-run` in
+`workpod-pods.slice` — the mechanism SP-A02-4 gives R-A and R-C, and the same slice the acceptance
+list reads pressure from. It carries no harness, no container image and no runtime, because none of
+those exist before AP-3.1. That is not a gap in the run, it is the reason two of the numbers it
+produces are floors and say so.
+
+**Three slices, because the fleet has three parts that are measured apart from each other.** The
+twenty active pods get their class's `cpu.weight` and their class's tolerated limit as `memory.high`,
+in the mix E-05 states — 4 tiny, 6 small, 7 medium, 3 large, which is 20/30/35/15 over twenty. Of the
+480 frozen pods, half hold nothing but themselves, so the marginal cost of the mechanism has no size
+chosen by the script in it; the other half hold a stated megabyte of the image's own unit files, so
+the compression factor has pages with content to work on. zram compresses page by page, which is why
+a seed repeated across pages does not flatter that factor, and why the seed is configuration text
+rather than `/dev/urandom` — noise compresses at 1.0 and would make the factor a fact about the
+random device.
+
+**The factor is measured where R-D uses it.** Frozen pods lie compressed and active pods lie hot, so
+the occupancy table divides the frozen pod's pages by the factor and nothing else. The two frozen
+slices are frozen with one write each — the freezer is hierarchical, which is what makes "freeze the
+fleet" one decision instead of 480 — and then reclaimed with `memory.reclaim`, and what zram received
+is read off the device. Freezing stops a pod's tasks; it does not pin their pages.
+
+**Four of the five constants are adopted, and the fifth is the panel's own exception.** E-05's table
+names where each is measured: four say "A-06", and the active pod says "three runs per repository
+(R-C)". There is no job at stage 1, so the run measures what the mix cost on the machine it had,
+records it, and leaves the table's 960 MB and 0.8 cores in place until AP-3.7. The twenty active pods
+together request 19.2 GB — four times what a runner can give a guest — so the load runs the mix at
+1/8 of each class request and prints the fraction with every number it produces.
+
+**The pressure event at the end is OP-6's.** One pod under a low `memory.high` until `memory some
+avg10` crosses 10 %, then released, and the decay timed to three thresholds. `avg10` is an
+exponential average over ten seconds and cannot fall faster than its own window, so the decay is what
+a hold time has to clear — which is the value §19 left open and proposed deriving from exactly this
+run.
+
+**The numbers land in two files and the run holds them against each other.** `decisions/E-05.md` is
+the ruling; `acceptance/e05-constants.tsv` is the same numbers in the shape R-D reads them in. A
+number in the table that is not in the ruling is drift, and a fresh measurement more than a factor of
+two from the recorded one stops the run instead of being averaged into it. A factor of two rather
+than a percentage: past that it is a different machine or a broken measurement, and both need a
+person.
+
+The host side of the script can be replayed without a machine — `CAL_REPLAY=<dir>` composes the table
+from a saved console log — because everything after the two boots is arithmetic over marker lines,
+and arithmetic that has never run over real output is a guess.
+
 ## What the runs have established
 
 This configuration was written on a host with no mkosi, no dnf, no rpm and no root, so nothing here
