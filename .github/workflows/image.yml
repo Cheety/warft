@@ -25,12 +25,14 @@ on:
       - 'image/**'
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
+      - 'acceptance/a06-acceptance.sh'
       - '.github/workflows/image.yml'
   pull_request:
     paths:
       - 'image/**'
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
+      - 'acceptance/a06-acceptance.sh'
       - '.github/workflows/image.yml'
   workflow_dispatch:
 
@@ -52,10 +54,14 @@ jobs:
       # image: erofs-utils for the root filesystem, dosfstools and mtools for the ESP,
       # systemd-ukify to assemble the unified kernel image mkosi puts the verity roothash into.
       # qemu and edk2-ovmf are for the checks that boot the result (AP-1.1's "done when").
+      #
+      # util-linux is named for AB-A06-7's drill: the damage has to go into the root partition, and
+      # `sfdisk` is what says where that partition begins. The base container ships util-linux-core,
+      # which does not carry it.
       - name: Install the build dependencies
         run: >
           dnf -y install mkosi git-core systemd-udev distribution-gpg-keys openssl
-          erofs-utils dosfstools mtools systemd-ukify
+          erofs-utils dosfstools mtools systemd-ukify util-linux
           qemu-system-x86-core edk2-ovmf
 
       # fetch-depth: 0 because build.sh dates the image from the last commit that touched image/,
@@ -106,6 +112,13 @@ jobs:
 
       - name: AB-A02-1 — four roles, one artifact
         run: ./acceptance/a02-roles.sh
+
+      # AP-1.2. A-06 in full: the list runs in the machine, the SBOM is read next to the artifact,
+      # and a deliberately damaged copy of the image is booted to see it refuse. Eight rows green,
+      # five open with the work package that closes them, no red — that is the work package's
+      # "done when", said by a run.
+      - name: AB-A06-* — the acceptance list of the image
+        run: ./acceptance/a06-acceptance.sh
 
       - name: Collect the SBOM
         if: always()
