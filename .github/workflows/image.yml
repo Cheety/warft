@@ -17,11 +17,21 @@
 
 name: image
 
+# The two acceptance scripts are trigger paths because they decide this run's verdict: a change to
+# a check must re-run the check, or the registry row it feeds rests on a run of the old one.
 on:
   push:
-    paths: ['image/**', '.github/workflows/image.yml']
+    paths:
+      - 'image/**'
+      - 'acceptance/e01-kernel.sh'
+      - 'acceptance/a02-roles.sh'
+      - '.github/workflows/image.yml'
   pull_request:
-    paths: ['image/**', '.github/workflows/image.yml']
+    paths:
+      - 'image/**'
+      - 'acceptance/e01-kernel.sh'
+      - 'acceptance/a02-roles.sh'
+      - '.github/workflows/image.yml'
   workflow_dispatch:
 
 jobs:
