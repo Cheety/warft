@@ -285,6 +285,32 @@ at 8 met, 0 not, the identical roothash on both boots, and the host now able to 
 boots in a VM with / read-only under dm-verity, which is the work package's "done when", said by a
 run rather than by this file.
 
+Then the list itself (AP-1.2). [Run 24](https://github.com/Cheety/warft/actions/runs/30200264202)
+reported eight green, five open, no red on its first attempt — and two of those verdicts were worth
+less than they looked:
+
+| Run | What passed but should not have | What it established |
+|---|---|---|
+| 24 | the drill's evidence was `device-mapper: verity: sha256 using "sha256-lib"` | The module logs that string when it loads, on every healthy boot. The pattern was `verity`, so any hung boot would have matched it. A check has to anchor on the refusal, not on the mechanism being present — and the damaged machine's console went to a file that was then thrown away, so the verdict could not be checked at all. |
+| 24 | ninety seconds of nothing before the first check | The wait was on `systemctl is-system-running`, which cannot report `running` here by construction: it stays `starting` until the initial transaction is done, and the check is a unit inside that transaction. It was waiting for itself. |
+
+[Run 25](https://github.com/Cheety/warft/actions/runs/30200758783) is the one the eleven rows are
+green through. The same eight and five, and now with the numbers behind them:
+
+- **reflink is O(1) and it is measured against something.** 4 ms and +0 MB for a 1 GB snapshot,
+  against 1103 ms and +1026 MB for a real copy of the same file on the same filesystem. `btrfs
+  filesystem du` reports the snapshot as 1073741824 bytes total, **0 exclusive**.
+- **CRIU works on this kernel**, which is the row all of E-11's stage 1 hangs on: `criu check`
+  green, a sample process dumped at count 10 and gone, restored under the same pid, counting again
+  at 20. E-01's overturn condition was not reached.
+- **zram selected zstd**, not the kernel's lzo-rle default: `lzo-rle lzo lz4 lz4hc [zstd] deflate
+  842`, 487 MB, in use as swap. The compression factor stays open — it is AP-1.3's to measure.
+- **The damaged image did not start.** `device-mapper: verity: 253:2: data block 0 is corrupted`,
+  then emergency mode, then `Cannot open access to console, the root account is locked` — a node
+  with no way in is A-04 working, not A-04 failing. The check never ran, which is the other half of
+  the verdict.
+- **The boot settles in 7.8 s** now that the wait is on a target rather than on itself.
+
 ## The seal: SBOM and signature (AB-A03-7)
 
 The SBOM is `ManifestFormat=json` — a manifest of everything installed, written per image. The
