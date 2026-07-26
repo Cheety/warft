@@ -1,0 +1,18 @@
+# The control plane — the ControlPlane service of contract/platform.proto out of the one binary
+# (SP-E02-1). It runs as a system service under system.slice on purpose: that is the slice whose
+# memory.min reserves "the control plane, the proxies and access" (SP-RC-4), and AB-RC-4 probes
+# exactly this placement under pressure.
+#
+# Requires= the selftest: a node that failed its own checks offers no plane to register against —
+# the sequence of SP-A04-2 holds for every step behind the selftest, not only for the worker.
+
+[Unit]
+Description=Workpod control plane
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-selftest.service
+After=workpod-selftest.service workpod-db.service
+
+[Service]
+ExecStart=/usr/bin/workpod control
+Restart=on-failure
+RestartSec=2

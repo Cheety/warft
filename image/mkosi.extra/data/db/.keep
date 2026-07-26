@@ -1,0 +1,2 @@
+# Mount point for SP-A05-1's /data/db — the only area that survives a reinstall. The root is
+# read-only under dm-verity, so the mount point must exist in the image; this file keeps it in Git.

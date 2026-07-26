@@ -1,0 +1,7 @@
+# The control layer as a slice (SP-V01-1): router, scheduler, state, leases. On this machine it
+# holds the state database; the plane itself is a system service under system.slice, which is
+# where SP-RC-4's memory.min reserves it (see system.slice.d/10-workpod-memory-min.conf).
+
+[Unit]
+Description=Workpod control layer
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

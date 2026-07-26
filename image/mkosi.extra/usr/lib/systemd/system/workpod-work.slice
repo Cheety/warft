@@ -1,0 +1,11 @@
+# The work layer as a slice (SP-V01-1): workpods, snapshots, caches. The worker agent runs here,
+# and every pod slice (AP-3.3) nests beneath it by its dashed name — workpod-work-<pod>.slice —
+# which is where `workpod podslice arm` sets memory.oom.group=1 (SP-RC-4): a pod is one workload
+# to the OOM killer, never a survivor of its own siblings.
+#
+# Deliberately without memory.min: under pressure this layer is where the kernel reclaims, so
+# that the system slice's reservation has somewhere to reclaim from.
+
+[Unit]
+Description=Workpod work layer
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

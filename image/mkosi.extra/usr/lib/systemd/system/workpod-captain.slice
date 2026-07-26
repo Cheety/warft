@@ -1,0 +1,8 @@
+# The captain layer as a slice (SP-V01-1): reserved capacity per project. Empty until stage 5 —
+# stage 3 runs without a captain on purpose (E-11, step 3: a system whose mechanics first run
+# together with a model has two unknown sources of error). The slice standing empty is that
+# boundary made visible: the reservation exists, the reserver does not yet.
+
+[Unit]
+Description=Workpod captain layer
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md

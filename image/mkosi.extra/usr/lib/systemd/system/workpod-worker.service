@@ -1,0 +1,21 @@
+# The `register` step of the A-04 start sequence, and the work layer's agent after it: the node
+# asks the control plane for capacity and pulling begins (SP-A04-2, V-02). It lives in the work
+# layer's slice — under pressure it is reclaimable, the plane it registered with is not (SP-RC-4).
+#
+# Requires=workpod-selftest.service is SP-A04-3 as a dependency: a failed selftest and this unit
+# never starts. The binary checks the selftest marker again itself.
+#
+# Restart=no, deliberately for AP-3.1: a registration that fails must stay visible as a failed
+# unit rather than flap behind a retry loop. Static stability across restarts and expiries is
+# V-02's, built and measured in AP-6.2.
+
+[Unit]
+Description=Workpod worker (register, then pull)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-selftest.service
+After=workpod-selftest.service workpod-control.service
+
+[Service]
+Slice=workpod-work.slice
+ExecStart=/usr/bin/workpod worker
+Restart=no

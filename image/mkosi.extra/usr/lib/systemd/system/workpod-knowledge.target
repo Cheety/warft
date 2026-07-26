@@ -5,10 +5,11 @@
 # the write-back path the finished job leaves its judgement candidates on. It is cut by the locality
 # group (E-03), not by the tenant.
 #
-# Nothing is wanted below this target yet. The image carries no platform binary — that is AP-1.1's
-# boundary — so what a role activates today is the target and nothing under it. AP-3.1 hangs the
-# first services here.
+# Its first process arrives with stage 4 (G-01, E-09). The A-04 sequence up to the selftest
+# already holds, so a knowledge node earns its boot the way every other role does.
 
 [Unit]
 Description=Workpod node role: knowledge
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Wants=workpod-knowledge.slice
+Wants=workpod-disk.service workpod-selftest.service
