@@ -191,6 +191,7 @@ that only a booted machine could have produced:
 | 18 | `--ephemeral: expected one argument` | The boot never started. |
 | 19, 20 | ten minutes, no output at all | `mkosi vm` registers the machine with systemd-machined, and a build container runs no systemd. Nothing was listening to the console either. |
 | 21 | exit 125 after a clean check | The image boots, and both defects below were only visible because it does. |
+| 22 | `the run as 'control' reported no roothash` | `AB-E01-1` green, 48 of 48. Both role boots passed 8 of 8 with the identical roothash — and the host read neither, because the probe's marker went through the journal and arrived prefixed. Run 21's trailer defect, one level up. |
 
 Run 21 is where the image first ran a check of its own. It established three things:
 
@@ -216,10 +217,17 @@ run 21 exactly — 2177 modules survive the filter, 2178 reach the image, and th
 `parport`. With the four dependents excluded it is 2173 and 2173, and nothing is dragged back past
 the filter at all.
 
+Run 22 sharpened the journal lesson into a rule: **a marker the host parses goes to `/dev/console`;
+the journal is for people.** vm.sh's exit trailer learned this from run 21; the roothash marker in
+`a02-roles.sh` had the same defect and run 22 found it the same way — a probe that passed inside
+the machine and a host that could not see it. Both markers now write to the console with a journal
+fallback, and both host-side matchers tolerate a prefix, so the fallback path is still read.
+
 Still not established:
 
-- That the two rows of AP-1.1 are green. `AB-A02-1` has not run at all yet — run 21 stopped at
-  `AB-E01-1`, which is the step before it.
+- That `AB-A02-1` is green. Everything it probes has now held in a run — same roothash under both
+  roles, `/usr` unwritable, verity on the root — but the run that shows its script saying so is the
+  next one.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
