@@ -18,7 +18,7 @@ help:
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
 	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1, AB-A06-* (AP-1.2)"
 	@echo "make calibration      500 pods, 20 active, the five constants — AB-A06-13, AB-E05-1 (AP-1.3)"
-	@echo "make contract         both schemas, their probes, the state machine in a database, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-V05-2 (AP-2.1 through AP-2.3)"
+	@echo "make contract         both schemas, their probes, the state machine and the authority token in a database and a library, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-V05-2 (AP-2.1 through AP-2.4)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -48,10 +48,10 @@ image-acceptance:
 	@acceptance/a02-roles.sh
 	@acceptance/a06-acceptance.sh
 
-# AP-2.1 through AP-2.3. The probes prove the linters bite and the trigger refuses; the
-# comparisons hold the working tree to SP-E10-3 and SP-V05-2 before a commit exists for CI to
-# hold it. CI compares against the pre-push contract instead — the same tools, a different
-# baseline.
+# AP-2.1 through AP-2.4. The probes prove the linters bite, the trigger refuses and widening is
+# cryptographically impossible; the comparisons hold the working tree to SP-E10-3 and SP-V05-2
+# before a commit exists for CI to hold it. CI compares against the pre-push contract instead — the
+# same tools, a different baseline.
 contract:
 	@acceptance/e10-schema.sh
 	@old="$$(mktemp)"; \
@@ -60,6 +60,7 @@ contract:
 	rc=$$?; rm -f "$$old"; exit $$rc
 	@acceptance/k01-schema.sh
 	@acceptance/k02-state.sh
+	@acceptance/k04-authority.sh
 	@old="$$(mktemp)"; \
 	git show HEAD:contract/schema.sql > "$$old" && \
 	acceptance/schema-additive.py "$$old" contract/schema.sql; \

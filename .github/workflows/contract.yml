@@ -25,22 +25,28 @@ on:
     paths:
       - 'contract/platform.proto'
       - 'contract/schema.sql'
+      - 'contract/authority.md'
       - 'acceptance/e10-additive.py'
       - 'acceptance/e10-schema.sh'
       - 'acceptance/schema-additive.py'
       - 'acceptance/k01-schema.sh'
       - 'acceptance/k02-state.sh'
+      - 'acceptance/k04-authority.sh'
+      - 'acceptance/k04-authority.py'
       - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   pull_request:
     paths:
       - 'contract/platform.proto'
       - 'contract/schema.sql'
+      - 'contract/authority.md'
       - 'acceptance/e10-additive.py'
       - 'acceptance/e10-schema.sh'
       - 'acceptance/schema-additive.py'
       - 'acceptance/k01-schema.sh'
       - 'acceptance/k02-state.sh'
+      - 'acceptance/k04-authority.sh'
+      - 'acceptance/k04-authority.py'
       - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   workflow_dispatch:
@@ -113,3 +119,13 @@ jobs:
           fi
           git show "$BASE:contract/schema.sql" > "$RUNNER_TEMP/schema-baseline.sql"
           ./acceptance/schema-additive.py "$RUNNER_TEMP/schema-baseline.sql" contract/schema.sql
+
+  authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The probe runs the real Biscuit library in a pinned container it spins itself — the same
+      # shape as the state-machine leg reaching for a Postgres. ubuntu-latest carries docker.
+      - name: The authority token and its probes
+        run: ./acceptance/k04-authority.sh
