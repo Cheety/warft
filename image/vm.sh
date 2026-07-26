@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # vm.sh — run a script inside the built image and hand back what it said (AP-1.1).
 #
-#   image/vm.sh [--role ROLE] [--file PATH]... [--disk SIZE] [--image PATH] [--timeout SECONDS] SCRIPT [ARG]...
+#   image/vm.sh [--role ROLE] [--file PATH]... [--disk SIZE] [--image PATH] [--timeout SECONDS]
+#               [--memory MB] [--cpus N] SCRIPT [ARG]...
 #
 # E-11's first step reads "A-06 as a script against a bare mkosi VM". This is the "against": the
 # checks stay outside the image and are carried in at boot, so the artifact under test never has to
@@ -28,6 +29,16 @@
 #                 of the artifact on purpose and needs the damaged copy to boot, or rather to fail
 #                 to.
 #
+# AP-1.3 added two more, and both are about the machine rather than the check: the calibration run
+# creates five hundred pods and lets twenty of them work (A-06's last row), and the constants it
+# measures are memory and cores. 2048 MB and two cores are enough to hold a check and not enough to
+# hold a fleet, so the size of the machine has to be sayable — and it is printed with every number
+# the run reports, because a measured constant without the machine it was measured on is a number
+# without a unit.
+#
+#   --memory MB   RAM of the guest, default 2048
+#   --cpus N      vCPUs of the guest, default 2
+#
 # Two things about the guest are worth knowing before reading its output:
 #
 #   * systemd-run-generator points default.target at its own target, so the boot stops short of
@@ -52,6 +63,8 @@ ROLE=""
 FILES=()
 SCRATCH=""
 IMAGE=""
+MEMORY=2048
+CPUS=2
 
 usage() { sed -n '3p' "$0" | sed 's/^# *//' >&2; exit 2; }
 
@@ -62,6 +75,8 @@ while [ $# -gt 0 ]; do
     --disk)    SCRATCH="${2:?}"; shift 2 ;;
     --image)   IMAGE="${2:?}"; shift 2 ;;
     --timeout) TIMEOUT="${2:?}"; shift 2 ;;
+    --memory)  MEMORY="${2:?}"; shift 2 ;;
+    --cpus)    CPUS="${2:?}"; shift 2 ;;
     --output)  OUTPUT="${2:?}"; shift 2 ;;
     --)        shift; break ;;
     -*)        echo "vm.sh: unknown option $1" >&2; usage ;;
@@ -172,6 +187,7 @@ fi
 CONSOLE="$WORK/console.log"
 echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
 echo "   image $IMAGE${SCRATCH:+ · scratch $SCRATCH}" >&2
+echo "   ${CPUS} vcpu · ${MEMORY} MB" >&2
 echo "   firmware $OVMF_CODE" >&2
 [ -c /dev/kvm ] && echo "   /dev/kvm present" >&2 || echo "   no /dev/kvm — emulated, slower" >&2
 
@@ -188,7 +204,7 @@ echo "   firmware $OVMF_CODE" >&2
 # kernel's log arrive on the same line, in order. -no-reboot turns a boot loop into an exit.
 timeout --foreground "$TIMEOUT" \
   qemu-system-x86_64 \
-    -machine q35,accel=kvm:tcg -cpu max -smp 2 -m 2048 \
+    -machine q35,accel=kvm:tcg -cpu max -smp "$CPUS" -m "$MEMORY" \
     -display none -nodefaults -no-reboot \
     -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE" \
     -drive "if=pflash,unit=1,format=raw,file=$WORK/vars.fd" \
