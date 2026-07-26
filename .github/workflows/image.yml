@@ -17,8 +17,11 @@
 
 name: image
 
-# The two acceptance scripts are trigger paths because they decide this run's verdict: a change to
-# a check must re-run the check, or the registry row it feeds rests on a run of the old one.
+# The acceptance scripts are trigger paths because they decide this run's verdict: a change to a
+# check must re-run the check, or the registry row it feeds rests on a run of the old one. The
+# ruling in decisions/E-05.md and its machine-readable half are triggers for the same reason — the
+# calibration run holds the recorded constants against a fresh measurement, so editing a constant
+# has to re-measure it.
 on:
   push:
     paths:
@@ -26,6 +29,9 @@ on:
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
       - 'acceptance/a06-acceptance.sh'
+      - 'acceptance/calibration.sh'
+      - 'acceptance/e05-constants.tsv'
+      - 'decisions/E-05.md'
       - '.github/workflows/image.yml'
   pull_request:
     paths:
@@ -33,6 +39,9 @@ on:
       - 'acceptance/e01-kernel.sh'
       - 'acceptance/a02-roles.sh'
       - 'acceptance/a06-acceptance.sh'
+      - 'acceptance/calibration.sh'
+      - 'acceptance/e05-constants.tsv'
+      - 'decisions/E-05.md'
       - '.github/workflows/image.yml'
   workflow_dispatch:
 
@@ -119,6 +128,13 @@ jobs:
       # "done when", said by a run.
       - name: AB-A06-* — the acceptance list of the image
         run: ./acceptance/a06-acceptance.sh
+
+      # AP-1.3, the measurement stage 1 ends with. Two more boots of the same artifact, this time on
+      # a machine with 6 GB and 4 cores: 500 pods created, 20 of them working, and the five constants
+      # of E-05 measured instead of assumed. The runner has 16 GB and 4 cores in total, so the guest
+      # takes what it needs and no more — and every number the run prints carries the machine with it.
+      - name: AB-A06-13, AB-A06-4, AB-E05-1 — the calibration run
+        run: ./acceptance/calibration.sh
 
       - name: Collect the SBOM
         if: always()

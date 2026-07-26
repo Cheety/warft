@@ -1,0 +1,26 @@
+# e05-constants.tsv — the five constants of E-05, given and measured (AP-1.3).
+#
+# The machine-readable half of decisions/E-05.md. The ruling is the file in decisions/; this is the
+# same numbers in the shape R-D reads them in, so the occupancy table computes with the measured
+# values instead of carrying its own copy of them. acceptance/calibration.sh holds the two against
+# each other on every run: a number here that is not in the ruling is drift, and a number here that
+# is more than a factor of two from a fresh measurement stops the run.
+#
+# Seven rows for five constants: "host and runtime" is given per role and "active pod" is two
+# numbers.
+#
+# `adopted` is what R-D computes with. Four constants are marked "measured in A-06" by the panel
+# itself and take this run's number. The active pod is marked "three runs per repository (R-C)" —
+# its operating value is AP-3.7's to measure, and until then the table keeps the given one. The
+# reason stands in decisions/E-05.md, with the condition that voids it.
+#
+# `evidence` names the run each measured number came from. A number without one is an assumption
+# wearing the colour of a measurement (Q-02).
+key	given	measured	unit	adopted	evidence
+host_runtime_control	12288	—	MB	measured
+host_runtime_work	6144	—	MB	measured
+page_cache_base	8192	—	MB	measured
+frozen_pod	24	—	MB	measured
+zram_factor	1.6	—	x	measured
+active_pod_cores	0.8	—	cores	given until AP-3.7
+active_pod_ram	960	—	MB	given until AP-3.7

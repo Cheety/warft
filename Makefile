@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -17,6 +17,7 @@ help:
 	@echo "make image            build the image twice and compare — AB-A03-2 (AP-0.2)"
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
 	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1, AB-A06-* (AP-1.2)"
+	@echo "make calibration      500 pods, 20 active, the five constants — AB-A06-13, AB-E05-1 (AP-1.3)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -45,3 +46,10 @@ image-acceptance:
 	@acceptance/e01-kernel.sh
 	@acceptance/a02-roles.sh
 	@acceptance/a06-acceptance.sh
+
+# AP-1.3. A-06's last row, and the measurement stage 1 ends with: a fleet of 500 pods on a machine
+# larger than a check needs, and the five constants of E-05 measured on it. It is its own target
+# because it boots twice more and takes minutes rather than seconds — and because the numbers it
+# prints are read by a person before they land in decisions/E-05.md.
+calibration:
+	@acceptance/calibration.sh
