@@ -372,6 +372,17 @@ machine — which is what a first measurement usually finds:
 |---|---|---|
 | 26 | fifteen minutes at a login prompt | The check never started and nothing said why. An SMBIOS structure is addressed with a 16-bit length, so the OEM string table that carries the credentials holds 64 KB; the script came to 64,948 bytes in base64, and the firmware refused the table whole — no credential, no role, no appended command line. Three legs of the same run worked because their payloads were smaller. The check is split now, and `vm.sh` adds the payload up before it starts a machine: **a check that cannot be delivered is not a red row, it is a silent one.** |
 | 27 | a fleet of nothing: 0 pods, factor 0.00, pressure never moved | 500 pods existed and ran 541 rounds of work — the readings were empty because the cgroup paths were assembled one level short. A slice sits under every level of its own dashed name, so `workpod-pods-bare.slice` is at `/workpod.slice/workpod-pods.slice/workpod-pods-bare.slice`. `a06-acceptance.sh` asks systemd with `systemctl show -p ControlGroup` and never had the defect; the probe asks now too. **Three symptoms, one cause, and the 541 rounds are what said so.** |
+| 28 | everything measured but the frozen pod, which came back empty | In an awk `printf` statement a bare `>` is output redirection, so `printf "%.0f", n > 0 ? … : 0` is a syntax error whose complaint went to the journal. gawk on the host refuses the same line out loud, which is how it reproduced without a machine. Parentheses around the ternary; the one other ternary behind a printf already had them and had produced its number. |
+
+[Run 29](https://github.com/Cheety/warft/actions/runs/30204671464) measured all of it — the numbers
+stand in `decisions/E-05.md` and `decisions/OP-6.md`, and the host side of the script was replayed
+against run 29's own console log before the ruling was pushed: 3 green, 0 red, from the same
+arithmetic CI runs. The headline numbers: host and runtime 328 MB work / 334 MB control against a
+given 6/12 GB (no control plane yet — a floor), page cache 60 MB against 8 GB (no base layers — a
+floor), 0.37 MB per frozen pod against 24 MB (no harness — the gap is AP-3.1's), zram factor 4.41
+against 1.6, and the mix at 1/8 scale costing 0.190 cores · 122.5 MB — recorded, not adopted,
+because E-05 sends the active pod to R-C's three runs per repository. The pressure event for OP-6:
+crossed 10 % in 4.6 s, and 26.0 s from release to under 1 % — the decay is the hold time's floor.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
