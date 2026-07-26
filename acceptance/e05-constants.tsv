@@ -17,10 +17,10 @@
 # `evidence` names the run each measured number came from. A number without one is an assumption
 # wearing the colour of a measurement (Q-02).
 key	given	measured	unit	adopted	evidence
-host_runtime_control	12288	—	MB	measured
-host_runtime_work	6144	—	MB	measured
-page_cache_base	8192	—	MB	measured
-frozen_pod	24	—	MB	measured
-zram_factor	1.6	—	x	measured
-active_pod_cores	0.8	—	cores	given until AP-3.7
-active_pod_ram	960	—	MB	given until AP-3.7
+host_runtime_control	12288	334	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+host_runtime_work	6144	328	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+page_cache_base	8192	60	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+frozen_pod	24	0.37	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+zram_factor	1.6	4.41	x	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+active_pod_cores	0.8	0.190	cores	given until AP-3.7	https://github.com/Cheety/warft/actions/runs/30204671464
+active_pod_ram	960	122.5	MB	given until AP-3.7	https://github.com/Cheety/warft/actions/runs/30204671464
