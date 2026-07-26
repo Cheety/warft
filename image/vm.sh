@@ -9,9 +9,9 @@
 #
 # How a script gets in. systemd reads credentials from SMBIOS OEM strings — in a virtual machine
 # exactly as a node reads its boot values from instance data, which is what E-01 rules for the five
-# values from A-04. mkosi hands them to qemu, the manager places them in /run/credentials/@system,
-# and `systemd.run=` on the command line appended at runtime executes the one this script wrote.
-# Both are mechanisms the image already lives by; neither is a door opened for testing.
+# values from A-04. qemu carries them, the manager places them in /run/credentials/@system, and
+# `systemd.run=` on the command line appended at runtime executes the one this script wrote. Both
+# are mechanisms the image already lives by; neither is a door opened for testing.
 #
 # SCRIPT lands as the credential `workpod.script`, every --file next to it under its own basename,
 # and --role as `workpod.role` — which is the credential the image's own role generator reads, not
@@ -58,7 +58,7 @@ done
 SCRIPT="$1"; shift
 [ -r "$SCRIPT" ] || { echo "vm.sh: cannot read $SCRIPT" >&2; exit 2; }
 
-command -v mkosi >/dev/null 2>&1 || { echo "vm.sh: mkosi is not installed" >&2; exit 2; }
+command -v qemu-system-x86_64 >/dev/null 2>&1 || { echo "vm.sh: qemu-system-x86_64 is not installed" >&2; exit 2; }
 [ -d "$OUTPUT" ] || { echo "vm.sh: no image in $OUTPUT — run image/build.sh first" >&2; exit 2; }
 
 WORK="$(mktemp -d)"
@@ -66,10 +66,8 @@ trap 'rm -rf "$WORK"' EXIT
 CREDS="$WORK/credentials"
 mkdir -p "$CREDS"
 
-# mkosi takes a directory of credentials and names each one after its file. Every file here is
-# deliberately left non-executable: mkosi runs an executable credential file on the *host* and
-# passes its output instead of its contents, which for a check script would run it in the wrong
-# machine entirely.
+# Each file here becomes one credential, named after the file, and lands in the machine under
+# /run/credentials/@system.
 install -m 0644 "$SCRIPT" "$CREDS/workpod.script"
 for f in ${FILES+"${FILES[@]}"}; do
   [ -r "$f" ] || { echo "vm.sh: cannot read $f" >&2; exit 2; }
@@ -92,38 +90,78 @@ fi
 } > "$CREDS/workpod.check"
 chmod 0644 "$CREDS/workpod.check"
 
+# The credentials, in the encoding systemd reads them in: one SMBIOS type 11 OEM string per
+# credential, `io.systemd.credential.binary:<name>=<base64>`. This is what mkosi builds too, and
+# writing it out here is the point — every step from this file to the machine is visible.
+SMB="$WORK/smbios"
+mkdir -p "$SMB"
+SMBIOS=()
+for c in "$CREDS"/*; do
+  name="$(basename "$c")"
+  { printf 'io.systemd.credential.binary:%s=' "$name"; base64 -w0 < "$c"; } > "$SMB/$name"
+  SMBIOS+=(-smbios "type=11,path=$SMB/$name")
+done
+
+# The command line appended at runtime. systemd-stub reads this OEM string and adds it to the one
+# baked into the unified kernel image — which is the only way to start something in a machine whose
+# command line is otherwise sealed inside a signed artifact. Commas are doubled because qemu reads
+# them as its own separators; the quoting around systemd.run= is what systemd-run-generator(8)
+# documents, and it is what keeps the command from being split at its space.
+EXTRA='systemd.run="/bin/bash /run/credentials/@system/workpod.check"'
+EXTRA="$EXTRA systemd.run_success_action=poweroff systemd.run_failure_action=poweroff"
+EXTRA="${EXTRA//,/,,}"
+SMBIOS+=(-smbios "type=11,value=io.systemd.stub.kernel-cmdline-extra=$EXTRA")
+
+# The firmware. A UEFI machine needs the code half read-only and a writable copy of the variables,
+# and the paths differ by distribution, so they are searched rather than assumed.
+OVMF_CODE=""
+for f in /usr/share/edk2/ovmf/OVMF_CODE.fd /usr/share/OVMF/OVMF_CODE.fd \
+         /usr/share/edk2-ovmf/x64/OVMF_CODE.fd /usr/share/qemu/edk2-x86_64-code.fd \
+         $(ls -1 /usr/share/edk2/ovmf/OVMF_CODE*.fd /usr/share/OVMF/OVMF_CODE*.fd 2>/dev/null); do
+  case "$f" in *secboot*) continue ;; esac   # secure boot refuses the command line appended above
+  [ -f "$f" ] && { OVMF_CODE="$f"; break; }
+done
+[ -n "$OVMF_CODE" ] || { echo "vm.sh: no OVMF firmware found — install edk2-ovmf" >&2; exit 2; }
+OVMF_VARS="${OVMF_CODE%CODE.fd}VARS.fd"
+[ -f "$OVMF_VARS" ] || OVMF_VARS="$(dirname "$OVMF_CODE")/OVMF_VARS.fd"
+[ -f "$OVMF_VARS" ] || { echo "vm.sh: no OVMF variables template next to $OVMF_CODE" >&2; exit 2; }
+install -m 0644 "$OVMF_VARS" "$WORK/vars.fd"
+
+IMAGE="$OUTPUT/workpod.raw"
+[ -f "$IMAGE" ] || { echo "vm.sh: no image at $IMAGE — run image/build.sh first" >&2; exit 2; }
+
 CONSOLE="$WORK/console.log"
-SERIAL="$WORK/serial.log"
 echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
+echo "   firmware $OVMF_CODE" >&2
 [ -c /dev/kvm ] && echo "   /dev/kvm present" >&2 || echo "   no /dev/kvm — emulated, slower" >&2
 
-# --console=native puts the guest console straight on stdio; the other modes need
-# systemd-pty-forward and a terminal, which a build agent has no business requiring.
-# --firmware=uefi rather than the default, which prefers secure boot: systemd-stub only accepts a
-# command line appended at runtime when secure boot is off, and that command line is how the check
-# is started at all.
+# qemu is driven directly rather than through `mkosi vm`. mkosi's own path registers the machine
+# with systemd-machined and puts qemu in a scope, and in a build container with no systemd running
+# there is nothing to register with: run 19 and run 20 sat for ten minutes each and produced not one
+# line on either console. What a check needs is a disk, a firmware, a console and the two SMBIOS
+# strings above — all of which are written out here, where they can be read.
 #
-# The serial port is the second half of the same question. mkosi puts the guest console on a virtio
-# console and tells the kernel about it by appending to the command line at runtime; if any part of
-# that chain does not hold, the machine runs and says nothing, which is what run 19 spent ten
-# minutes doing. The serial line is wired by the firmware, named in the image's own command line,
-# and carries the kernel's log whether or not anything else worked.
+# snapshot=on keeps every write in a temporary file. The artifact must come out of this unchanged:
+# the seal from AB-A03-7 is over exactly these bytes.
+#
+# The console is the serial port the image's own command line names, so the check's output and the
+# kernel's log arrive on the same line, in order. -no-reboot turns a boot loop into an exit.
 timeout --foreground "$TIMEOUT" \
-  mkosi --directory "$HERE" --output-directory "$OUTPUT" \
-        --ephemeral=yes --console=native --firmware=uefi \
-        --credential "$CREDS" \
-        --kernel-command-line-extra \
-          "systemd.run=\"/bin/bash /run/credentials/@system/workpod.check\" systemd.run_success_action=poweroff systemd.run_failure_action=poweroff" \
-        vm -- -serial "file:$SERIAL" > "$CONSOLE" 2>&1
+  qemu-system-x86_64 \
+    -machine q35,accel=kvm:tcg -cpu max -smp 2 -m 2048 \
+    -display none -nodefaults -no-reboot \
+    -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE" \
+    -drive "if=pflash,unit=1,format=raw,file=$WORK/vars.fd" \
+    -drive "if=none,id=root,format=raw,snapshot=on,file=$IMAGE" \
+    -device virtio-blk-pci,drive=root \
+    -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 \
+    -serial stdio \
+    "${SMBIOS[@]}" > "$CONSOLE" 2>&1
 rc=$?
 
 # A serial console leaves carriage returns behind; stripping them makes the log grep and read like
 # a log rather than like a terminal recording.
 tr -d '\r' < "$CONSOLE" >&2
-if [ -s "$SERIAL" ]; then
-  echo "== serial (the kernel's log; the check itself speaks on the console above)" >&2
-  tr -d '\r' < "$SERIAL" | tail -120 >&2
-fi
 
 if [ "$rc" = 124 ]; then
   echo "vm.sh: the guest did not finish within ${TIMEOUT}s" >&2
@@ -132,7 +170,7 @@ fi
 
 STATUS="$(tr -d '\r' < "$CONSOLE" | sed -n 's/^WORKPOD-EXIT: \([0-9]\{1,3\}\)$/\1/p' | tail -1)"
 if [ -z "$STATUS" ]; then
-  echo "vm.sh: the guest never reported an exit code — the boot did not reach the check (mkosi exited $rc)" >&2
+  echo "vm.sh: the guest never reported an exit code — the boot did not reach the check (qemu exited $rc)" >&2
   exit 125
 fi
 exit "$STATUS"
