@@ -16,3 +16,7 @@ After=workpod-selftest.service workpod-db.service
 ExecStart=/usr/bin/workpod control
 Restart=on-failure
 RestartSec=2
+# The claim on system.slice's reservation (SP-RC-4): infinity clamps to the slice's 4 GB, and
+# protection follows actual use — the plane is protected because it runs, not because it was
+# sized. Only the units the reservation names claim it; see the drop-in on system.slice.
+MemoryMin=infinity
