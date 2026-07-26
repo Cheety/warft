@@ -333,9 +333,9 @@ mark fleet_detail "$n_active active · $n_bare bare · $n_state holding state ·
 # text on top of that. Both are reported, because R-D's frozen-pod value is the first plus whatever
 # a pod actually holds — and what it will hold is the harness, which is AP-3.1's to build.
 frozen_bare_kb="$(awk -v a="$bare_after" -v b="$bare_before" -v n="$bare_n" \
-                    'BEGIN { printf "%.0f", n > 0 ? (a - b) / n : 0 }')"
+                    'BEGIN { printf "%.0f", (n > 0 ? (a - b) / n : 0) }')"
 frozen_state_kb="$(awk -v a="$state_after" -v b="$state_before" -v n="$state_n" \
-                     'BEGIN { printf "%.0f", n > 0 ? (a - b) / n : 0 }')"
+                     'BEGIN { printf "%.0f", (n > 0 ? (a - b) / n : 0) }')"
 mark frozen_pod_mb "$(awk -v v="$frozen_bare_kb" 'BEGIN { printf "%.2f", v / 1024 }')"
 mark frozen_pod_state_mb "$(awk -v v="$frozen_state_kb" 'BEGIN { printf "%.2f", v / 1024 }')"
 mark frozen_pod_detail \

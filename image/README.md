@@ -365,6 +365,14 @@ green through. The same eight and five, and now with the numbers behind them:
   the verdict.
 - **The boot settles in 7.8 s** now that the wait is on a target rather than on itself.
 
+Then the calibration (AP-1.3), where both failures were about the instrument and neither about the
+machine — which is what a first measurement usually finds:
+
+| Run | Failure | What it established |
+|---|---|---|
+| 26 | fifteen minutes at a login prompt | The check never started and nothing said why. An SMBIOS structure is addressed with a 16-bit length, so the OEM string table that carries the credentials holds 64 KB; the script came to 64,948 bytes in base64, and the firmware refused the table whole — no credential, no role, no appended command line. Three legs of the same run worked because their payloads were smaller. The check is split now, and `vm.sh` adds the payload up before it starts a machine: **a check that cannot be delivered is not a red row, it is a silent one.** |
+| 27 | a fleet of nothing: 0 pods, factor 0.00, pressure never moved | 500 pods existed and ran 541 rounds of work — the readings were empty because the cgroup paths were assembled one level short. A slice sits under every level of its own dashed name, so `workpod-pods-bare.slice` is at `/workpod.slice/workpod-pods.slice/workpod-pods-bare.slice`. `a06-acceptance.sh` asks systemd with `systemctl show -p ControlGroup` and never had the defect; the probe asks now too. **Three symptoms, one cause, and the 541 rounds are what said so.** |
+
 ## The seal: SBOM and signature (AB-A03-7)
 
 The SBOM is `ManifestFormat=json` — a manifest of everything installed, written per image. The
