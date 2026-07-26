@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # vm.sh — run a script inside the built image and hand back what it said (AP-1.1).
 #
-#   image/vm.sh [--role ROLE] [--file PATH]... [--timeout SECONDS] SCRIPT [ARG]...
+#   image/vm.sh [--role ROLE] [--file PATH]... [--disk SIZE] [--image PATH] [--timeout SECONDS] SCRIPT [ARG]...
 #
 # E-11's first step reads "A-06 as a script against a bare mkosi VM". This is the "against": the
 # checks stay outside the image and are carried in at boot, so the artifact under test never has to
@@ -16,6 +16,17 @@
 # SCRIPT lands as the credential `workpod.script`, every --file next to it under its own basename,
 # and --role as `workpod.role` — which is the credential the image's own role generator reads, not
 # a test fixture.
+#
+# Two options exist for AP-1.2, and both are about the disk rather than the check:
+#
+#   --disk SIZE   attaches a second, empty virtio disk, reachable in the machine as
+#                 /dev/disk/by-id/virtio-workpod-scratch. The image has no data partition until
+#                 AP-3.1 builds A-05's layout, and AB-A06-2 has to measure a reflink snapshot on a
+#                 real filesystem — a tmpfs cannot reflink and would turn the measurement into a
+#                 skip. The disk is a throwaway file in this script's temporary directory.
+#   --image PATH  boots PATH instead of the build's `workpod.raw`. AB-A06-7's drill damages a copy
+#                 of the artifact on purpose and needs the damaged copy to boot, or rather to fail
+#                 to.
 #
 # Two things about the guest are worth knowing before reading its output:
 #
@@ -39,6 +50,8 @@ OUTPUT="${OUTPUT:-$HERE/.build/pass1}"
 TIMEOUT=600
 ROLE=""
 FILES=()
+SCRATCH=""
+IMAGE=""
 
 usage() { sed -n '3p' "$0" | sed 's/^# *//' >&2; exit 2; }
 
@@ -46,6 +59,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --role)    ROLE="${2:?}"; shift 2 ;;
     --file)    FILES+=("${2:?}"); shift 2 ;;
+    --disk)    SCRATCH="${2:?}"; shift 2 ;;
+    --image)   IMAGE="${2:?}"; shift 2 ;;
     --timeout) TIMEOUT="${2:?}"; shift 2 ;;
     --output)  OUTPUT="${2:?}"; shift 2 ;;
     --)        shift; break ;;
@@ -59,7 +74,10 @@ SCRIPT="$1"; shift
 [ -r "$SCRIPT" ] || { echo "vm.sh: cannot read $SCRIPT" >&2; exit 2; }
 
 command -v qemu-system-x86_64 >/dev/null 2>&1 || { echo "vm.sh: qemu-system-x86_64 is not installed" >&2; exit 2; }
-[ -d "$OUTPUT" ] || { echo "vm.sh: no image in $OUTPUT — run image/build.sh first" >&2; exit 2; }
+if [ -z "$IMAGE" ]; then
+  [ -d "$OUTPUT" ] || { echo "vm.sh: no image in $OUTPUT — run image/build.sh first" >&2; exit 2; }
+  IMAGE="$OUTPUT/workpod.raw"
+fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -136,11 +154,24 @@ OVMF_VARS="${OVMF_CODE%CODE.fd}VARS.fd"
 [ -f "$OVMF_VARS" ] || { echo "vm.sh: no OVMF variables template next to $OVMF_CODE" >&2; exit 2; }
 install -m 0644 "$OVMF_VARS" "$WORK/vars.fd"
 
-IMAGE="$OUTPUT/workpod.raw"
 [ -f "$IMAGE" ] || { echo "vm.sh: no image at $IMAGE — run image/build.sh first" >&2; exit 2; }
+
+# The disks. The root is always read through a snapshot (see below); the scratch disk is written
+# straight through, because it is a file in $WORK that the trap deletes either way. `serial=` is
+# what makes it findable in the machine by name instead of by device order — udev builds
+# /dev/disk/by-id/virtio-workpod-scratch from it.
+DISKS=(-drive "if=none,id=root,format=raw,snapshot=on,file=$IMAGE"
+       -device virtio-blk-pci,drive=root)
+if [ -n "$SCRATCH" ]; then
+  truncate -s "$SCRATCH" "$WORK/scratch.raw" \
+    || { echo "vm.sh: cannot create a ${SCRATCH} scratch disk" >&2; exit 2; }
+  DISKS+=(-drive "if=none,id=scratch,format=raw,file=$WORK/scratch.raw"
+          -device virtio-blk-pci,drive=scratch,serial=workpod-scratch)
+fi
 
 CONSOLE="$WORK/console.log"
 echo "== vm (role ${ROLE:-none}): $(basename "$SCRIPT") $*" >&2
+echo "   image $IMAGE${SCRATCH:+ · scratch $SCRATCH}" >&2
 echo "   firmware $OVMF_CODE" >&2
 [ -c /dev/kvm ] && echo "   /dev/kvm present" >&2 || echo "   no /dev/kvm — emulated, slower" >&2
 
@@ -161,8 +192,7 @@ timeout --foreground "$TIMEOUT" \
     -display none -nodefaults -no-reboot \
     -drive "if=pflash,unit=0,format=raw,readonly=on,file=$OVMF_CODE" \
     -drive "if=pflash,unit=1,format=raw,file=$WORK/vars.fd" \
-    -drive "if=none,id=root,format=raw,snapshot=on,file=$IMAGE" \
-    -device virtio-blk-pci,drive=root \
+    "${DISKS[@]}" \
     -object rng-random,filename=/dev/urandom,id=rng0 -device virtio-rng-pci,rng=rng0 \
     -serial stdio \
     "${SMBIOS[@]}" > "$CONSOLE" 2>&1

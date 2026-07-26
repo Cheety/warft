@@ -16,7 +16,7 @@ help:
 	@echo
 	@echo "make image            build the image twice and compare — AB-A03-2 (AP-0.2)"
 	@echo "make verify           check that build against the seal — AB-A03-7 (needs no key)"
-	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1 (AP-1.1)"
+	@echo "make image-acceptance boot that build and check it — AB-E01-1, AB-A02-1, AB-A06-* (AP-1.2)"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
 	@echo "acceptance/registry.py sync  the same sync"
@@ -37,9 +37,11 @@ image:
 verify:
 	@image/verify.sh
 
-# AP-1.1: the two rows that need a machine rather than an artifact. They boot the image built by
-# `make image` — E-11's "A-06 as a script against a bare mkosi VM", and the door AP-1.2 walks
-# through with a06-acceptance.sh.
+# The rows that need a machine rather than an artifact. They boot the image built by `make image` —
+# E-11's "A-06 as a script against a bare mkosi VM". The first two are AP-1.1's; the third is the
+# list itself, and it is the longest of the three because it damages a copy of the image and boots
+# that too.
 image-acceptance:
 	@acceptance/e01-kernel.sh
 	@acceptance/a02-roles.sh
+	@acceptance/a06-acceptance.sh

@@ -2,13 +2,13 @@
 
 AP-0.2 answered one question here: **does the image build reproducibly?** AP-1.1 added the content —
 the kernel requirements from SP-A02-2, the userland from SP-A02-3, and a bootable disk whose root is
-read-only under dm-verity.
+read-only under dm-verity. AP-1.2 holds the result against A-06's list of thirteen.
 
 ```
 mkosi.conf                        distribution, output, content, build
 mkosi.conf.d/10-package-pin.conf  the pinned Fedora release tree (SP-E01-2)
 mkosi.repart/                     the partitions: ESP, erofs root, verity hash
-mkosi.extra/                      what is copied into the image: the role generator, four targets
+mkosi.extra/                      what is copied in: the role generator, four targets, zram
 kernel-requirements.conf          the kernel configuration as a file (SP-A02-2, AB-E01-1)
 tool-version                      the pinned mkosi version
 build.sh                          builds twice, second pass offline, compares — this is AB-A03-2
@@ -16,7 +16,7 @@ vm.sh                             runs a script inside the built image; the door
 genkey.sh                         generates the signing pair, once, off the build machines
 seal.sh                           signs a build's seal record — the only step that needs the key
 verify.sh                         checks a build against the seal — needs no key. This is AB-A03-7
-signing.crt                       the public certificate; in the boot path from AP-1.2
+signing.crt                       the public certificate
 seal/image.seal[.sig]             what was sealed, and the signature over it
 ```
 
@@ -25,6 +25,7 @@ seal/image.seal[.sig]             what was sealed, and the signature over it
 ./image/verify.sh             # or: make verify
 acceptance/e01-kernel.sh      # or: make image-acceptance — boots the build and checks it
 acceptance/a02-roles.sh
+acceptance/a06-acceptance.sh
 ```
 
 ## What makes a rebuild identical
@@ -108,10 +109,15 @@ kernel image, so the boot path carries the hash of the content it is about to mo
 is checked as it is read. The ESP is the only writable partition and cannot be used to change what
 runs: a modified root stops matching the hash.
 
-The third file of the usual triple — a verity **signature** partition — is deliberately absent. It
-needs the private key at build time, and by
-[`decisions/signing-key.md`](../decisions/signing-key.md) that key is on no build machine. `AP-1.2`
-signs the roothash and puts `signing.crt` into the boot path.
+The third file of the usual triple — a verity **signature** partition — is absent, and after AP-1.2
+that is an open question rather than a plan. It needs the private key at build time, and by
+[`decisions/signing-key.md`](../decisions/signing-key.md) that key is on no build machine; the
+offline shape that works for the seal does not transfer, because a kernel only enforces a signed
+roothash against a certificate in its own keyring, and E-01 takes Fedora's kernel as it comes. So
+SP-A03-3's second sentence — "the public key lies in the boot path" — is not evidenced by any run
+yet. No matrix row asks for it: `AB-A03-3` and `AB-A06-7` both ask that a damaged image not start,
+and AP-1.2 evidences that with the drill below. Placing the signature is work that begins with a
+ruling in `decisions/`, not with a partition.
 
 ### Four roles, one artifact
 
@@ -140,6 +146,56 @@ ephemerally so the firmware's writes to the ESP never touch the sealed artifact.
 Until AP-3.1 builds the disk layout from A-05, the image has no data partition and boots with
 `systemd.volatile=state` — `/var` on tmpfs, the root still read-only. A node keeps nothing across a
 reboot yet.
+
+## The list (AP-1.2)
+
+`acceptance/a06-acceptance.sh` is section A of the acceptance matrix, thirteen rows, and it was
+written before the image was. AP-1.2 is where it is run against one. Eight rows can be evidenced by
+an image on its own; five need the platform binary and report as open, each naming the work package
+that closes it. Two more rows travel with the list because their own panels put them there —
+`AB-K04-7` (time is infrastructure) and `AB-B01-2` (an image is public).
+
+Most of it runs in the machine, through the same door as the other two checks. Three things about
+it are worth reading before the script:
+
+**Two rows are decided on both sides.** "Inventory against SBOM" (`AB-A06-6`) is a comparison, so
+both halves are looked at: the machine says what it carries, the bill of materials next to the
+artifact says what was put in, and the row is green only when neither names a compiler, an
+interpreter, a package manager or an editor. `AB-A06-7` is the same shape — verity carrying the root
+is a property of the running machine, and "a damaged image does not start" is a property of an
+artifact that has been damaged on purpose.
+
+**The drill damages a copy.** 512 bytes of noise go over the erofs superblock, 1024 bytes into the
+root partition — the one block that is certainly read, so the failure is a fact about the boot and
+not about which blocks happened to be touched. dm-verity sits under the filesystem and hashes every
+block as it is read, so the corruption is caught before erofs sees it. The machine that results has
+nowhere to go — no getty, no SSH — so it waits until the timeout kills it, and the verdict is
+therefore not an exit code: it is that the check never ran *and* the console names the block
+dm-verity refused. The artifact itself is untouched; `AB-A03-7`'s seal is over exactly those bytes.
+
+**Two measurements needed something the image does not have yet.** `AB-A06-2` measures a reflink
+snapshot, and there is no `/data/work` until AP-3.1 builds A-05's layout — a tmpfs cannot reflink,
+so the row would have been a skip. `vm.sh --disk` gives the machine an empty second disk instead;
+the check makes a btrfs on it, writes a gigabyte, and measures three things rather than two: the
+snapshot's time, the disk it cost, **and** the time and disk a real copy of the same file costs. The
+third is what makes the second a measurement instead of a threshold — an instrument that can see a
+gigabyte arrive and does not see one after the snapshot is saying something. `AB-A06-4` needed zram
+to exist at all: `zram-generator` and a configuration in `mkosi.extra` now put it in the image, with
+zstd said explicitly, because the kernel's own default is lzo-rle and the compression factor is one
+of the five constants AP-1.3 measures.
+
+What this list does not evidence is the second half of `AB-A06-7`'s sentence, "B takes over": there
+is one system slot in the image. A/B and its boot counter (SP-A03-4) arrive with the disk layout in
+AP-3.1 and the channels in AP-6.4. The half that is evidenced is the half A-03 calls "verity or
+nothing at all", and it is what `AB-A03-3` asks for in as many words.
+
+Landlock is the one wall of `AB-A06-3` that is read off the kernel rather than probed by a failing
+action. User namespaces and seccomp are probed: a process that is root inside its namespace cannot
+read a root-owned file outside it, and a syscall a `SystemCallFilter=` blocks fails where the same
+syscall succeeds unfiltered. Landlock is applied by a sandboxed process to itself through a syscall
+— there is no pod to sandbox until the runtime exists, and no compiler in the image to write one,
+which SP-A02-3 intends. What the run does establish is that the kernel has it active in its LSM
+list, which a configuration symbol alone does not say.
 
 ## What the runs have established
 
