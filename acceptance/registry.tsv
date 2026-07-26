@@ -70,9 +70,9 @@ AB-E08-3	P	red	AP-3.6
 AB-E08-4	S	red	AP-7.5	
 AB-E09-3	P	red	AP-4.1	
 AB-E09-5	P	red	AP-4.1	
-AB-E10-1	S	red	AP-2.1	
-AB-E10-3	P	red	AP-2.1	
-AB-E10-5	S	red	AP-2.1	
+AB-E10-1	S	green	AP-2.1	https://github.com/Cheety/warft/actions/runs/30206672990
+AB-E10-3	P	green	AP-2.1	https://github.com/Cheety/warft/actions/runs/30206672990
+AB-E10-5	S	green	AP-2.1	https://github.com/Cheety/warft/actions/runs/30206672990
 AB-E11-1	D	red	all	
 AB-F01-1	P	red	AP-4.2	
 AB-F01-2	P	red	AP-4.4	
@@ -186,7 +186,7 @@ AB-T03-1	M	red	AP-3.3
 AB-T03-3	S	red	AP-5.2	
 AB-T04-2	P	red	AP-3.3	
 AB-T04-3	S	red	AP-3.3	
-AB-T04-4	S	red	AP-2.1	
+AB-T04-4	S	green	AP-2.1	https://github.com/Cheety/warft/actions/runs/30206672990
 AB-T04-5	S	red	AP-3.3	
 AB-T05-1	S	red	AP-3.4	
 AB-T05-2	P	red	AP-3.4	
