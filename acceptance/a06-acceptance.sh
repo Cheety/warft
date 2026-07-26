@@ -251,7 +251,9 @@ if [ "$MODE" = drive ]; then
     AB-A01-1  no package manager, no toolchain  = AB-A06-6
     AB-A03-3  verity                            = AB-A06-7
 
-  The five open rows need the platform binary, not another image. They carry their work package.
+  Four of the five open rows need the platform binary, not another image. The fifth is the
+  calibration run, which needs a fleet rather than a binary: acceptance/calibration.sh (AP-1.3).
+  All five carry their work package.
   What no run of this list can evidence yet is the second half of AB-A06-7's sentence, "B takes
   over": there is one system slot in the image. A/B and its boot counter (SP-A03-4) arrive with the
   disk layout in AP-3.1 and the channels in AP-6.4.
@@ -695,7 +697,10 @@ verdict AB-A06-9  SKIP "one job from envelope to patch — turns green in AP-3.8
 verdict AB-A06-10 SKIP "intake, lease, heartbeat, expiry, return — turns green in AP-6.2"
 verdict AB-A06-11 SKIP "the same job twice, one push — turns green in AP-3.5"
 verdict AB-A06-12 SKIP "two versions at once, no job lost — turns green in AP-6.4"
-verdict AB-A06-13 SKIP "500 pods created, 20 active — turns green in AP-1.3"
+# Row 13 is not this script's to evidence and never was — it needs a fleet on a machine larger than
+# a check gets. It is measured by acceptance/calibration.sh, which boots the same artifact through
+# the same door; this list names where instead of leaving the row out (section D).
+verdict AB-A06-13 SKIP "500 pods created, 20 active — measured by acceptance/calibration.sh (AP-1.3)"
 
 # -------------------------------------------------------------------------------------------------
 # K-04: time is infrastructure, not an operations manual (SP-K04-7). What that requires of an image
