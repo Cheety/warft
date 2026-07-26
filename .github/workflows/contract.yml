@@ -1,14 +1,14 @@
-# AP-2.1 — the leg that holds the contract to its own rule (AB-E10-1, AB-E10-3, AB-E10-5,
-# AB-T04-4).
+# AP-2.1 and AP-2.2 — the legs that hold the contract to its own rules (AB-E10-1, AB-E10-3,
+# AB-E10-5, AB-T04-4 · AB-K01-1 through AB-K01-5, AB-V05-2).
 #
-# SP-E10-3 says the migration rule is enforced by a schema linter in CI — this is that
-# enforcement, in two halves:
+# SP-E10-3 and SP-V05-2 say the migration rules are enforced in CI — this is that enforcement,
+# in two halves per schema:
 #   1. The probes: a scratch copy of the contract is mutated and the linter must reject it. That
-#      is AB-E10-3, and it runs on every change so the linter cannot rot unnoticed.
+#      is AB-E10-3 and AB-V05-2, and it runs on every change so a linter cannot rot unnoticed.
 #   2. The baseline comparison: the pushed contract against the contract as it stood before the
-#      push. Each step being additive against its predecessor is only transitive because the
-#      linter also forbids lifting a reservation — a number cannot be laundered back over two
-#      pushes.
+#      push. For the proto, each step being additive against its predecessor is only transitive
+#      because the linter also forbids lifting a reservation; for the SQL schema, removal has no
+#      lawful death at all, so stepwise-additive is transitive by itself.
 #
 # The acceptance scripts are trigger paths because they decide this run's verdict: a change to a
 # check must re-run the check, or the registry row it feeds rests on a run of the old one.
@@ -19,14 +19,20 @@ on:
   push:
     paths:
       - 'contract/platform.proto'
+      - 'contract/schema.sql'
       - 'acceptance/e10-additive.py'
       - 'acceptance/e10-schema.sh'
+      - 'acceptance/schema-additive.py'
+      - 'acceptance/k01-schema.sh'
       - '.github/workflows/contract.yml'
   pull_request:
     paths:
       - 'contract/platform.proto'
+      - 'contract/schema.sql'
       - 'acceptance/e10-additive.py'
       - 'acceptance/e10-schema.sh'
+      - 'acceptance/schema-additive.py'
+      - 'acceptance/k01-schema.sh'
       - '.github/workflows/contract.yml'
   workflow_dispatch:
 
@@ -64,3 +70,34 @@ jobs:
           fi
           git show "$BASE:contract/platform.proto" > "$RUNNER_TEMP/platform-baseline.proto"
           ./acceptance/e10-additive.py "$RUNNER_TEMP/platform-baseline.proto" contract/platform.proto
+
+  state-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The baseline comparison reaches into history; a shallow clone would have none.
+          fetch-depth: 0
+
+      - name: The state schema and its probes
+        run: ./acceptance/k01-schema.sh
+
+      - name: Additive against the baseline
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            # A forced or freshly created ref has no before-commit to stand against. The probes
+            # above still ran; only the baseline half has nothing to compare.
+            echo "no baseline commit ($BASE) — nothing to compare against"
+            exit 0
+          fi
+          if ! git cat-file -e "$BASE:contract/schema.sql" 2>/dev/null; then
+            echo "the schema did not exist at $BASE — its first version is additive by definition"
+            exit 0
+          fi
+          git show "$BASE:contract/schema.sql" > "$RUNNER_TEMP/schema-baseline.sql"
+          ./acceptance/schema-additive.py "$RUNNER_TEMP/schema-baseline.sql" contract/schema.sql

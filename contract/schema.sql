@@ -1,7 +1,9 @@
 -- schema.sql — the state contract of the cell (K-01, K-02, E-02).
 --
 -- Principles enforced here and not left to the application:
---   1. cell and project are NOT NULL on every table (SP-K01-3, SP-K01-4).
+--   1. cell and project are NOT NULL on every table (SP-K01-3, SP-K01-4). A table stands exempt
+--      only where another MUST of the specification forces it — the closed list, each entry with
+--      the requirement that forces it, lives in acceptance/schema-additive.py.
 --   2. Identifiers come from the producer as UUID v7, never from a sequence (SP-K01-2).
 --   3. One field, one writer: state transitions are checked by a trigger (SP-K02-1).
 --   4. No terminal state without a cause (SP-K02-3).
@@ -9,7 +11,9 @@
 --   6. No secrets, only references (SP-K01-5).
 --   7. The queue lives in this database, no second broker (SP-E02-2).
 --
--- Migrations run additively, exclusively (SP-V05-2).
+-- Migrations run additively, exclusively (SP-V05-2): write the new field, read both, remove the
+-- old one — three releases. acceptance/schema-additive.py holds every revision to that rule
+-- against its predecessor, and acceptance/k01-schema.sh probes that the rejection bites.
 
 BEGIN;
 
@@ -80,6 +84,8 @@ CREATE TABLE envelope (
   principal          uuid REFERENCES principal(id),   -- empty = first contact, produces an invitation
   authority          authority_level NOT NULL,        -- from the channel, not from the text
   text_body          text NOT NULL,
+  attachments        text[] NOT NULL DEFAULT '{}',    -- content hashes into attachment (SP-K01-6):
+                                                      -- references, resolved at intake, never payloads
   thread             text,
   received_at        timestamptz NOT NULL,
   idempotency        text NOT NULL,
@@ -113,6 +119,8 @@ CREATE TABLE spec (
 
 CREATE TABLE acceptance (                              -- without a row here, no job (SP-Q01-6)
   id           uuid PRIMARY KEY,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
   spec_id      uuid NOT NULL,
   spec_version bigint NOT NULL,
   statement    text NOT NULL,
@@ -123,6 +131,8 @@ CREATE TABLE acceptance (                              -- without a row here, no
 
 CREATE TABLE assumption (                              -- objects, not prose (SP-Q01-5)
   id           uuid PRIMARY KEY,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
   spec_id      uuid NOT NULL,
   spec_version bigint NOT NULL,
   statement    text NOT NULL,
@@ -239,6 +249,18 @@ CREATE TRIGGER order_transition
   BEFORE UPDATE ON "order"
   FOR EACH ROW EXECUTE FUNCTION enforce_transition();
 
+-- K-02: the attempt is the unit of retry — same order id, same idempotency key, new attempt
+-- counter, its own result. SP-K01-8 makes it an object of its own; AP-2.3 gives it its lease and
+-- result semantics.
+CREATE TABLE attempt (
+  order_id   uuid NOT NULL REFERENCES "order"(id),
+  attempt    int NOT NULL,
+  cell       text NOT NULL REFERENCES cell(id),
+  project    uuid NOT NULL REFERENCES project(id),
+  started_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (order_id, attempt)
+);
+
 -- ---------------------------------------------------------------------------
 -- V-02: leases. The queue with SKIP LOCKED, no second broker.
 -- ---------------------------------------------------------------------------
@@ -257,9 +279,18 @@ CREATE TABLE node (
 CREATE TABLE lease (
   order_id   uuid NOT NULL REFERENCES "order"(id),
   attempt    int NOT NULL,
+  cell       text NOT NULL REFERENCES cell(id),
+  project    uuid NOT NULL REFERENCES project(id),
   node_id    text NOT NULL REFERENCES node(id),
   expires_at timestamptz NOT NULL,
   PRIMARY KEY (order_id, attempt)
+);
+
+-- V-02: sticky assignment repository -> node, queues and work stealing inside the group (OP-8).
+CREATE TABLE locality_group (
+  id   text NOT NULL,                      -- 'monorepo-a'
+  cell text NOT NULL REFERENCES cell(id),
+  PRIMARY KEY (cell, id)
 );
 
 -- Allocation (control plane):
@@ -276,12 +307,28 @@ CREATE TABLE outbox (
   order_id     uuid NOT NULL REFERENCES "order"(id),
   target       text NOT NULL,
   content_hash text NOT NULL,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
   payload_ref  text NOT NULL,
   requires_register boolean NOT NULL DEFAULT false,
   registered_at timestamptz,
   executed_at   timestamptz,
   receipt_id    text,
   PRIMARY KEY (order_id, target, content_hash)   -- SP-K03-2: the key is a domain key
+);
+
+-- SP-K03-1: the receipt comes back from the gate that executed the entry; outbox.receipt_id names
+-- it. For non-idempotent targets it is the register's acknowledgement (SP-K03-4).
+CREATE TABLE receipt (
+  id           uuid PRIMARY KEY,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
+  order_id     uuid NOT NULL,
+  target       text NOT NULL,
+  content_hash text NOT NULL,
+  issued_by    text NOT NULL,               -- which gate let it through (B-02: there are two)
+  issued_at    timestamptz NOT NULL,
+  FOREIGN KEY (order_id, target, content_hash) REFERENCES outbox (order_id, target, content_hash)
 );
 
 -- ---------------------------------------------------------------------------
@@ -300,9 +347,38 @@ CREATE TABLE budget_pot (
   tokens_cap           bigint NOT NULL,
   money_reserved_micros bigint NOT NULL DEFAULT 0,
   money_cap_micros      bigint NOT NULL,
+  -- SP-V04-5: three caps, three purposes. The principal-day pot is the one scope that spans
+  -- projects, and the only lawful reason for an empty project on this table.
+  CONSTRAINT pot_scope_project   CHECK ((scope = 'principal_day') = (project IS NULL)),
+  CONSTRAINT pot_scope_principal CHECK (scope <> 'principal_day' OR principal IS NOT NULL),
   CHECK (pod_minutes_reserved <= pod_minutes_cap),
   CHECK (tokens_reserved <= tokens_cap),
   CHECK (money_reserved_micros <= money_cap_micros)
+);
+
+-- ---------------------------------------------------------------------------
+-- The versioned artifacts a job pins (SP-K01-8): capability, container image,
+-- pipeline. The cell serves them; a project pins them by hash or version.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE skill_version (                -- F-07: capability versions are content-addressed
+  content_hash text PRIMARY KEY,
+  cell         text NOT NULL REFERENCES cell(id),
+  name         text NOT NULL,
+  version      text NOT NULL,
+  UNIQUE (cell, name, version)
+);
+
+CREATE TABLE container_image (              -- image@hash: T-03's container image an order runs in,
+  hash text PRIMARY KEY,                    -- not A-03's system image
+  cell text NOT NULL REFERENCES cell(id)
+);
+
+CREATE TABLE pipeline_version (             -- T-05: the fixed spine, versioned
+  cell         text NOT NULL REFERENCES cell(id),
+  version      text NOT NULL,
+  content_hash text NOT NULL,
+  PRIMARY KEY (cell, version)
 );
 
 -- ---------------------------------------------------------------------------
@@ -340,7 +416,8 @@ CREATE TABLE decision_ref (                 -- V-05: decisions lie in Git, not h
 CREATE TABLE audit (
   id         uuid PRIMARY KEY,
   cell       text NOT NULL REFERENCES cell(id),
-  project    uuid,
+  project    uuid,               -- platform actions (halt.set, authority.issued) have no project;
+                                 -- entries about a job carry its project
   at         timestamptz NOT NULL DEFAULT now(),
   actor      text NOT NULL,
   action     text NOT NULL,      -- authority.issued · gate.passed · human.accepted · halt.set …
