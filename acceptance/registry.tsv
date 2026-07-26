@@ -112,11 +112,11 @@ AB-G07-3	P	red	AP-4.3
 AB-G07-6	P	red	AP-4.3	
 AB-G07-7	P	red	AP-4.3	
 AB-G07-9	S	red	AP-4.3	
-AB-K01-1	S	red	AP-2.2	
-AB-K01-2	P	red	AP-2.2	
-AB-K01-3	S	red	AP-2.2	
-AB-K01-4	S	red	AP-2.2	
-AB-K01-5	P	red	AP-2.2	
+AB-K01-1	S	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
+AB-K01-2	P	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
+AB-K01-3	S	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
+AB-K01-4	S	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
+AB-K01-5	P	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
 AB-K01-6	P	red	AP-3.2	
 AB-K01-7	S	red	AP-3.8	
 AB-K02-1	P	red	AP-2.3	
@@ -209,5 +209,5 @@ AB-V04-2	P	red	AP-3.6
 AB-V04-4	M	red	AP-3.6	
 AB-V04-6	S	red	AP-7.4	
 AB-V05-1	P	red	AP-6.5	
-AB-V05-2	P	red	AP-2.2	
+AB-V05-2	P	green	AP-2.2	https://github.com/Cheety/warft/actions/runs/30208499668
 AB-V05-3	D	red	AP-6.5	
