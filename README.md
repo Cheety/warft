@@ -24,6 +24,8 @@ becomes a checkable criterion.
 contract/    platform.proto (E-10) · schema.sql (K-01, K-02)
 acceptance/  registry.py · registry.tsv — the 212 checks and their state (AP-0.3)
              a06-acceptance.sh — thirteen checks, written before the image
+             calibration.sh · calibration-probe.sh — the fleet, and the five constants (AP-1.3)
+             e05-constants.tsv — those constants, given and measured; R-D computes with them
 skills/      SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/     issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
 decisions/   empty until AP-0.1: eleven rulings E-01…E-11, ten open points OP-1…OP-10

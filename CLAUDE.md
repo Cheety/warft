@@ -120,6 +120,10 @@ asserted into the instrument — which is Q-02 applied to the thing that measure
 contract/                platform.proto (E-10) · schema.sql (K-01, K-02)
 acceptance/              registry.py · registry.tsv — the 212 checks and their state (AP-0.3)
                          a06-acceptance.sh — thirteen checks, written before the image
+                         calibration.sh · calibration-probe.sh — the fleet, and E-05's five
+                         constants measured on it (AP-1.3)
+                         e05-constants.tsv — those constants, given and measured; what R-D computes
+                         with, and the machine-readable half of decisions/E-05.md
 Makefile                 make acceptance — the instrument; fails while anything is red
 skills/                  SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/                 issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
