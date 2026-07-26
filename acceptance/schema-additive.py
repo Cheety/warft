@@ -54,6 +54,8 @@ EXEMPT_CELL = {
     "cell": "the identity root: its primary key IS the cell identifier every other table carries",
     "state_transition": "K-02's transition contract as data, identical in every cell and seeded "
                         "by the schema itself; its rows are rules, not objects",
+    "lease_parameter": "OP-4's ruled constants for SP-V02-1's pull model, identical in every cell "
+                       "and seeded by the schema itself; its rows are rules, not objects",
 }
 
 # Tables that cannot carry a NOT NULL `project` while the rest of the specification holds.
@@ -66,6 +68,7 @@ EXEMPT_PROJECT = {
     "identity_link": "T-01: confirmed at first contact, before any project exists; it binds an "
                      "identity to a principal, not work to a project",
     "state_transition": "K-02's transition contract as data; its rows are rules, not objects",
+    "lease_parameter": "OP-4's ruled constants (SP-V02-1); its rows are rules, not objects",
     "node": "a node serves every project in its cell; repository -> node is locality (V-02), "
             "not ownership",
     "locality_group": "groups repositories and nodes for placement (SP-V02-4), across the "

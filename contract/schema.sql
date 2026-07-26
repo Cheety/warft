@@ -10,6 +10,8 @@
 --   5. No backward transitions (SP-K02-5).
 --   6. No secrets, only references (SP-K01-5).
 --   7. The queue lives in this database, no second broker (SP-E02-2).
+--   8. The lease and heartbeat parameters are ruled once (OP-4) and seeded as rows, never carried
+--      as numbers in application code.
 --
 -- Migrations run additively, exclusively (SP-V05-2): write the new field, read both, remove the
 -- old one — three releases. acceptance/schema-additive.py holds every revision to that rule
@@ -250,14 +252,18 @@ CREATE TRIGGER order_transition
   FOR EACH ROW EXECUTE FUNCTION enforce_transition();
 
 -- K-02: the attempt is the unit of retry — same order id, same idempotency key, new attempt
--- counter, its own result. SP-K01-8 makes it an object of its own; AP-2.3 gives it its lease and
--- result semantics.
+-- counter, its own result (SP-K02-2). SP-K01-8 makes it an object of its own. The result columns
+-- live per attempt so a retry's verdict never overwrites its predecessor's; the order carries only
+-- the verdict of the attempt that ended it.
 CREATE TABLE attempt (
   order_id   uuid NOT NULL REFERENCES "order"(id),
   attempt    int NOT NULL,
   cell       text NOT NULL REFERENCES cell(id),
   project    uuid NOT NULL REFERENCES project(id),
   started_at timestamptz NOT NULL DEFAULT now(),
+  ended_at   timestamptz,
+  cause      cause_code,                   -- its own result: how this attempt ended, if badly
+  evidence   evidence_class,               -- or the evidence class it delivered (Q-02)
   PRIMARY KEY (order_id, attempt)
 );
 
@@ -283,8 +289,25 @@ CREATE TABLE lease (
   project    uuid NOT NULL REFERENCES project(id),
   node_id    text NOT NULL REFERENCES node(id),
   expires_at timestamptz NOT NULL,
-  PRIMARY KEY (order_id, attempt)
+  PRIMARY KEY (order_id, attempt),
+  -- a lease is granted on an attempt that exists (SP-K02-2); granting one is AP-6.2's work
+  FOREIGN KEY (order_id, attempt) REFERENCES attempt (order_id, attempt)
 );
+
+-- OP-4 (decisions/OP-4.md): lease 60 s, heartbeat 15 s, three missed heartbeats release. The
+-- parameters of SP-V02-1's pull model stand here as rows the control plane reads, not as numbers
+-- in application code. This seed is the machine-readable half of the ruling, and
+-- acceptance/k02-state.sh holds the two against each other — a number there that is not here is
+-- drift.
+CREATE TABLE lease_parameter (
+  name  text PRIMARY KEY,
+  value int NOT NULL CHECK (value > 0)
+);
+
+INSERT INTO lease_parameter (name, value) VALUES
+  ('lease_duration_seconds',     60),   -- the deadline a job is handed out with (SP-V02-1)
+  ('heartbeat_interval_seconds', 15),   -- the worker extends its lease this often
+  ('failures_to_release',         3);   -- missed heartbeats in a row before leased -> queued
 
 -- V-02: sticky assignment repository -> node, queues and work stealing inside the group (OP-8).
 CREATE TABLE locality_group (

@@ -1,5 +1,6 @@
-# AP-2.1 and AP-2.2 — the legs that hold the contract to its own rules (AB-E10-1, AB-E10-3,
-# AB-E10-5, AB-T04-4 · AB-K01-1 through AB-K01-5, AB-V05-2).
+# AP-2.1 through AP-2.3 — the legs that hold the contract to its own rules (AB-E10-1, AB-E10-3,
+# AB-E10-5, AB-T04-4 · AB-K01-1 through AB-K01-5, AB-V05-2 · AB-K02-1, AB-K02-2, AB-K02-3,
+# AB-K02-5).
 #
 # SP-E10-3 and SP-V05-2 say the migration rules are enforced in CI — this is that enforcement,
 # in two halves per schema:
@@ -9,6 +10,10 @@
 #      push. For the proto, each step being additive against its predecessor is only transitive
 #      because the linter also forbids lifting a reservation; for the SQL schema, removal has no
 #      lawful death at all, so stepwise-additive is transitive by itself.
+#
+# AP-2.3's leg loads the schema into a Postgres 16 and probes the K-02 state machine there: the
+# wrong writer, the missing cause and the exit from a terminal state must fail in the database,
+# not in any application.
 #
 # The acceptance scripts are trigger paths because they decide this run's verdict: a change to a
 # check must re-run the check, or the registry row it feeds rests on a run of the old one.
@@ -24,6 +29,8 @@ on:
       - 'acceptance/e10-schema.sh'
       - 'acceptance/schema-additive.py'
       - 'acceptance/k01-schema.sh'
+      - 'acceptance/k02-state.sh'
+      - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   pull_request:
     paths:
@@ -33,6 +40,8 @@ on:
       - 'acceptance/e10-schema.sh'
       - 'acceptance/schema-additive.py'
       - 'acceptance/k01-schema.sh'
+      - 'acceptance/k02-state.sh'
+      - 'decisions/OP-4.md'
       - '.github/workflows/contract.yml'
   workflow_dispatch:
 
@@ -81,6 +90,9 @@ jobs:
 
       - name: The state schema and its probes
         run: ./acceptance/k01-schema.sh
+
+      - name: The state machine and its probes
+        run: ./acceptance/k02-state.sh
 
       - name: Additive against the baseline
         run: |
