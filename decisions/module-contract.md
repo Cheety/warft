@@ -1,7 +1,13 @@
 # Decision: the module dependency contract is deferred until there are modules
 
-**Status:** ruled · **Date:** 2026-07-26 · **Due before:** AP-3.1 · **Affects:** SP-G01-5,
-AB-G01-5, AP-0.1.
+**Status:** expired at AP-3.1, on its own overturn condition · **Date:** 2026-07-26 ·
+**Due before:** AP-3.1 · **Affects:** SP-G01-5, AB-G01-5, AP-0.1.
+
+> AP-3.1 drew the first module boundaries, so this deferral ended as it said it would. The contract
+> itself is [`module-dependencies.md`](module-dependencies.md), `acceptance/module-contract.py`
+> checks it, and `AB-G01-5` is green through a run rather than open against this file. What stands
+> below is why the row was open for eleven work packages, which is worth keeping: the reason was
+> never that the contract was hard to write, it was that there was nothing to write it about.
 
 `AB-G01-5` reads "decisions in Git — the module contract is machine-checkable and survives losing
 the database". That is two claims, and at AP-0.1 they are in different states.

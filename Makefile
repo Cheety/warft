@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform boot proto help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform boot decisions proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -21,6 +21,7 @@ help:
 	@echo "make contract         both schemas, their probes, the state machine, the authority token and the node identity, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-B01-3, AB-V05-2 (AP-2.1 through AP-2.5)"
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
+	@echo "make decisions        the decision store, and the module contract against the imports — AB-G01-5 (AP-0.1, AP-3.1)"
 	@echo "make proto            regenerate platform/api/workpodv1 from contract/platform.proto"
 	@echo
 	@echo "acceptance/registry.py       the same report, exit 1 when red (use this in CI)"
@@ -88,6 +89,12 @@ platform:
 # the failed selftest that must not register.
 boot:
 	@acceptance/a04-boot.sh
+
+# AP-0.1 and AP-3.1. The store is a property of the repository; the module contract is a decision
+# (decisions/module-dependencies.md) held against the imports of platform/. CI runs the same script
+# on every change to either side.
+decisions:
+	@acceptance/g01-decisions.sh
 
 # The generated bindings are committed; this regenerates them after a (decided, additive) change
 # to contract/platform.proto. The import path is mapped on the command line so the contract file
