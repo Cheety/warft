@@ -327,8 +327,12 @@ func (w *Workpod) watch(ctx context.Context, podID, cgPath string, job runner.Jo
 			return delivered, "budget.exhausted", nil
 		}
 		if quiet >= FreezeAfter && currentState(podID) == "running" {
+			// A failed freeze or checkpoint ends the pod; it does not lose what the pod produced.
+			// The patch and the report are what the job is for, and the last two states of
+			// SP-T04-3's chain are how the pod stops — a dump that could not be taken must not
+			// take a delivered result with it.
 			if err := w.freezeAndCheckpoint(podID, l, quiet); err != nil {
-				return delivered, "", err
+				w.logf("pod %s: %v", podID, err)
 			}
 			return delivered, "", nil
 		}
@@ -349,8 +353,14 @@ func (w *Workpod) freezeAndCheckpoint(podID string, l *life, quiet time.Duration
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	if err := runcCmd("checkpoint", "--image-path", dir, "--work-path", dir, podID); err != nil {
-		return fmt.Errorf("checkpointing %s: %w", podID, err)
+	// `--manage-cgroups-mode=ignore` tells CRIU to dump no cgroup properties. That is not a
+	// concession: the pod's contract is written by the runner between `runc create` and `runc
+	// start` on every pod it makes (decisions/pod-runtime.md §2), so a dump that carried R-A's
+	// knobs would carry a copy of something that is rewritten from the class anyway — and on a
+	// node, where the cgroup is a systemd scope, dumping it is what fails.
+	if err := runcCmd("checkpoint", "--manage-cgroups-mode", "ignore",
+		"--image-path", dir, "--work-path", dir, podID); err != nil {
+		return fmt.Errorf("checkpointing %s: %w\n%s", podID, err, tail(filepath.Join(dir, "dump.log")))
 	}
 	return l.at(runner.Checkpointed, "dumped to disk (CRIU)")
 }
