@@ -7,10 +7,11 @@
 # about the repository rather than a fact about it — which is Q-02 applied to the store that holds
 # the rulings.
 #
-# What this does NOT check is the module dependency contract from SP-G01-5 ("module A may depend on
-# B and C, not on D"). platform/ is empty until AP-3.1, so there are no modules to constrain and no
-# such decision to validate. That half is deferred in decisions/module-contract.md with a due work
-# package, which is why AB-G01-5 stands `open` rather than green.
+# The module dependency contract from SP-G01-5 ("module A may depend on B and C, not on D") was the
+# half of AB-G01-5 that had nothing to check while platform/ was empty. AP-3.1 filled it, so the
+# deferral in decisions/module-contract.md expired and decisions/module-dependencies.md took its
+# place: the ranks table in that decision is the contract, and acceptance/module-contract.py holds
+# the import graph of platform/ against it here. Both halves of the row are now a run.
 #
 # Exit:  0 = no FAIL
 #        1 = at least one FAIL
@@ -175,12 +176,31 @@ else
 fi
 
 # --------------------------------------------------------------------------
+# 6  The module contract, against the modules
+#    SP-G01-5's second half. The contract is the ranks table in
+#    decisions/module-dependencies.md and the program is platform/; this reads
+#    both and compares. It is deliberately the same shape as the registry
+#    against the matrix — a package the contract does not name is drift, not a
+#    package that happens to be unconstrained.
+# --------------------------------------------------------------------------
+CONTRACT_OUT="$("$ROOT/acceptance/module-contract.py" 2>&1)"; CONTRACT_RC=$?
+if [ "$CONTRACT_RC" -eq 0 ]; then
+  pass "G01-8 the module contract holds" "$(printf '%s\n' "$CONTRACT_OUT" | head -1 | sed 's/^ *//')"
+else
+  pattern='violation: '
+  fail "G01-8 the module contract holds" \
+       "$(printf '%s\n' "$CONTRACT_OUT" | grep -c "$pattern") against decisions/module-dependencies.md"
+  printf '%s\n' "$CONTRACT_OUT" | grep "$pattern" | sed 's/^ *violation: /        /'
+fi
+printf '%s\n' "$CONTRACT_OUT" | grep -v 'violation: ' | sed 's/^/  /'
+
+# --------------------------------------------------------------------------
 banner "Result"
 printf '  %d green, %d red\n\n' "$PASS" "$FAIL"
 if [ "$FAIL" -gt 0 ]; then
   echo "  The decision store does not hold. A ruling nobody can check is an opinion with a date."
   exit 1
 fi
-echo "  The decisions half of AB-G01-5 is evidenced by this run."
-echo "  The module contract half is deferred — see decisions/module-contract.md."
+echo "  AB-G01-5 is evidenced by this run, both halves: the decision store above, and the module"
+echo "  contract of decisions/module-dependencies.md against the imports of platform/."
 exit 0
