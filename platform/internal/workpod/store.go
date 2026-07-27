@@ -50,6 +50,31 @@ func (s Store) RunDir(podID string) string { return filepath.Join(s.Run, "pods",
 // BaseDir is a working-copy base — a checkout a pod's working copy is snapshotted from.
 func (s Store) BaseDir(key string) string { return filepath.Join(s.Work, "bases", key) }
 
+// KeptDir is where place seven of T-05 leaves the working copy of a pod that did not deliver. It is
+// deliberately not under `pods`: the reaper sweeps that directory against the containers runc knows
+// about (SP-T04-5), so a kept working copy left there would be an orphan by the next minute.
+func (s Store) KeptDir(podID string) string { return filepath.Join(s.Work, "kept", podID) }
+
+// Keep is place seven, applied: a read-only snapshot of a working copy that is about to be reaped.
+//
+// A snapshot rather than a copy, for the reason Snapshot itself is one — btrfs shares the extents,
+// so keeping a failed working copy costs the metadata of one subvolume and not the size of the tree.
+// Read-only, because what it is for is being read: a tree someone can still edit is not evidence of
+// what the pod left behind.
+func (s Store) Keep(podID string) (string, error) {
+	dst := s.KeptDir(podID)
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(dst); err == nil {
+		return dst, nil
+	}
+	if err := subvolumeSnapshotReadOnly(s.PodDir(podID), dst); err != nil {
+		return "", err
+	}
+	return dst, nil
+}
+
 // EnsureBase makes a base subvolume out of a directory, so that a working copy can be snapshotted
 // off it. Preparing bases from a repository is the `prepare` phase of T-05 (AP-3.4); this is the
 // mechanism underneath it.
@@ -122,6 +147,10 @@ func subvolumeCreate(path string) error {
 
 func subvolumeSnapshot(src, dst string) error {
 	return run("btrfs", "subvolume", "snapshot", src, dst)
+}
+
+func subvolumeSnapshotReadOnly(src, dst string) error {
+	return run("btrfs", "subvolume", "snapshot", "-r", src, dst)
 }
 
 func subvolumeSetReadOnly(path string, ro bool) error {

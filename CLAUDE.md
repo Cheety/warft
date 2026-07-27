@@ -130,6 +130,8 @@ acceptance/              registry.py · registry.tsv — the 212 checks and thei
                          constants measured on it (AP-1.3)
                          t04-runner.sh — pods on a node: R-A's contract read back out of their own
                          cgroups, no network, the lifecycle, the reaper (AP-3.3)
+                         t05-pipeline.sh — T-05: the fixed spine, the seven movable places, and a
+                         job that cannot be solved ending after OP-2's rounds (AP-3.4)
                          e05-constants.tsv — those constants, given and measured; what R-D computes
                          with, and the machine-readable half of decisions/E-05.md
 Makefile                 make acceptance — the instrument; fails while anything is red
@@ -138,7 +140,8 @@ tracker/                 issues.json · issues.csv · gh-import.{sh,py} · issue
 decisions/               rulings E-01…E-11, open points OP-1…OP-10, and the rulings taken here (AP-0.1)
 image/                   mkosi configuration, the units a role activates, build · seal · verify · vm
 platform/                the one Go binary: the A-04 start sequence, SP-E02-1's seven entry points,
-                         the Runner contract (T-04) and the workpod that implements it
+                         the Runner contract (T-04), the pipeline (T-05) beside it, and the workpod
+                         that implements both
 ```
 
 All three started empty and were filled by the work package that owns them — AP-0.1, AP-1.1,

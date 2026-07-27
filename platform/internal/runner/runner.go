@@ -117,10 +117,23 @@ type Job struct {
 	// requirement hash entirely. A job with neither is a job whose image nobody decided.
 	ImageDigest string `json:"image_digest,omitempty"`
 
-	// Command is what runs in the working directory. Until AP-3.4 there is no pipeline and no
-	// agent, so the `edit` phase is a command stated by hand — the same shape
-	// decisions/jobs-by-hand.md rules for the job itself.
+	// Command is the `edit` phase of T-05's spine, stated by hand. There is a pipeline since
+	// AP-3.4 but still no agent — the model that would decide what to change is stage 5's — so the
+	// edit is a command, the same shape decisions/jobs-by-hand.md rules for the job itself. The
+	// `repair` phase runs it again; what a repair round changes without an agent is what the
+	// command does with the check output it can read in the working copy.
 	Command []string `json:"command"`
+
+	// PipelineVersion is `order.pipeline_version` of contract/schema.sql: the definition this job
+	// pins, as `name@version`. Empty means DefaultPipeline — a job that pins nothing still runs
+	// under one, because SP-T05-1's spine is the same for all jobs.
+	PipelineVersion string `json:"pipeline_version,omitempty"`
+
+	// Places is six of SP-T05-2's seven, as this job moves them. The seventh — which image, which
+	// toolchain — is ImageDigest and Requirements above. Nothing else about a job may differ; the
+	// decoder refuses an eighth field (DecodeJob), which is what makes "only at these places" a
+	// rule rather than a habit.
+	Places *PlaceMoves `json:"places,omitempty"`
 
 	// PodMinutes is the budget half of the lifetime (decisions/pod-runtime.md §4). Zero means the
 	// job carries no budget and the default ceiling applies; the pots themselves are AP-3.6's.
@@ -140,9 +153,15 @@ func (j Job) Validate() error {
 	case j.Class == "":
 		return fmt.Errorf("a job without a class cannot be allocated (SP-RA-1)")
 	case len(j.Command) == 0:
-		return fmt.Errorf("a job without a command has nothing to run; the pipeline that would supply one is AP-3.4's")
+		return fmt.Errorf("a job without a command has nothing to edit with; until the agent of stage 5 exists the edit phase is stated by hand (decisions/jobs-by-hand.md)")
 	case j.ImageDigest == "" && j.Requirements.Empty():
 		return fmt.Errorf("a job names an image or the requirements to resolve one (SP-T03-1)")
+	}
+	// The pipeline last, because it is the only part of the check that reads a file: a job whose
+	// pinned definition does not exist, or whose places name something the platform has no word
+	// for, is refused here — before the image is resolved and before the snapshot stands.
+	if _, err := j.Effective(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -227,6 +246,39 @@ type Report struct {
 	// ImageDigest is the image the pod actually ran, which is not always the one the job named:
 	// a job carrying only requirements has one resolved for it (SP-T03-1).
 	ImageDigest string `json:"image_digest,omitempty"`
+
+	// PipelineVersion is the definition the job ran under, and PipelineHash its content hash — the
+	// two halves of `pipeline_version` in contract/schema.sql. A report that named the version
+	// without the hash would name something that could have been edited since (SP-T05-4).
+	PipelineVersion string `json:"pipeline_version,omitempty"`
+	PipelineHash    string `json:"pipeline_hash,omitempty"`
+
+	// Phases is SP-T05-1's spine as it actually went, joined from both machines: `prepare`,
+	// `deliver` and `reap` are the runner's, the four between them are the harness's. Every job
+	// carries all seven, which is the claim AB-T05-1 reads.
+	Phases []PhaseRecord `json:"phases,omitempty"`
+
+	// Rounds is how many rework rounds were spent — a round being one `repair` and the `check`
+	// that judges it (decisions/OP-2.md). RoundsAllowed is the effective `n` it was bounded by, so
+	// a reply says not only how long the loop ran but where it was allowed to end.
+	Rounds        int `json:"rounds"`
+	RoundsAllowed int `json:"rounds_allowed"`
+
+	// Assessment is the third part of SP-T05-3's reply, beside the diff (PatchHash) and the logs
+	// (LogPath): the pod's own account of why it did not get there. It is written even when the
+	// job delivered, because "which checks passed and what it took" is the same sentence read from
+	// the other side.
+	Assessment string `json:"assessment,omitempty"`
+
+	// LogPath is where the pod's console was left on the node — the logs half of SP-T05-3. Like
+	// PatchPath it is not on the wire: a path on one node means nothing on another, and the worker
+	// that has to ship it is the one that has it.
+	LogPath string `json:"log_path,omitempty"`
+
+	// KeptSnapshot is set when place seven kept the working copy of a pod that did not deliver: a
+	// read-only snapshot beside the pods, named here because a snapshot nobody can find is a disk
+	// that fills up for no one.
+	KeptSnapshot string `json:"kept_snapshot,omitempty"`
 }
 
 // PodPaths is decisions/pod-runtime.md §3 as constants, so the two sides of the bind mount cannot

@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot runner decisions proto help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot runner pipeline decisions proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -23,6 +23,7 @@ help:
 	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
 	@echo "make runner           pods on a node: the contract, no network, the lifecycle, the reaper — AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 (AP-3.3)"
+	@echo "make pipeline         the fixed spine, the seven places, the bounded loop — AB-T05-1, AB-T05-2, AB-T05-3 (AP-3.4)"
 	@echo "make decisions        the decision store, and the module contract against the imports — AB-G01-5 (AP-0.1, AP-3.1)"
 	@echo "make proto            regenerate platform/api/workpodv1 from contract/platform.proto"
 	@echo
@@ -104,6 +105,14 @@ boot:
 # host first — a boot that measured a program the ruling does not describe would measure nothing.
 runner:
 	@acceptance/t04-runner.sh
+
+# AP-3.4. T-05's spine against the panel, OP-2's ceilings against the ruling, and then one boot: a
+# job that delivers, a job that demands a plan nobody can write and a job that cannot be solved —
+# all three through the same seven steps, the last one ending after the ruled number of rounds with
+# a diff, logs and an assessment. `acceptance/t05-pipeline.sh host` is the half that needs no
+# machine and runs against a working tree.
+pipeline:
+	@acceptance/t05-pipeline.sh
 
 # AP-0.1 and AP-3.1. The store is a property of the repository; the module contract is a decision
 # (decisions/module-dependencies.md) held against the imports of platform/. CI runs the same script

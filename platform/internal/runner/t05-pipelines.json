@@ -1,0 +1,18 @@
+{
+  "pipelines": [
+    {
+      "name": "default",
+      "version": "1",
+      "description": "The ordinary job. No plan is demanded, the whole working copy may be touched, the job names its own checks, three rework rounds, and the snapshot goes when the pod does. Every job that does not pin another pipeline runs under this one.",
+      "reap_after": "quiet",
+      "places": {
+        "plan_required": false,
+        "paths": [],
+        "checks": [],
+        "rework_rounds": 3,
+        "acceptance": "tests.existing",
+        "keep_snapshot_on_failure": false
+      }
+    }
+  ]
+}

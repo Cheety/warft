@@ -43,11 +43,11 @@ type ReapAfter string
 const (
 	// AfterQuiet is SP-T04-3's chain in full: the pod is left running after it has delivered, and
 	// 45 s of quiet takes it through frozen and checkpointed to reaped.
-	AfterQuiet ReapAfter = "quiet"
+	AfterQuiet ReapAfter = runner.ReapAfterQuiet
 	// AfterReport ends the pod the moment its report is in. Which of the two a pod gets is the
-	// pipeline's to decide once there is one (AP-3.4): a pod between two phases waits, a pod that
-	// has finished its last phase does not.
-	AfterReport ReapAfter = "report"
+	// pipeline definition's to decide (SP-T05-4) — `workpod pod run --reap` overrides it, because a
+	// human at a terminal is not a runtime object.
+	AfterReport ReapAfter = runner.ReapAfterReport
 )
 
 // Workpod is the runner of the `alpine` pool: a container on this node. T-04 is explicit that the
@@ -55,7 +55,8 @@ const (
 // know about runc, btrfs and cgroups and nothing above it is.
 type Workpod struct {
 	Store Store
-	// Reap decides the end of the lifecycle; AfterQuiet is the panel's.
+	// Reap decides the end of the lifecycle. Empty means "as the job's pipeline says" (SP-T05-4);
+	// a value here is a human overriding it on the command line.
 	Reap ReapAfter
 	// Log is where the lifecycle is narrated. A pod's transitions are operational facts — B-03
 	// makes them spans of a trace in AP-3.8 — so they are said out loud rather than kept.
@@ -65,9 +66,10 @@ type Workpod struct {
 	sockets map[string]*harnessSocket
 }
 
-// New is a runner over the node's own layout.
+// New is a runner over the node's own layout. Reap is left empty on purpose: the pipeline the job
+// pins decides where a pod's life ends, and a default here would be a second opinion about it.
 func New(s Store) *Workpod {
-	return &Workpod{Store: s, Reap: AfterQuiet, Log: func(string, ...any) {}, sockets: map[string]*harnessSocket{}}
+	return &Workpod{Store: s, Log: func(string, ...any) {}, sockets: map[string]*harnessSocket{}}
 }
 
 // Platform is SP-T04-4's pool. One runner, one pool: `windows`, `macos` and `remote` are AP-8.3's
@@ -99,8 +101,15 @@ func (l *life) at(s runner.State, reason string) error {
 // The order of the steps is the whole of T-04, and each of them is where one requirement lands:
 // resolve (SP-T03-1) · snapshot (SP-T04-1) · create (SP-T04-3) · contract (SP-RA-1…4) · start ·
 // watch (SP-T04-3, SP-T04-5) · reap.
-// The return values are named because the two deferred blocks below fill them in: a pod's lifetime
-// and its lifecycle are known only after it is over, including on the paths that end early.
+//
+// Three of T-05's seven phases are here and four are in the pod: `prepare` is everything up to a
+// container that has not run, `deliver` is the patch and the check that it stayed inside place
+// three, `reap` is the last state of the lifecycle. The four between them come back in the pod's
+// report and are joined into one spine, which is what AB-T05-1 reads.
+//
+// The return values are named because the deferred blocks below fill them in: a pod's lifetime, its
+// lifecycle and its last phase are known only after it is over, including on the paths that end
+// early.
 func (w *Workpod) Run(ctx context.Context, base string, job runner.Job) (rep runner.Report, err error) {
 	rep = runner.Report{OrderID: job.OrderID, Attempt: job.Attempt}
 	if err := job.Validate(); err != nil {
@@ -108,6 +117,19 @@ func (w *Workpod) Run(ctx context.Context, base string, job runner.Job) (rep run
 	}
 	if job.Platform != "" && job.Platform != runner.Alpine {
 		return rep, runner.NotBuilt(job.Platform)
+	}
+	// The pipeline before the allocation, because it decides three things about the run that come
+	// before the pod: how long the loop inside may be, where the pod's life ends, and whether the
+	// working copy survives it (SP-T05-2, SP-T05-4).
+	pipe, err := job.Effective()
+	if err != nil {
+		return rep, err
+	}
+	rep.PipelineVersion, rep.PipelineHash = pipe.Ref(), pipe.ContentHash()
+	rep.RoundsAllowed = pipe.Places.ReworkRounds
+	reapAfter := w.Reap
+	if reapAfter == "" {
+		reapAfter = ReapAfter(pipe.ReapAfter)
 	}
 	alloc, err := allocation.For(allocation.Class(job.Class))
 	if err != nil {
@@ -124,25 +146,38 @@ func (w *Workpod) Run(ctx context.Context, base string, job runner.Job) (rep run
 
 	podID := PodID(job)
 	l := &life{log: w.logf}
+	phases := &runner.PhaseLog{}
 	started := time.Now()
 
 	defer func() {
 		rep.PodSeconds = uint64(time.Since(started).Seconds())
 		rep.Lifecycle = l.states
+		// The spine is fixed even for a pod that never ran: a phase that could not happen is
+		// recorded as not having happened, with the reason, rather than left out. A hole in the log
+		// and a step that was deliberately skipped would otherwise read the same (SP-T05-1).
+		rep.Phases = completeSpine(phases.Records, rep)
 	}()
 
 	// Everything from here on has something to clean up, so every path out of it goes through the
 	// reaper. That is not tidiness: a pod that fails between the snapshot and the first instruction
 	// is exactly the pod whose subvolume nobody would think to delete.
 	defer func() {
+		reapStart := time.Now()
 		if err := w.reap(podID, l); err != nil {
 			w.logf("reaping %s: %v", podID, err)
+			phases.Add(runner.PhaseReap, runner.Failed, 0, time.Since(reapStart), "%v", err)
+			return
 		}
+		phases.Add(runner.PhaseReap, runner.Ran, 0, time.Since(reapStart), "patch out, pod gone (SP-T04-5)")
 	}()
 
+	prepareStart := time.Now()
 	if err := w.prepare(podID, base, job, manifest, alloc); err != nil {
+		phases.Add(runner.PhasePrepare, runner.Failed, 0, time.Since(prepareStart), "%v", err)
 		return rep, err
 	}
+	phases.Add(runner.PhasePrepare, runner.Ran, 0, time.Since(prepareStart),
+		"working copy snapshotted off %s in O(1), container created (SP-T04-1)", baseName(base))
 	if err := l.at(runner.Created, "the snapshot stands and the container exists"); err != nil {
 		return rep, err
 	}
@@ -162,12 +197,56 @@ func (w *Workpod) Run(ctx context.Context, base string, job runner.Job) (rep run
 	rep.StartMillis = time.Since(started).Milliseconds()
 	w.logf("pod %s: started in %d ms (SP-T03-1)", podID, rep.StartMillis)
 
-	delivered, endCause, err := w.watch(ctx, podID, cgPath, job, l)
+	delivered, endCause, err := w.watch(ctx, podID, cgPath, job, l, reapAfter)
 	if err != nil {
 		return rep, err
 	}
-	rep = w.collect(rep, podID, base, delivered, endCause)
+	rep = w.collect(rep, podID, base, pipe, phases, delivered, endCause)
 	return rep, nil
+}
+
+// baseName is what the prepare phase names as the tree the working copy came from. A job with no
+// base is lawful — it changed nothing that can be expressed as a difference from something — and
+// saying "nothing" is more useful than an empty string in a phase record.
+func baseName(base string) string {
+	if base == "" {
+		return "an empty subvolume"
+	}
+	return base
+}
+
+// completeSpine fills in the phases a run never reached, so that every job's log carries all seven
+// steps of SP-T05-1 in order.
+//
+// It only inserts, never reorders: `check` and `repair` interleave once per rework round, and a log
+// that had been rebuilt by phase would have lost which round each belonged to. A run that ended
+// early has no interleaving to lose, which is the only kind of run this touches.
+func completeSpine(rs []runner.PhaseRecord, rep runner.Report) []runner.PhaseRecord {
+	reason := "the pod did not get this far"
+	if rep.Cause != "" {
+		reason += ": " + rep.Cause
+	}
+	present := map[runner.Phase]bool{}
+	for _, r := range rs {
+		present[r.Phase] = true
+	}
+	out := append([]runner.PhaseRecord(nil), rs...)
+	for _, p := range runner.Spine() {
+		if present[p] {
+			continue
+		}
+		at := len(out)
+		for i, r := range out {
+			if runner.SpineIndex(r.Phase) > runner.SpineIndex(p) {
+				at = i
+				break
+			}
+		}
+		out = append(out, runner.PhaseRecord{})
+		copy(out[at+1:], out[at:])
+		out[at] = runner.PhaseRecord{Phase: p, Outcome: runner.Skipped, Detail: reason}
+	}
+	return out
 }
 
 // PodID is a pod's name on the node and its container id in runc. Order and attempt, because a
@@ -259,7 +338,7 @@ func (w *Workpod) contract(podID string, a allocation.Allocation) (string, error
 // to report it under. A pod that hit its lifetime without delivering has not failed silently:
 // SP-K02-3 wants a cause in every terminal state, and this is where the two that come from the
 // reaper's side are named.
-func (w *Workpod) watch(ctx context.Context, podID, cgPath string, job runner.Job, l *life) (bool, string, error) {
+func (w *Workpod) watch(ctx context.Context, podID, cgPath string, job runner.Job, l *life, reapAfter ReapAfter) (bool, string, error) {
 	reportFile := filepath.Join(w.Store.RunDir(podID), "pod", "out", "report.json")
 	lifetime := DefaultLifetime
 	if job.PodMinutes > 0 {
@@ -287,7 +366,7 @@ func (w *Workpod) watch(ctx context.Context, podID, cgPath string, job runner.Jo
 			if _, err := os.Stat(reportFile); err == nil {
 				delivered = true
 				w.logf("pod %s: the report is in", podID)
-				if w.Reap == AfterReport {
+				if reapAfter == AfterReport {
 					return true, "", nil
 				}
 			}
@@ -365,28 +444,47 @@ func (w *Workpod) freezeAndCheckpoint(podID string, l *life, quiet time.Duration
 	return l.at(runner.Checkpointed, "dumped to disk (CRIU)")
 }
 
-// collect takes the two halves of what a pod delivers: the report it wrote, and the patch the
-// supervisor computes from the base and the working copy.
+// collect is T-05's `deliver` phase, and it takes the two halves of what a pod delivers: the report
+// it wrote, and the patch the supervisor computes from the base and the working copy.
 //
 // The patch is made **outside** the pod, from two trees the pod cannot reach — the base subvolume
 // and its own snapshot, both on the host. What the pod changed is therefore measured rather than
 // claimed, and a pod cannot hand out a patch that does not match what it did. It lands on /var,
 // because it is the job's result and has to outlive the pod that produced it (SP-K03-1's outbox on
-// /var is where it goes once AP-3.5 builds one).
-func (w *Workpod) collect(rep runner.Report, podID, base string, delivered bool, endCause string) runner.Report {
+// /var is where it goes once AP-3.5 builds one). The pod's console goes with it, for the same
+// reason: SP-T05-3's reply is a diff, logs and an assessment, and two of the three would otherwise
+// be deleted by the phase that follows this one.
+//
+// Place three is enforced here and nowhere else. "Which paths the agent may touch" is a claim about
+// what changed, and what changed is only knowable from the diff — so the place that names it is
+// checked against the measurement rather than against the pod's word for it.
+func (w *Workpod) collect(rep runner.Report, podID, base string, pipe runner.Pipeline, phases *runner.PhaseLog, delivered bool, endCause string) runner.Report {
+	start := time.Now()
 	out := filepath.Join(w.Store.RunDir(podID), "pod", "out")
 	if b, err := os.ReadFile(filepath.Join(out, "report.json")); err == nil {
 		var fromPod runner.Report
 		if err := json.Unmarshal(b, &fromPod); err == nil {
 			rep.FinalState, rep.Cause, rep.Evidence = fromPod.FinalState, fromPod.Cause, fromPod.Evidence
 			rep.Text, rep.ExitCode = fromPod.Text, fromPod.ExitCode
+			rep.Assessment, rep.Rounds = fromPod.Assessment, fromPod.Rounds
+			// The pod's four phases, in the order it lived them, between prepare and deliver.
+			phases.Records = append(phases.Records, fromPod.Phases...)
 		}
 	}
-	if path, hash, err := w.writePatch(podID, base); err != nil {
+
+	var changed []string
+	if path, hash, body, err := w.writePatch(podID, base); err != nil {
 		w.logf("pod %s: the patch could not be made: %v", podID, err)
 	} else {
 		rep.PatchPath, rep.PatchHash = path, hash
+		changed = changedPaths(body, w.Store.PodDir(podID))
 	}
+	if path, err := w.keepLog(podID); err != nil {
+		w.logf("pod %s: the console could not be kept: %v", podID, err)
+	} else {
+		rep.LogPath = path
+	}
+
 	if !delivered && rep.FinalState == "" {
 		// SP-K02-3: no terminal state without a cause. A pod that ended without a report ended for
 		// a reason, and the cause has to be one of the state contract's words, not a new one.
@@ -396,15 +494,134 @@ func (w *Workpod) collect(rep runner.Report, podID, base string, delivered bool,
 		}
 		rep.Text = "the pod ended without leaving a report at " + runner.PodReportFile
 	}
+
+	outside := outsidePlaces(changed, pipe.Places.Paths)
+	switch {
+	case len(outside) > 0:
+		// The job changed something place three did not allow. `goal.wrong` rather than a new word:
+		// contract/schema.sql's cause codes are closed, and of the twelve this is the one that says
+		// the pod did something other than what it was asked to do. It overrides whatever the pod
+		// reported about itself — a delivery of a patch that leaves its bounds is not a delivery.
+		rep.FinalState, rep.Cause, rep.Evidence = "failed", "goal.wrong", ""
+		phases.Add(runner.PhaseDeliver, runner.Failed, 0, time.Since(start),
+			"%d path(s) outside place three (%s): %s", len(outside), strings.Join(pipe.Places.Paths, ", "), strings.Join(outside, ", "))
+	case rep.PatchHash == "":
+		// A delivery is a patch and a report. Without the patch there is nothing to deliver, so a
+		// pod that reported `delivered` did not — whatever it believed about itself. A pod that had
+		// already reported a failure keeps its own cause, which says more than this one would.
+		if rep.FinalState == "delivered" {
+			rep.FinalState, rep.Cause, rep.Evidence = "failed", "tool.failure", ""
+		}
+		phases.Add(runner.PhaseDeliver, runner.Failed, 0, time.Since(start), "no patch could be computed from the working copy")
+	default:
+		phases.Add(runner.PhaseDeliver, runner.Ran, 0, time.Since(start),
+			"%d path(s) changed, patch %s, %s", len(changed), rep.PatchHash, rep.FinalState)
+	}
+
+	// Place seven, after the state is final and before the reaper runs: a snapshot of a pod that
+	// did not deliver, so that what failed can still be looked at. It is a read-only snapshot in
+	// O(1) beside the pods rather than a copy, and it lies outside the directory the reaper sweeps
+	// — a kept working copy that the next sweep deleted would be a place that does nothing.
+	if pipe.Places.KeepSnapshotOnFailure && rep.FinalState != "delivered" {
+		if path, err := w.Store.Keep(podID); err != nil {
+			w.logf("pod %s: the working copy could not be kept: %v", podID, err)
+		} else {
+			rep.KeptSnapshot = path
+			w.logf("pod %s: working copy kept at %s (place keep_snapshot_on_failure)", podID, path)
+		}
+	}
 	return rep
+}
+
+// changedPaths is what the diff says was touched, relative to the working copy.
+//
+// It reads the patch rather than walking the two trees again: the patch is the measurement, and a
+// second walk could disagree with it. `+++ ` headers carry the file on the pod's side; binary files
+// have no hunks and are named on their own line, which is why both shapes are read.
+func changedPaths(patch []byte, podDir string) []string {
+	seen := map[string]bool{}
+	var out []string
+	add := func(p string) {
+		p = strings.TrimPrefix(strings.TrimPrefix(p, podDir), "/")
+		if p == "" || seen[p] {
+			return
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	for _, line := range strings.Split(string(patch), "\n") {
+		switch {
+		case strings.HasPrefix(line, "+++ "):
+			// GNU diff appends a tab and a timestamp to the header.
+			field := strings.TrimPrefix(line, "+++ ")
+			if i := strings.IndexByte(field, '\t'); i >= 0 {
+				field = field[:i]
+			}
+			if strings.HasPrefix(field, podDir) {
+				add(field)
+			}
+		case strings.HasPrefix(line, "Binary files ") && strings.HasSuffix(line, " differ"):
+			for _, field := range strings.Fields(strings.TrimSuffix(strings.TrimPrefix(line, "Binary files "), " differ")) {
+				if strings.HasPrefix(field, podDir) {
+					add(field)
+				}
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// outsidePlaces is place three, applied: which of the changed paths no prefix allows. An empty list
+// of prefixes is the whole working copy, which is what `default@1` carries — the place exists to be
+// narrowed, not to be satisfied.
+func outsidePlaces(changed, allowed []string) []string {
+	if len(allowed) == 0 {
+		return nil
+	}
+	var out []string
+	for _, c := range changed {
+		ok := false
+		for _, a := range allowed {
+			a = strings.TrimSuffix(filepath.Clean(a), "/")
+			if c == a || strings.HasPrefix(c, a+"/") {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// keepLog copies the pod's console onto /var, beside the patch. The console lies in the output
+// directory, which is on /run and is deleted with the pod; SP-T05-3's reply names logs, and a path
+// into a directory the next phase removes is not a log anyone can read.
+func (w *Workpod) keepLog(podID string) (string, error) {
+	body, err := os.ReadFile(filepath.Join(w.Store.RunDir(podID), "pod", "out", "console.log"))
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(w.Store.Var, "logs")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, podID+".log")
+	_ = os.Remove(path)
+	if err := os.WriteFile(path, body, 0o444); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // writePatch is `diff -ruN base workingCopy`, on the host. diff exits 0 when the trees are equal and
 // 1 when they differ; anything above that is a failure of the tool and not a property of the trees.
-func (w *Workpod) writePatch(podID, base string) (string, string, error) {
+func (w *Workpod) writePatch(podID, base string) (string, string, []byte, error) {
 	dir := filepath.Join(w.Store.Var, "patches")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 	from := base
 	if from == "" {
@@ -412,7 +629,7 @@ func (w *Workpod) writePatch(podID, base string) (string, string, error) {
 		// An empty directory is that something.
 		empty, err := os.MkdirTemp("", "workpod-empty-")
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 		defer os.RemoveAll(empty)
 		from = empty
@@ -420,17 +637,17 @@ func (w *Workpod) writePatch(podID, base string) (string, string, error) {
 	cmd := exec.Command("diff", "--recursive", "--unified", "--new-file", "--no-dereference", from, w.Store.PodDir(podID))
 	body, err := cmd.Output()
 	if code := cmd.ProcessState.ExitCode(); code > 1 {
-		return "", "", fmt.Errorf("diff exited %d: %w", code, err)
+		return "", "", nil, fmt.Errorf("diff exited %d: %w", code, err)
 	}
 	path := filepath.Join(dir, podID+".diff")
 	// Removed first: the patch is written read-only, and a second attempt on the same pod would
 	// otherwise fail against its own earlier output rather than replace it.
 	_ = os.Remove(path)
 	if err := os.WriteFile(path, body, 0o444); err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 	sum := sha256.Sum256(body)
-	return path, "sha256:" + hex.EncodeToString(sum[:]), nil
+	return path, "sha256:" + hex.EncodeToString(sum[:]), body, nil
 }
 
 // reap is SP-T04-3's last state and SP-T04-5's whole point: the container gone, the subvolume

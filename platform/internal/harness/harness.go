@@ -1,10 +1,10 @@
 // Package harness is the pod's half of the runner contract: the same binary the worker runs,
 // mounted read-only into every pod and started as its init process (SP-E02-4, SP-T04-1).
 //
-// It is deliberately small, and the boundary is AP-3.3's own: *no agent, no model*. What it does is
-// read the job it was given, run it in the working copy, say what happened, and then wait to be
-// frozen or reaped. Choosing what to run — plan, edit, check, repair — is the pipeline of T-05
-// (AP-3.4), and the model that would drive it is stage 5's.
+// It is deliberately small, and the boundary is still *no agent, no model*. What it does is read the
+// job it was given, run the four phases of T-05's spine that happen inside a pod — plan, edit, check,
+// repair (pipeline.go) — say what happened, and then wait to be frozen or reaped. The model that
+// would decide what to change between two rounds is stage 5's.
 //
 // It talks to exactly one thing: the Unix socket at /run/workpod/harness.sock. There is no network
 // in the pod, no key and no token (SP-T04-2), so anything the pod cannot do with its own files goes
@@ -14,10 +14,8 @@ package harness
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -54,36 +52,16 @@ func Run() error {
 	if err != nil {
 		return err
 	}
-
-	rep := runner.Report{OrderID: job.OrderID, Attempt: job.Attempt}
-	var notes []string
-	notes = append(notes, "harness socket: "+socketState())
-
-	start := time.Now()
-	output, code, runErr := runJob(job)
-	rep.ExitCode = code
-
-	switch {
-	case runErr != nil && code < 0:
-		rep.FinalState, rep.Cause = "failed", "tool.failure"
-		notes = append(notes, "the command could not be started: "+runErr.Error())
-	case code != 0:
-		rep.FinalState, rep.Cause = "failed", "tool.failure"
-		notes = append(notes, fmt.Sprintf("%v exited %d after %s", job.Command, code, time.Since(start).Round(time.Millisecond)))
-	default:
-		// Q-02: confidence is not an acceptance criterion, evidence is. The command succeeded and
-		// nothing measured anything, so the honest terminal state is `unproven` — the capability
-		// that would produce an evidence class is the check phase of T-05 and the handles of F-03,
-		// and neither is built (AP-3.4, AP-4.2).
-		rep.FinalState, rep.Cause = "unproven", "skill.missing"
-		notes = append(notes, fmt.Sprintf("%v exited 0 after %s; no check ran, so there is no evidence class (Q-02)",
-			job.Command, time.Since(start).Round(time.Millisecond)))
+	// The pipeline is resolved in the pod as well as on the host, from the same embedded catalog in
+	// the same artifact (E-02). Not a second opinion: the host refuses an unrunnable job before it
+	// creates anything, and this is what makes the pod's four phases run under the definition the
+	// job pinned rather than under whatever was passed to it (SP-T05-4).
+	pipe, err := job.Effective()
+	if err != nil {
+		return err
 	}
-	if len(output) > 0 {
-		notes = append(notes, "--- output ---", string(output))
-	}
-	rep.Text = strings.Join(notes, "\n")
 
+	rep := runPipeline(job, pipe, runner.PodWorkDir, []string{"harness socket: " + socketState()})
 	if err := writeReport(rep); err != nil {
 		return err
 	}
@@ -136,30 +114,11 @@ func readJob(path string) (runner.Job, error) {
 	if err != nil {
 		return job, fmt.Errorf("no job at %s — the harness runs in a pod, not on a node: %w", path, err)
 	}
-	if err := json.Unmarshal(b, &job); err != nil {
+	job, err = runner.DecodeJob(b)
+	if err != nil {
 		return job, fmt.Errorf("%s: %w", path, err)
 	}
 	return job, job.Validate()
-}
-
-// runJob runs the job's command in the working copy. The environment is the pod's own, which is the
-// one the runner built from the allocation (SP-RC-5) — inherited here on purpose, because inside the
-// pod there is nothing else it could have come from.
-func runJob(job runner.Job) ([]byte, int, error) {
-	cmd := exec.Command(job.Command[0], job.Command[1:]...)
-	cmd.Dir = runner.PodWorkDir
-	out, err := cmd.CombinedOutput()
-	if len(out) > outputTail {
-		out = append([]byte("… truncated to the last 64 KiB …\n"), out[len(out)-outputTail:]...)
-	}
-	if err == nil {
-		return out, 0, nil
-	}
-	var exit *exec.ExitError
-	if errors.As(err, &exit) {
-		return out, exit.ExitCode(), nil
-	}
-	return out, -1, err
 }
 
 func writeReport(rep runner.Report) error {

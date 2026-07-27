@@ -33,10 +33,12 @@ on:
       - 'acceptance/a04-boot.sh'
       - 'acceptance/e02-binary.sh'
       - 'acceptance/t04-runner.sh'
+      - 'acceptance/t05-pipeline.sh'
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
       - 'decisions/E-05.md'
+      - 'decisions/OP-2.md'
       - 'decisions/pod-runtime.md'
       - 'decisions/resource-contract.md'
       - '.github/workflows/image.yml'
@@ -50,10 +52,12 @@ on:
       - 'acceptance/a04-boot.sh'
       - 'acceptance/e02-binary.sh'
       - 'acceptance/t04-runner.sh'
+      - 'acceptance/t05-pipeline.sh'
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
       - 'decisions/E-05.md'
+      - 'decisions/OP-2.md'
       - 'decisions/pod-runtime.md'
       - 'decisions/resource-contract.md'
       - '.github/workflows/image.yml'
@@ -157,6 +161,14 @@ jobs:
       # three orphans against a restarted worker.
       - name: AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 — pods on a node
         run: ./acceptance/t04-runner.sh
+
+      # AP-3.4. One more boot, and a short one: every pod here is reaped on its report rather than
+      # after 45 s of quiet, because what this leg measures is the pipeline and not the lifecycle
+      # (that is the boot above). Three jobs that end in three different states pass through the
+      # same seven steps, four jobs that try to differ somewhere other than the seven places are
+      # refused, and the job that cannot be solved ends after the ruled number of rounds.
+      - name: AB-T05-1, AB-T05-2, AB-T05-3 — the pipeline on a node
+        run: ./acceptance/t05-pipeline.sh
 
       # AP-1.2. A-06 in full: the list runs in the machine, the SBOM is read next to the artifact,
       # and a deliberately damaged copy of the image is booted to see it refuse. Eight rows green,

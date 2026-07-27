@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Cheety/warft/platform/internal/runner"
@@ -22,6 +23,7 @@ import (
 //
 //	pod run      --job FILE [--base DIR] [--reap quiet|report]   run one job to a patch and a report
 //	pod resolve  --job FILE                                      T-03: the image, or the build job a miss makes
+//	pod pipeline [--job FILE]                                    T-05: the definitions, or the one a job runs under
 //	pod image import --skeleton DIR --requirements FILE [--layer SRC:DST] [--env K=V]
 //	pod base KEY --from DIR                                      a working-copy base to snapshot from
 //	pod list                                                     what is on this node
@@ -36,6 +38,8 @@ func Command(args []string, out io.Writer) error {
 		return cmdRun(s, args[1:], out)
 	case "resolve":
 		return cmdResolve(s, args[1:], out)
+	case "pipeline":
+		return cmdPipeline(args[1:], out)
 	case "image":
 		if len(args) < 2 || args[1] != "import" {
 			return usage()
@@ -53,7 +57,7 @@ func Command(args []string, out io.Writer) error {
 }
 
 func usage() error {
-	return fmt.Errorf("pod run | pod resolve | pod image import | pod base | pod list | pod reap")
+	return fmt.Errorf("pod run | pod resolve | pod pipeline | pod image import | pod base | pod list | pod reap")
 }
 
 // flags is a small argument reader. The platform binary takes no configuration file and no
@@ -98,7 +102,104 @@ func readJobFile(path string) (runner.Job, error) {
 	if err != nil {
 		return job, err
 	}
-	return job, json.Unmarshal(b, &job)
+	// The strict decoder, not encoding/json's forgiving one: SP-T05-2 is a closed list of seven
+	// places, and a decoder that ignored an eighth field would open it by accident (AB-T05-2).
+	return runner.DecodeJob(b)
+}
+
+// cmdPipeline is T-05 read back out of the artifact.
+//
+// Without a job it prints the catalog the binary carries — every `pipeline@version` with the content
+// hash `pipeline_version.content_hash` holds. With one it prints the definition that job runs under,
+// the places it moves, and the fixed spine underneath both, which is the thing SP-T05-1 says never
+// differs.
+func cmdPipeline(args []string, out io.Writer) error {
+	f, err := parseFlags(args)
+	if err != nil {
+		return err
+	}
+	for _, p := range runner.Spine() {
+		fmt.Fprintf(out, "spine\t%s\n", p)
+	}
+
+	if f.single["job"] == "" {
+		for _, p := range runner.Pipelines() {
+			fmt.Fprintf(out, "pipeline\t%s\t%s\n", p.Ref(), p.ContentHash())
+		}
+		for _, c := range sortedClasses() {
+			fmt.Fprintf(out, "ceiling\t%s\t%d\n", c, runner.RoundCeilings()[c])
+		}
+		return nil
+	}
+
+	job, err := readJobFile(f.single["job"])
+	if err != nil {
+		return err
+	}
+	pipe, err := job.Effective()
+	if err != nil {
+		return err
+	}
+	moved, err := job.Moved()
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "pipeline\t%s\t%s\n", pipe.Ref(), pipe.ContentHash())
+	fmt.Fprintf(out, "reap_after\t%s\n", pipe.ReapAfter)
+	for _, name := range runner.PlaceNames {
+		fmt.Fprintf(out, "place\t%s\t%s\n", name, placeValue(job, pipe, name))
+	}
+	fmt.Fprintf(out, "moved\t%s\n", strings.Join(moved, " "))
+	return nil
+}
+
+// placeValue is one of SP-T05-2's seven, printed. Place one is the job's own image fields, which is
+// why it is read from the job and the other six from the effective definition.
+func placeValue(job runner.Job, pipe runner.Pipeline, name string) string {
+	switch name {
+	case "image":
+		if job.ImageDigest != "" {
+			return job.ImageDigest
+		}
+		return job.Requirements.Hash()
+	case "plan_required":
+		return strconv.FormatBool(pipe.Places.PlanRequired)
+	case "paths":
+		if len(pipe.Places.Paths) == 0 {
+			return "(the whole working copy)"
+		}
+		return strings.Join(pipe.Places.Paths, " ")
+	case "checks":
+		if len(pipe.Places.Checks) == 0 {
+			return "(none)"
+		}
+		var parts []string
+		for _, c := range pipe.Places.Checks {
+			kind := "reports"
+			if c.Blocks {
+				kind = "blocks"
+			}
+			parts = append(parts, c.Name+":"+kind)
+		}
+		return strings.Join(parts, " ")
+	case "rework_rounds":
+		return strconv.Itoa(pipe.Places.ReworkRounds)
+	case "acceptance":
+		return pipe.Places.Acceptance
+	case "keep_snapshot_on_failure":
+		return strconv.FormatBool(pipe.Places.KeepSnapshotOnFailure)
+	}
+	return ""
+}
+
+func sortedClasses() []string {
+	ceilings := runner.RoundCeilings()
+	out := make([]string, 0, len(ceilings))
+	for c := range ceilings {
+		out = append(out, c)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func cmdRun(s Store, args []string, out io.Writer) error {

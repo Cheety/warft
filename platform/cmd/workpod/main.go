@@ -50,7 +50,7 @@ func usage() {
 
 components   control · scheduler · worker · adapter · git-gate · egress-gate · harness
 adapter      adapter submit · adapter identity · adapter capabilities (T-01)
-pod          pod run · pod resolve · pod image import · pod base · pod list · pod reap (T-04)
+pod          pod run · pod resolve · pod pipeline · pod image import · pod base · pod list · pod reap (T-04, T-05)
 node         disk [reinstall] · selftest · podslice arm <slice> · db-init · ping
 about        components · version
 `)

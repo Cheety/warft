@@ -22,7 +22,9 @@ on:
       - 'contract/schema.sql'
       - 'contract/platform.proto'
       - 'acceptance/t01-intake.sh'
+      - 'acceptance/t05-pipeline.sh'
       - 'acceptance/module-contract.py'
+      - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
@@ -35,7 +37,9 @@ on:
       - 'contract/schema.sql'
       - 'contract/platform.proto'
       - 'acceptance/t01-intake.sh'
+      - 'acceptance/t05-pipeline.sh'
       - 'acceptance/module-contract.py'
+      - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
@@ -65,6 +69,14 @@ jobs:
 
       - name: The module contract against the imports
         run: ./acceptance/module-contract.py
+
+      # AP-3.4's host half: T-05's spine against the panel that names it, the seven places against
+      # SP-T05-2's prose, OP-2's ceilings against the file the binary embeds, and the acceptance
+      # criterion against the state contract's evidence classes. It needs no machine, so it runs
+      # here on every change rather than only in the leg that boots one — the boot itself, which is
+      # where AB-T05-* turn green, is in image.yml.
+      - name: T-05's four sources against the program
+        run: ./acceptance/t05-pipeline.sh host
 
       # ubuntu-latest carries docker; the script spins its own Postgres, the same shape the
       # state-machine leg of the contract workflow uses.

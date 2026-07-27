@@ -1,0 +1,20 @@
+# op2-rounds.tsv — the machine-readable half of decisions/OP-2.md.
+#
+# The ruling is the source; this file is what a program can read, and acceptance/t05-pipeline.sh
+# holds the two against each other on every run. A ceiling in one that is not in the other is
+# drift, and the run fails — the same rule op5-policy.tsv and ra1-classes.tsv live by.
+#
+# A rework round is one `repair` followed by the `check` that judges it (SP-T05-3). The first
+# check is not a round: it judges the `edit`. The ceiling below is the most repairs a pod of that
+# class may ever spend, whatever the pipeline definition or the job asks for — the effective `n`
+# is the smaller of the two, and a job that *explicitly* names more than its class allows is
+# refused rather than clamped.
+#
+# It is embedded into the binary (go:embed) for the reason R-A's table is: a runner bounds a loop
+# without asking anything. A ceiling a node could edit is a ceiling an operator can raise.
+#
+#   class  rework_rounds_max
+tiny	1
+small	3
+medium	3
+large	2
