@@ -18,13 +18,17 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	workpodv1 "github.com/Cheety/warft/platform/api/workpodv1"
+	"github.com/Cheety/warft/platform/internal/attachment"
+	"github.com/Cheety/warft/platform/internal/statedb"
 )
 
 type server struct {
@@ -32,7 +36,16 @@ type server struct {
 
 	mu    sync.Mutex
 	nodes map[string]string // node_id → cell
+	db    *pgxpool.Pool     // nil until the state database is ready
+
+	// policy is OP-5 as the artifact carries it, read once at start: the ruling does not change
+	// while the plane runs, and re-reading it per envelope would suggest it could.
+	policy attachment.Policy
 }
+
+// dbRetry is how often the plane tries the state database again while it is not there. Postgres
+// starts beside the plane, not before it, so the first attempt losing is the normal case.
+const dbRetry = 2 * time.Second
 
 // Serve is `workpod control`: bind the address the `control` boot value names and serve until
 // stopped.
@@ -44,10 +57,72 @@ func Serve(addr string) error {
 	if err != nil {
 		return err
 	}
+	srv := &server{nodes: map[string]string{}, policy: attachment.Ruled()}
+
+	// The state database is reached for in the background, not waited on. A-04's register step is
+	// what a starting node needs from this plane (SP-A04-2), and it needs no queue: a plane that
+	// refused to start until Postgres answered would make every node's boot depend on a service
+	// that starts beside it. Intake refuses by name until this succeeds; it never pretends.
+	go srv.connectDB()
+
 	s := grpc.NewServer()
-	workpodv1.RegisterControlPlaneServer(s, &server{nodes: map[string]string{}})
+	workpodv1.RegisterControlPlaneServer(s, srv)
 	log.Printf("control plane serving on %s (loopback only until AP-6.1 gives connections a name)", addr)
 	return s.Serve(lis)
+}
+
+func (s *server) connectDB() {
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		err := statedb.Ensure(ctx)
+		if err == nil {
+			var pool *pgxpool.Pool
+			pool, err = statedb.Open(ctx)
+			if err == nil {
+				s.mu.Lock()
+				s.db = pool
+				s.mu.Unlock()
+				cancel()
+				log.Printf("state database ready — intake accepts (T-01, K-01)")
+				return
+			}
+		}
+		cancel()
+		log.Printf("state database not ready yet (%v); trying again in %s", err, dbRetry)
+		time.Sleep(dbRetry)
+	}
+}
+
+func (s *server) pool() *pgxpool.Pool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.db
+}
+
+// logIntake states the one fact this work package exists for, in the plane's own log: what the
+// message produced, and whether it had been seen before.
+func logIntake(e statedb.Envelope, res statedb.Result) {
+	switch {
+	case res.Deduplicated:
+		log.Printf("intake %s/%s: already delivered — order %s stands, no second job (SP-T01-7)",
+			e.Channel, e.Idempotency, orElse(res.OrderID, "none"))
+	case res.FirstContact:
+		log.Printf("intake %s/%s: first contact from %s — an invitation, not a job (SP-T01-5)",
+			e.Channel, e.Idempotency, e.SenderExternal)
+	case res.OrderID == "":
+		log.Printf("intake %s/%s: envelope %s stored; no acceptance criterion, no job (SP-Q01-6)",
+			e.Channel, e.Idempotency, res.EnvelopeID)
+	default:
+		log.Printf("intake %s/%s: envelope %s -> order %s, authority %s",
+			e.Channel, e.Idempotency, res.EnvelopeID, res.OrderID, e.Authority)
+	}
+}
+
+func orElse(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
 }
 
 func requireLoopback(addr string) error {
@@ -64,8 +139,8 @@ func requireLoopback(addr string) error {
 
 // RequestCapacity is the register step's other half: a node that asks for capacity is a node
 // that has started pulling (SP-A04-2). The header is the acknowledgement; the stream then stays
-// open because leases travel on it — and before AP-3.2 there are no jobs to lease, so an open,
-// empty stream is the truthful answer.
+// open because leases travel on it — and granting one is AP-6.2's work, so an open, empty stream
+// is still the truthful answer even now that queued jobs exist.
 func (s *server) RequestCapacity(req *workpodv1.CapacityRequest, stream grpc.ServerStreamingServer[workpodv1.Lease]) error {
 	if req.GetNodeId() == "" || req.GetCell() == "" {
 		return status.Error(codes.InvalidArgument, "a capacity request names node_id and cell — identity is stated, not inferred")
@@ -108,14 +183,12 @@ func (s *server) Enroll(_ context.Context, _ *workpodv1.EnrollRequest) (*workpod
 	return nil, notBuilt("enrollment (B-01: token → certificate with role and cell in the name)", "AP-6.1")
 }
 
-func (s *server) SubmitEnvelope(_ context.Context, _ *workpodv1.Envelope) (*workpodv1.EnvelopeAck, error) {
-	return nil, notBuilt("intake (T-01: envelope → job with an idempotency key)", "AP-3.2")
-}
+// SubmitEnvelope is served since AP-3.2 and lives in intake.go.
 
 func (s *server) SubmitReport(_ context.Context, _ *workpodv1.Report) (*workpodv1.ReportAck, error) {
-	return nil, notBuilt("reports (there are no jobs before the adapter exists)", "AP-3.2")
+	return nil, notBuilt("reports (a job reports when a pipeline has run it)", "AP-3.4")
 }
 
 func (s *server) PublishEvent(_ context.Context, _ *workpodv1.Event) (*workpodv1.EventAck, error) {
-	return nil, notBuilt("events back into the channels (T-02)", "AP-3.2")
+	return nil, notBuilt("events back into the channels, from the captain (T-02)", "AP-5.5")
 }

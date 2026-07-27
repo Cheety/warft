@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Cheety/warft/platform/internal/adapter"
 	"github.com/Cheety/warft/platform/internal/boot"
 	"github.com/Cheety/warft/platform/internal/cgroup"
 	"github.com/Cheety/warft/platform/internal/controlplane"
@@ -36,7 +37,7 @@ var components = [][3]string{
 	{"control-plane", "serving", "AP-3.1"},
 	{"scheduler", "refusing-until", "AP-3.7"},
 	{"worker", "serving", "AP-3.1"},
-	{"adapter", "refusing-until", "AP-3.2"},
+	{"adapter", "serving", "AP-3.2"},
 	{"git-gate", "refusing-until", "AP-3.5"},
 	{"egress-gate", "refusing-until", "AP-3.5"},
 	{"harness", "refusing-until", "AP-3.3"},
@@ -46,6 +47,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `workpod — the platform in one artifact (E-02)
 
 components   control · scheduler · worker · adapter · git-gate · egress-gate · harness
+adapter      adapter submit · adapter identity · adapter capabilities (T-01)
 node         disk [reinstall] · selftest · podslice arm <slice> · db-init · ping
 about        components · version
 `)
@@ -83,10 +85,13 @@ func main() {
 			fail(err)
 		}
 
+	case "adapter":
+		if err := adapter.Run(os.Args[2:], boot.Read(), os.Stdout); err != nil {
+			fail(err)
+		}
+
 	case "scheduler":
 		refuse("scheduler", "tokens per phase, four priorities, the PSI ladder (R-B, R-C)", "AP-3.7")
-	case "adapter":
-		refuse("adapter", "intake with receive(), identity(), respond(), capabilities() (T-01)", "AP-3.2")
 	case "git-gate":
 		refuse("git-gate", "the gate that checks policy and signs itself (K-03, B-02)", "AP-3.5")
 	case "egress-gate":

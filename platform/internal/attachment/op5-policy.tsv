@@ -1,0 +1,21 @@
+# op5-policy.tsv — the machine-readable half of decisions/OP-5.md.
+#
+# The ruling is the source; this file is what a program can read, and acceptance/t01-intake.sh
+# holds the two against each other on every run. A number or a media type in one that is not in
+# the other is drift, and the run fails.
+#
+# It is embedded into the binary (go:embed), because SP-T01-3 will run adapters as workloads of
+# their own — with no database and no configuration. A constant intake must know is a constant
+# that travels in the artifact.
+#
+#   limit       NAME              VALUE
+#   media_type  TYPE              WITNESS   what the leading bytes must sniff as
+limit	attachment_max_bytes	4194304
+limit	envelope_max_total_bytes	16777216
+limit	envelope_max_attachments	8
+media_type	text/plain	text
+media_type	text/markdown	text
+media_type	text/csv	text
+media_type	application/json	text
+media_type	image/png	image/png
+media_type	image/jpeg	image/jpeg

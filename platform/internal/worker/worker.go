@@ -51,13 +51,13 @@ func Run(v boot.Values) error {
 	}
 	defer closeConn()
 
-	// Pulling begins: the stream is the ferry's near end. Leases arrive on it once jobs exist
-	// (AP-3.2); until then holding it open is the pull.
+	// Pulling begins: the stream is the ferry's near end. Jobs exist since AP-3.2, but granting a
+	// lease over one is AP-6.2's; until then holding the stream open is the pull.
 	for {
 		if _, err := stream.Recv(); err != nil {
 			return fmt.Errorf("the pull stream ended: %w", err)
 		}
-		// A lease before AP-3.2 built intake would be a job from nowhere.
+		// A lease before a runner exists would be a job nothing can execute.
 		return fmt.Errorf("received a lease, but nothing can run one before AP-3.3 — refusing it")
 	}
 }

@@ -66,15 +66,34 @@ done
 
 # 3 — what is not built refuses by the name of the package that builds it. The exit code is 69
 #     (unavailable), distinguishable from a built component that failed.
-declare -A OWNER=([scheduler]=AP-3.7 [adapter]=AP-3.2 [git-gate]=AP-3.5 [egress-gate]=AP-3.5 [harness]=AP-3.3)
-for c in scheduler adapter git-gate egress-gate harness; do
-  out="$("$BIN" "$c" 2>&1)"; rc=$?
-  if [ "$rc" -eq 69 ] && echo "$out" | grep -q "${OWNER[$c]}"; then
-    pass "$c refuses honestly" "exit 69, names ${OWNER[$c]}"
-  else
-    fail "$c refuses honestly" "exit $rc — $(echo "$out" | head -1)"
-  fi
-done
+#
+#     The list is the artifact's own. `components` says which of the seven still refuse and which
+#     work package owns each; reading it here instead of restating it means this check needs no
+#     edit when a component is built, and cannot quietly go on demanding a refusal from something
+#     that now serves. A component that serves is proven by its own work package's rows — the
+#     control plane and the worker by a boot (a04-boot.sh), the adapter by t01-intake.sh.
+REFUSING=0; SERVING=0
+while read -r c state ap; do
+  [ -n "$c" ] || continue
+  case "$state" in
+    serving)
+      SERVING=$((SERVING+1))
+      ;;
+    refusing-until)
+      REFUSING=$((REFUSING+1))
+      out="$("$BIN" "$c" 2>&1)"; rc=$?
+      if [ "$rc" -eq 69 ] && echo "$out" | grep -q "$ap"; then
+        pass "$c refuses honestly" "exit 69, names $ap"
+      else
+        fail "$c refuses honestly" "exit $rc — $(echo "$out" | head -1)"
+      fi
+      ;;
+    *)
+      fail "$c states what it is" "neither serving nor refusing-until: $state"
+      ;;
+  esac
+done <<< "$COMPONENTS"
+printf '        %d serving · %d refusing until their work package\n' "$SERVING" "$REFUSING"
 
 # 4 — the serving ones answer. `version` proves the artifact runs at all; control and worker are
 #     proven by a boot (a04-boot.sh), not by a flag — serving is a machine's business.

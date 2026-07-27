@@ -23,14 +23,17 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | contract | `api/workpodv1` | — | anything |
 | base | `internal/boot` | — | anything |
 | base | `internal/cgroup` | — | anything |
+| base | `internal/ids` | — | anything |
+| base | `internal/attachment` | — | anything |
 | step | `internal/disk` | `internal/boot` | another step, a role, `cmd` |
 | step | `internal/selftest` | `internal/boot`, `internal/cgroup` | another step, a role, `cmd` |
-| step | `internal/statedb` | `internal/boot` | another step, a role, `cmd` |
-| role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/statedb` | another role, a step, `cmd` |
+| step | `internal/statedb` | `internal/boot`, `internal/ids` | another step, a role, `cmd` |
+| role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids` | another role, a step, `cmd` |
+| role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
 | role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup` | another role, a step, `cmd` |
 | entry | `cmd/workpod` | every module above | — |
 
-Three of those "may not" lines carry the weight and are worth saying in prose:
+Four of those "may not" lines carry the weight and are worth saying in prose:
 
 - **The judge does not depend on the mechanism it judges.** `internal/selftest` may not import
   `internal/disk`. SP-A04-2 splits the two on purpose — the disk step mounts what it finds, the
@@ -44,6 +47,12 @@ Three of those "may not" lines carry the weight and are worth saying in prose:
   deployment.
 - **The contract does not reach back.** `api/workpodv1` is generated from `contract/platform.proto`
   (E-10) and imports nothing of this program. A schema that depends on its implementation is not one.
+- **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
+  and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
+  contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so
+  the shared halves sit below both: `internal/attachment` holds the ruling and the store, and the
+  translation between wire and schema lives in the role that already knows both (`intake.go`). A
+  base module is how two roles share a rule without one of them owning it.
 
 **A new module is a change to this table, in this file, in the same commit.** The check fails on a
 package the table does not name — in both directions, the way `acceptance/registry.py` fails on
@@ -79,9 +88,10 @@ drift between matrix and registry. Silence is not the same as permission.
   scripts are trigger paths of the image leg — a check that does not re-run rests on a run of the
   old program. A change that breaks the contract then fails the leg that owns the contract, not the
   one that owns the image.
-- The scheduler, the adapters, both gates and the harness are entry points that refuse until their
-  work packages build them (AP-3.2, AP-3.3, AP-3.5, AP-3.7). Each arrives as a module and a row in
-  this table, added in the commit that builds it.
+- The scheduler, both gates and the harness are entry points that refuse until their work packages
+  build them (AP-3.3, AP-3.5, AP-3.7). Each arrives as a module and a row in this table, added in
+  the commit that builds it — as `internal/adapter`, `internal/attachment` and `internal/ids` did
+  in AP-3.2's.
 
 ## Overturned by
 

@@ -1,0 +1,68 @@
+# AP-3.2 — the leg that holds intake to its own rules (AB-T01-7, AB-K01-6).
+#
+# The image leg already builds the binary and boots it; this one is the fast half, and it is where
+# the two rows of this work package turn green. It does three things, in order of what they cost:
+#
+#   1. the unit tests of the modules AP-3.2 added — the OP-5 policy, the adapter's four methods,
+#      the identifiers the state contract demands (SP-K01-2)
+#   2. the module contract, because a new module is a change to decisions/module-dependencies.md
+#      and the check is what makes that a rule rather than a habit
+#   3. acceptance/t01-intake.sh — a real Postgres 16 with contract/schema.sql, the real control
+#      plane against it, and the real `workpod adapter submit` twice with one message id
+#
+# The acceptance script and the ruling it reads are trigger paths for the same reason they are
+# everywhere else in this repository: a check that does not re-run rests on a run of the old one.
+
+name: platform
+
+on:
+  push:
+    paths:
+      - 'platform/**'
+      - 'contract/schema.sql'
+      - 'contract/platform.proto'
+      - 'acceptance/t01-intake.sh'
+      - 'acceptance/module-contract.py'
+      - 'decisions/OP-5.md'
+      - 'decisions/jobs-by-hand.md'
+      - 'decisions/module-dependencies.md'
+      - '.github/workflows/platform.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - 'contract/schema.sql'
+      - 'contract/platform.proto'
+      - 'acceptance/t01-intake.sh'
+      - 'acceptance/module-contract.py'
+      - 'decisions/OP-5.md'
+      - 'decisions/jobs-by-hand.md'
+      - 'decisions/module-dependencies.md'
+      - '.github/workflows/platform.yml'
+  workflow_dispatch:
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Go version is the one platform/go.mod names; check-latest would make the toolchain a
+      # floating input of a build whose artifact the image seals.
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: platform/go.mod
+
+      - name: The modules and their tests
+        working-directory: platform
+        run: |
+          test -z "$(gofmt -l ./cmd ./internal)" || { gofmt -l ./cmd ./internal; exit 1; }
+          go vet ./...
+          go test ./...
+
+      - name: The module contract against the imports
+        run: ./acceptance/module-contract.py
+
+      # ubuntu-latest carries docker; the script spins its own Postgres, the same shape the
+      # state-machine leg of the contract workflow uses.
+      - name: Intake, its idempotency and its attachments
+        run: ./acceptance/t01-intake.sh

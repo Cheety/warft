@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform boot decisions proto help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot decisions proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -20,6 +20,7 @@ help:
 	@echo "make calibration      500 pods, 20 active, the five constants — AB-A06-13, AB-E05-1 (AP-1.3)"
 	@echo "make contract         both schemas, their probes, the state machine, the authority token and the node identity, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-B01-3, AB-V05-2 (AP-2.1 through AP-2.5)"
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
+	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
 	@echo "make decisions        the decision store, and the module contract against the imports — AB-G01-5 (AP-0.1, AP-3.1)"
 	@echo "make proto            regenerate platform/api/workpodv1 from contract/platform.proto"
@@ -83,6 +84,12 @@ calibration:
 # the name of the package that builds them.
 platform:
 	@acceptance/e02-binary.sh
+
+# AP-3.2. The CLI adapter and intake, against a Postgres 16 the script spins itself: OP-5's ruling
+# against the file the binary embeds, the four methods of T-01, the same message delivered twice,
+# and every attachment OP-5 refuses.
+intake:
+	@acceptance/t01-intake.sh
 
 # AP-3.1. The A-04 start sequence against the image `make image` built: four boots — the sequence
 # to a registered node, the reinstall that only /data/db survives, the withheld boot value, and

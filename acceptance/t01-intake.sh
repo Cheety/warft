@@ -173,10 +173,14 @@ PG="t01-intake-$$"
 # trust on the local socket: this container's Postgres is reached from outside its user namespace,
 # where peer authentication has no shared answer. The node's own path is peer with the ident map
 # `workpod db-init` writes, and a04-boot.sh is what checks that one.
+#
+# /var/run/postgresql stays in unix_socket_directories beside the shared one: the image's own
+# entrypoint runs psql against that path while it initializes, and taking it away makes the
+# container exit before it ever serves.
 docker run --rm -d --name "$PG" \
   -e POSTGRES_PASSWORD=acceptance -e POSTGRES_HOST_AUTH_METHOD=trust \
   -v "$SOCK:/sock" postgres:16 \
-  -c unix_socket_directories=/sock -c listen_addresses= >/dev/null
+  -c unix_socket_directories=/sock,/var/run/postgresql -c listen_addresses= >/dev/null
 
 READY=""
 for _ in $(seq 1 90); do
@@ -410,7 +414,7 @@ else
   fail "K01-6f a lawful attachment is accepted" "$OK · $HASH"
 fi
 
-STORED="$STORE/sha256/${HASH#sha256:}"
+# The store fans out two hex characters deep, so one directory never holds a million entries.
 STORED="$STORE/sha256/${HASH:7:2}/${HASH#sha256:}"
 if [ -f "$STORED" ]; then
   MODE="$(stat -c '%a' "$STORED")"
@@ -430,10 +434,11 @@ else
 fi
 
 # The row cannot say otherwise: the state contract makes an executable attachment impossible.
-if psql_c "UPDATE attachment SET executable = true WHERE content_hash = '$HASH'" | grep -q "violates check constraint"; then
+FORCED="$(psql_c "UPDATE attachment SET executable = true WHERE content_hash = '$HASH'")"
+if grep -q "violates check constraint" <<< "$FORCED"; then
   pass "K01-6i the database refuses an executable attachment" "CHECK (executable = false)"
 else
-  fail "K01-6i the database refuses an executable attachment" "the update went through"
+  fail "K01-6i the database refuses an executable attachment" "${FORCED:-the update went through}"
 fi
 
 # The envelope carries the reference, never the payload.

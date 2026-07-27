@@ -72,8 +72,9 @@ fi
 #
 # ../platform is on the list since AP-3.1: the platform binary is image content (SP-A02-3), so a
 # change to its source is a change to the artifact — the seal has to notice it and
-# SOURCE_DATE_EPOCH has to move with it.
-INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart mkosi.extra tool-version build.sh ../platform)
+# SOURCE_DATE_EPOCH has to move with it. ../contract/schema.sql joined it in AP-3.2 for the same
+# reason: the image carries the state contract as a file, so editing the contract edits the image.
+INPUTS=(mkosi.conf mkosi.conf.d mkosi.repart mkosi.extra tool-version build.sh ../platform ../contract/schema.sql)
 
 REVISION="$(git -C "$HERE" log -1 --pretty=%H -- "${INPUTS[@]}" 2>/dev/null || true)"
 # An uncommitted change is a different image than any commit describes, and no seal can honestly
@@ -110,6 +111,13 @@ echo "== platform binary ($(go version))"
     -o "$PLATFORM_TREE/usr/bin/workpod" ./cmd/workpod )
 chmod 0755 "$PLATFORM_TREE/usr/bin/workpod"
 sha256sum "$PLATFORM_TREE/usr/bin/workpod" | sed 's/^/  /'
+
+# The state contract travels as itself (K-01, AP-3.2). The control plane loads it into the database
+# on the first boot that finds none, and it reads the file rather than a copy compiled into the
+# binary: two copies of a contract are two contracts, and this way the image carries the very file
+# acceptance/k01-schema.sh holds to its rules.
+install -D -m 0444 "$HERE/../contract/schema.sql" "$PLATFORM_TREE/usr/share/workpod/schema.sql"
+sha256sum "$PLATFORM_TREE/usr/share/workpod/schema.sql" | sed 's/^/  /'
 
 PIN="$(grep -h '^LocalMirror=' "$HERE"/mkosi.conf.d/*.conf | cut -d= -f2-)"
 

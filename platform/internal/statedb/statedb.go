@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -46,6 +47,50 @@ func Init() error {
 	if err != nil {
 		return fmt.Errorf("initdb: %w\n%s", err, out)
 	}
+	if err := mapCallers(); err != nil {
+		return err
+	}
 	fmt.Println("state database initialized on /data/db — the only area that survives a reinstall (SP-A05-1)")
 	return nil
+}
+
+// mapCallers lets the control plane through its own front door.
+//
+// The socket is the only door and peer authentication is the credential: the kernel states which
+// OS user is knocking. The control plane runs as root (it holds the node's cgroups), the cluster's
+// one role is `postgres`, and peer with no map demands that the two names be equal — so without
+// this the plane would be locked out of the database it owns.
+//
+// An ident map is the narrow answer: it names exactly which OS users may present as `postgres`,
+// which is a shorter list than a second role with its own grants would be, and it leaves the
+// method itself untouched. Nothing is opened to the network; listen_addresses stays empty.
+func mapCallers() error {
+	hbaPath := pgData + "/pg_hba.conf"
+	hba, err := os.ReadFile(hbaPath)
+	if err != nil {
+		return err
+	}
+	var b strings.Builder
+	for _, line := range strings.Split(string(hba), "\n") {
+		if fields := strings.Fields(line); len(fields) > 0 && fields[0] == "local" &&
+			fields[len(fields)-1] == "peer" {
+			line += " map=workpod"
+		}
+		b.WriteString(line + "\n")
+	}
+	if err := os.WriteFile(hbaPath, []byte(strings.TrimSuffix(b.String(), "\n")), 0o600); err != nil {
+		return err
+	}
+
+	// MAPNAME  SYSTEM-USERNAME  PG-USERNAME
+	const identMap = "\n# The platform's own callers (workpod db-init):\n" +
+		"workpod\troot\t\tpostgres\n" +
+		"workpod\tpostgres\tpostgres\n"
+	f, err := os.OpenFile(pgData+"/pg_ident.conf", os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.WriteString(identMap)
+	return err
 }

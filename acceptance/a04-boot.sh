@@ -175,6 +175,21 @@ probe-main)
     [ "$st" = active ] && pass "$u.service" "active" || fail "$u.service" "$st"
   done
 
+  # ---- the plane reaches its own state database (AP-3.2) ---------------------------------------
+  # Intake writes state, so the path from the plane to Postgres is part of a working node, not a
+  # detail of a test harness: root over the socket, peer authentication, the ident map `workpod
+  # db-init` wrote. The plane says so itself when the contract is loaded — and it keeps serving the
+  # register step either way, which is why this is its own check and not a failed unit.
+  dbready=""
+  for _ in $(seq 1 120); do
+    journalctl -u workpod-control --no-pager 2>/dev/null | grep -q "state database ready" \
+      && { dbready=1; break; }
+    sleep 1
+  done
+  [ -n "$dbready" ] && pass "the plane reached the state database" "contract loaded, intake accepts" \
+                    || fail "the plane reached the state database" \
+                            "$(journalctl -u workpod-control --no-pager 2>/dev/null | tail -3 | tr '\n' ' ')"
+
   # ---- four layers, four slices, one machine (AB-V01-1) ----------------------------------------
   for s in workpod-control.slice workpod-captain.slice workpod-knowledge.slice workpod-work.slice; do
     st="$(systemctl is-active "$s" 2>/dev/null)"
