@@ -534,7 +534,10 @@ STATES="$(grep -o '"state": "[a-z]*"' "$WORK/life.log" | sed 's/.*"\([a-z]*\)"$/
 if [ "$STATES" = "created active frozen checkpointed reaped " ]; then
   pass "T04-3a the five states, in order" "$STATES"
 else
-  fail "T04-3a the five states, in order" "${STATES:-none} · $(tail -3 "$WORK/life.log" | tr '\n' ' ')"
+  fail "T04-3a the five states, in order" "${STATES:-none}"
+  # A state the pod did not reach has a reason, and the reason is in the runner's own log rather
+  # than in the report. CRIU's dump log travels with the error, so this is the whole answer.
+  grep -a -m1 -A 30 'checkpointing\|freezing' "$WORK/life.log" | head -34 | sed 's/^/        /'
 fi
 FROZEN_AT="$(grep -m1 -A2 '"state": "frozen"' "$WORK/life.log" | sed -n 's/.*"reason": "\(.*\)"$/\1/p')"
 case "$FROZEN_AT" in
