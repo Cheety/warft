@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/Cheety/warft/platform/internal/allocation"
 	"github.com/Cheety/warft/platform/internal/cgroup"
@@ -72,11 +72,23 @@ func readContract(cgPath string) (map[string]string, error) {
 	return out, nil
 }
 
-// deviceNumbers is the major:minor of the block device a path lives on.
+// sysBlock is the sysfs directory the block devices are read from. A variable so a test can point
+// it at a tree it built itself; nothing else ever changes it.
+var sysBlock = "/sys/class/block"
+
+// deviceNumbers is the major:minor of the block device a path lives on — and, when that is a
+// partition, of the **whole disk** behind it.
 //
-// Not `stat` on the directory: btrfs reports an anonymous device there, which is the same trap the
+// The kernel's io controllers are attached to a request queue, and a partition does not have one.
+// `blkcg_conf_open_bdev` rejects a partition with ENODEV, which is what the first run of this check
+// on a real node produced: /data/work is the `workpod-work` partition, io.latency took its number,
+// and every pod on the node failed between `runc create` and `runc start`. A loop device — which is
+// what a container has — is a whole device, so the mistake only appears on a machine with a disk
+// layout, which is every node (SP-A05-1).
+//
+// Not `stat` on the directory either: btrfs reports an anonymous device there, the same trap the
 // disk step hit when it compared mounts by major:minor (internal/disk). The mount's source path is
-// the identity that means something, so it is resolved first and stat'ed as a device node.
+// the identity that means something, and sysfs is what turns it into a number.
 func deviceNumbers(path string) (uint32, uint32, error) {
 	out, err := exec.Command("findmnt", "--noheadings", "--output", "SOURCE", "--target", path).Output()
 	if err != nil {
@@ -87,16 +99,41 @@ func deviceNumbers(path string) (uint32, uint32, error) {
 	if i := strings.Index(src, "["); i > 0 {
 		src = src[:i]
 	}
-	var st syscall.Stat_t
-	if err := syscall.Stat(src, &st); err != nil {
-		return 0, 0, fmt.Errorf("stat %s: %w", src, err)
+	resolved, err := filepath.EvalSymlinks(src)
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s: %w", src, err)
 	}
-	rdev := uint64(st.Rdev)
-	// The kernel's own encoding, the one /proc/partitions and io.latency use.
-	major := uint32((rdev >> 8) & 0xfff)
-	minor := uint32(rdev&0xff | ((rdev >> 12) & 0xfff00))
-	if major == 0 {
-		return 0, 0, fmt.Errorf("%s is not a block device — io.latency has nothing to name", src)
+	return wholeDiskNumbers(filepath.Base(resolved))
+}
+
+// wholeDiskNumbers reads a block device's major:minor out of sysfs, climbing from a partition to the
+// disk that holds it.
+func wholeDiskNumbers(name string) (uint32, uint32, error) {
+	dir := filepath.Join(sysBlock, name)
+	if _, err := os.Stat(filepath.Join(dir, "partition")); err == nil {
+		// A partition's sysfs entry sits inside its disk's, so the disk is one level up. The
+		// symbolic link has to be resolved first — /sys/class/block/vdb1 points into /sys/devices.
+		resolved, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			return 0, 0, err
+		}
+		dir = filepath.Dir(resolved)
 	}
-	return major, minor, nil
+	b, err := os.ReadFile(filepath.Join(dir, "dev"))
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s has no device number in sysfs: %w", name, err)
+	}
+	major, minor, ok := strings.Cut(strings.TrimSpace(string(b)), ":")
+	if !ok {
+		return 0, 0, fmt.Errorf("%s/dev reads %q, not major:minor", dir, strings.TrimSpace(string(b)))
+	}
+	maj, err1 := strconv.ParseUint(major, 10, 32)
+	min, err2 := strconv.ParseUint(minor, 10, 32)
+	if err1 != nil || err2 != nil {
+		return 0, 0, fmt.Errorf("%s/dev reads %q, not major:minor", dir, strings.TrimSpace(string(b)))
+	}
+	if maj == 0 {
+		return 0, 0, fmt.Errorf("%s is not a block device — io.latency has nothing to name", name)
+	}
+	return uint32(maj), uint32(min), nil
 }

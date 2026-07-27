@@ -555,6 +555,12 @@ banner "T-04 — the reaper (AB-T04-5, script)"
 
 # Three pods whose supervisors are killed outright: the working copies stay on the disk and the
 # containers stay running, which is exactly what a worker that died leaves behind.
+#
+# The worker is stopped *first*, and not for tidiness. Its reaper sweeps every minute, so with the
+# worker up the three orphans might be collected between the kill and the count — the reaper doing
+# its job and the probe reading it as a failure to make one. Stopping the worker is also the more
+# faithful simulation: what AB-T04-5 asks about is a node whose worker was not there.
+systemctl stop workpod-worker.service
 ORPHANS=()
 for n in 1 2 3; do
   job "orphan-$n" tiny /usr/bin/bash -c 'sleep 600'
@@ -568,15 +574,16 @@ done
 for p in "${ORPHANS[@]}"; do kill -9 "$p" 2>/dev/null; done
 sleep 2
 BEFORE="$(ls /data/work/pods 2>/dev/null | wc -l)"
-if [ "$BEFORE" -ge 3 ]; then
-  pass "T04-5a three supervisors killed" "$BEFORE working copies left on the disk, unsupervised"
+UNSUPERVISED="$(workpod pod list 2>/dev/null | grep -c orphan)"
+if [ "$BEFORE" -ge 3 ] && [ "$UNSUPERVISED" -ge 3 ]; then
+  pass "T04-5a three supervisors killed" "$BEFORE working copies on the disk, $UNSUPERVISED of them unsupervised"
 else
-  fail "T04-5a three supervisors killed" "$BEFORE working copies — the orphans were never made"
+  fail "T04-5a three supervisors killed" "$BEFORE working copies, $UNSUPERVISED unsupervised — the orphans were never made"
 fi
 
-# The simulated worker restart. The reaper runs on the worker (SP-T04-5, V-02), and its first sweep
-# is the one that matters: every pod it finds belonged to a worker that is no longer running.
-systemctl restart workpod-worker.service
+# The worker comes back. The reaper runs on the worker (SP-T04-5, V-02), and its first sweep is the
+# one that matters: every pod it finds belonged to a worker that is no longer running.
+systemctl start workpod-worker.service
 for _ in $(seq 1 180); do
   [ "$(systemctl is-active workpod-worker.service)" = active ] && break
   sleep 1
@@ -593,10 +600,13 @@ else
   fail "T04-5b zero orphaned subvolumes" "$AFTER subvolumes, $LEFTOVER containers still there"
   ls -la /data/work/pods 2>&1 | sed 's/^/        /'
 fi
-if journalctl -u workpod-worker.service --no-pager 2>/dev/null | grep -q 'orphaned pod(s) from before this worker'; then
-  pass "T04-5c the worker says what it reaped" "the sweep is a step of starting, not a background job"
+# Named orphans, not a count. Every worker start prints how many it swept — including "0" at boot —
+# so the line that evidences this row is the one that names a pod it actually reaped.
+REAPED="$(journalctl -u workpod-worker.service --no-pager 2>/dev/null | grep -c 'reaped the orphan')"
+if [ "$REAPED" -ge 3 ]; then
+  pass "T04-5c the worker says what it reaped" "$REAPED orphans named in the journal, by the worker that swept them"
 else
-  fail "T04-5c the worker says what it reaped" "$(journalctl -u workpod-worker.service --no-pager 2>/dev/null | tail -3 | tr '\n' ' ')"
+  fail "T04-5c the worker says what it reaped" "$REAPED named · $(journalctl -u workpod-worker.service --no-pager 2>/dev/null | tail -3 | tr '\n' ' ')"
 fi
 
 # One last look at the whole disk: nothing of any pod in this run is left anywhere.

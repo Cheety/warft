@@ -351,3 +351,62 @@ func TestAnUnbuiltPoolIsRefused(t *testing.T) {
 		t.Error("a refused job left a working copy behind")
 	}
 }
+
+// The failure that turned every row of AP-3.3 red on the first run against a real node: io.latency
+// took the partition's device number, and the io controller only attaches to whole devices. A
+// container's loop device hides it — that is a whole device — so the test builds the sysfs of a
+// machine that has a disk layout.
+func TestIOLatencyNamesTheWholeDisk(t *testing.T) {
+	root := t.TempDir()
+	devices := filepath.Join(root, "devices")
+	class := filepath.Join(root, "class", "block")
+	if err := os.MkdirAll(filepath.Join(devices, "vdb", "vdb1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(devices, "loop0"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(class, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write := func(p, s string) {
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(devices, "vdb", "dev"), "253:32\n")
+	write(filepath.Join(devices, "vdb", "vdb1", "dev"), "253:33\n")
+	write(filepath.Join(devices, "vdb", "vdb1", "partition"), "1\n")
+	write(filepath.Join(devices, "loop0", "dev"), "7:0\n")
+	for name, target := range map[string]string{
+		"vdb":   filepath.Join(devices, "vdb"),
+		"vdb1":  filepath.Join(devices, "vdb", "vdb1"),
+		"loop0": filepath.Join(devices, "loop0"),
+	} {
+		if err := os.Symlink(target, filepath.Join(class, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	old := sysBlock
+	sysBlock = class
+	defer func() { sysBlock = old }()
+
+	for name, want := range map[string][2]uint32{
+		"vdb1":  {253, 32}, // the partition resolves to its disk
+		"vdb":   {253, 32}, // the disk is itself
+		"loop0": {7, 0},    // no partition, no climb
+	} {
+		maj, min, err := wholeDiskNumbers(name)
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		if maj != want[0] || min != want[1] {
+			t.Errorf("%s: %d:%d, want %d:%d", name, maj, min, want[0], want[1])
+		}
+	}
+	if _, _, err := wholeDiskNumbers("nothing"); err == nil {
+		t.Error("a device that is not there answered with a number")
+	}
+}
