@@ -28,13 +28,13 @@ acceptance/  registry.py · registry.tsv — the 212 checks and their state (AP-
              e05-constants.tsv — those constants, given and measured; R-D computes with them
 skills/      SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/     issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
-decisions/   empty until AP-0.1: eleven rulings E-01…E-11, ten open points OP-1…OP-10
-image/       empty until AP-1.1 (mkosi)
-platform/    empty until AP-3.1 (Go)
+decisions/   eleven rulings E-01…E-11, ten open points OP-1…OP-10, and the rulings taken here (AP-0.1)
+image/       mkosi configuration, the units a role activates, build · seal · verify · vm (AP-1.1 ff.)
+platform/    the one Go binary: the A-04 start sequence and SP-E02-1's seven entry points (AP-3.1)
 ```
 
-`decisions/`, `image/` and `platform/` are deliberately empty. Filling them is work with an
-acceptance, not tidying up — AP-0.1, AP-1.1, AP-3.1.
+All three started empty. Each was filled by the work package that owns it — AP-0.1, AP-1.1, AP-3.1 —
+and each through an acceptance rather than by tidying up.
 
 ## The tracker
 

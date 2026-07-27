@@ -143,9 +143,10 @@ Two consequences show up in the guest: the boot stops short of `multi-user.targe
 `systemd-run-generator` points `default.target` at its own target, and the image is booted
 ephemerally so the firmware's writes to the ESP never touch the sealed artifact.
 
-Until AP-3.1 builds the disk layout from A-05, the image has no data partition and boots with
-`systemd.volatile=state` — `/var` on tmpfs, the root still read-only. A node keeps nothing across a
-reboot yet.
+The image still boots with `systemd.volatile=state` — `/var` on tmpfs, the root read-only. Since
+AP-3.1 that is the floor rather than the layout: the disk step mounts the real `/var`, `/data/work`
+and `/data/db` over it, and a node that never gets there stays volatile and does not register. See
+[The node (AP-3.1)](#the-node-ap-31).
 
 ## The list (AP-1.2)
 
@@ -264,6 +265,50 @@ person.
 The host side of the script can be replayed without a machine — `CAL_REPLAY=<dir>` composes the table
 from a saved console log — because everything after the two boots is arithmetic over marker lines,
 and arithmetic that has never run over real output is a guess.
+
+## The node (AP-3.1)
+
+Until here the image was an artifact that boots. AP-3.1 makes it a **node**: it starts along A-04,
+prepares the disks A-05 describes, judges itself, and only then joins anything.
+
+**One binary, seven entry points.** `platform/` holds the statically linked Go artifact SP-E02-1
+asks for; `build.sh` builds it before either mkosi pass and stages it into `.build/platform-tree`,
+so both passes embed the identical file and the reproducibility comparison keeps its meaning. The
+parts that exist serve — control plane, worker — and the parts that do not **refuse by the name of
+the work package that builds them** (`exit 69`, `AP-3.2`, `AP-3.5`, `AP-3.7`). A role that pretended
+to work would be worth less than one that says it is not there yet; that is Q-02 applied to the
+binary's own surface, and `acceptance/e02-binary.sh` checks both halves.
+
+**Four layers, four slices.** V-01's `control`, `captain`, `knowledge` and `work` stand as cgroup
+slices under `workpod.slice` on one machine and as roles across a cluster — the same software, one
+boot variable (SP-A02-1, SP-V01-5's isolation level 0). SP-RC-4's reservation sits on `system.slice`
+as `MemoryMin=4G`, and `workpod-control.service` claims it with `MemoryMin=infinity`: the budget
+belongs to the slice, the protection follows actual use. `memory.oom.group=1` on a pod slice is
+written by the binary, because systemd has no directive for it — `OOMPolicy=kill` sets the attribute
+for services and scopes, not for the slice a pod's cgroups live under.
+
+**The layout, found before it is created.** `/var`, `/data/work` and `/data/db` are GPT partition
+labels on disks the machine names (`/dev/disk/by-id/*workpod-work*`, `*workpod-data*`), not spindles
+this step guesses at. The work disk is separate from the data disk (SP-A05-3), `/var` is LUKS2 with
+the key enrolled against the TPM and no other slot (SP-A05-4) — said out loud where a machine has no
+TPM, because AB-A05-4 is AP-6.1's row and a silent downgrade would be the worse failure. A reinstall
+wipes `/var` and `/data/work` and keeps `/data/db`: the first two are reconstructible, the third is
+the state database, and that asymmetry is the whole of AB-A05-1.
+
+**The selftest is the gate.** The sequence is a `Requires=` chain of units — `workpod-disk` →
+`workpod-selftest` → the layer services — and the selftest's pass is a marker under `/run`, which
+cannot survive a reboot, so every boot earns its own. A failed selftest means no registration in the
+unit graph *and* in the binary; removing one guard still leaves the other (SP-A04-3).
+
+**What AP-3.1 deliberately does not build:** the second system slot and the boot counter (AP-6.4,
+which brings the updater that fills them), the enrollment handshake that turns a token into a
+certificate (AP-6.1 — until then `all` and `control` carry their own plane and need no token, which
+is SP-A04-1's own exemption), and pods with a runtime in them (AP-3.3).
+
+`acceptance/a04-boot.sh` boots the built image four times for this: the sequence to a registered
+node with the pressure drama in it, the same disks after a reinstall, a withheld boot value, and a
+layout that violates A-05. Four boots rather than four assertions, because the second and the fourth
+are only true if the first one really wrote something.
 
 ## What the runs have established
 
@@ -397,6 +442,23 @@ floor), 0.37 MB per frozen pod against 24 MB (no harness — the gap is AP-3.1's
 against 1.6, and the mix at 1/8 scale costing 0.190 cores · 122.5 MB — recorded, not adopted,
 because E-05 sends the active pod to R-C's three runs per repository. The pressure event for OP-6:
 crossed 10 % in 4.6 s, and 26.0 s from release to under 1 % — the decay is the hold time's floor.
+
+Then the node (AP-3.1). All three failures were about **memory the kernel was forbidden to
+reclaim**, or about **reading a device through a field that does not name one** — and none of them
+about the sequence they were supposed to test, which had passed in the first run already:
+
+| Run | Failure | What it established |
+|---|---|---|
+| 30 | the selftest's separation check read both disks as `""` | btrfs puts an anonymous device number in `mountinfo`'s major:minor field — one per superblock, and `/sys` knows no such block device. The walk to the whole disk starts from the mount's *source path* now (`/dev/vdb1`, `/dev/mapper/workpod-var`), which both btrfs and device mapper state truthfully. The same run showed the pressure hog stalling just short of OOM: an eater that forks per bite stops growing the moment `fork()` is refused under pressure, and refused forks are the first thing pressure produces. |
+| 31 | the A-06 list died at thirteen seconds, eleven green rows went red | `DefaultMemoryMin=infinity` handed SP-RC-4's reservation to every leaf of `system.slice`, page cache included. On a 2 GB machine a 4 GB reservation makes reclaim impossible, so the kernel OOM-killed chronyd and then systemd while 1.8 GB of file pages sat marked unreclaimable. The budget stays on the slice; the plane claims it with its own `MemoryMin=`. **Eleven rows went red for want of a machine, not for want of a fact** — which is the failure mode a reservation has. |
+| 32 | the same death, now in `AB-A06-2` alone | The reflink row writes two gigabytes on purpose — a snapshot and a real copy of it, the control that makes it a measurement — and it ran under `systemd.run=`, that is, inside `system.slice`. It runs in `workpod-work.slice` now: the layer deliberately without `memory.min`, so the kernel has somewhere to reclaim from, and the layer whose snapshots the row is about anyway. |
+
+The run those six rows are green through is
+[30292609655](https://github.com/Cheety/warft/actions/runs/30292609655): `AB-E02-1` at 14 met, 0
+not, and the four A-04 boots at 22, 5, 6 and 7 — a node registered on two named disks with the plane
+answering 13 pings while a pod died whole under the OOM killer, the reinstalled node keeping only
+`/data/db`, the node with a withheld `cell` refusing at the head of the sequence and naming the
+value, and the node on an illegal layout failing its selftest and registering nothing.
 
 ## The seal: SBOM and signature (AB-A03-7)
 
