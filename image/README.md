@@ -184,6 +184,20 @@ to exist at all: `zram-generator` and a configuration in `mkosi.extra` now put i
 zstd said explicitly, because the kernel's own default is lzo-rle and the compression factor is one
 of the five constants AP-1.3 measures.
 
+**And `AB-A06-2` later needed somewhere else to run.** The list arrives through `systemd.run=`, so
+it and everything it forks are under `system.slice` — which is where AP-3.1 put SP-RC-4's
+reservation, `MemoryMin=4G`. systemd mounts cgroup2 with `memory_recursiveprot`, so that protection
+covers the whole subtree, page cache included, and on the 2 GB machine this list runs on a
+reservation larger than the machine makes every page of the row's two gigabytes unreclaimable.
+[Run 32](https://github.com/Cheety/warft/actions/runs/30222311883) is what that cost: the kernel
+OOM-killed chronyd and then systemd, thirteen seconds in, holding 1.8 GB of file pages it was
+forbidden to take, and the list reported one row and then nothing. The measurement is
+`acceptance/a06-reflink.sh` now, started as a transient unit in `workpod-work.slice` — the layer
+that is deliberately without `memory.min` so the kernel has somewhere to reclaim from, and the
+layer whose snapshots this row is about in the first place. One process launch, so every timing is
+still taken inside it: wrapping the two `cp` calls separately would have put unit startup inside
+the stopwatch that distinguishes a reflink from a copy.
+
 What this list does not evidence is the second half of `AB-A06-7`'s sentence, "B takes over": there
 is one system slot in the image. A/B and its boot counter (SP-A03-4) arrive with the disk layout in
 AP-3.1 and the channels in AP-6.4. The half that is evidenced is the half A-03 calls "verity or
