@@ -79,8 +79,12 @@ if [ "$MODE" = drive ]; then
   # nothing, and a real copy of it that must cost a gigabyte — the third is what makes the second a
   # measurement rather than a threshold. 900 seconds because a runner without /dev/kvm emulates,
   # and two gigabytes of writes plus a CRIU dump and restore are the slowest things in the list.
+  #
+  # a06-reflink.sh travels beside the list because that row has to run outside system.slice; its
+  # own header says why, and the guest half below is what starts it.
   # ---------------------------------------------------------------------------------------------
   "$ROOT/image/vm.sh" --role work --disk 8G --timeout 900 \
+      --file "$HERE/a06-reflink.sh" \
       "$HERE/a06-acceptance.sh" probe 2>&1 | tee "$LOG/probe"
   probe_rc=$?
 
@@ -353,58 +357,32 @@ fi
 #    same file — is what makes the second one mean something: it shows the instrument can see a
 #    gigabyte arrive, so not seeing one after the reflink is a fact about the filesystem.
 #    Also AB-A05-2.
+#
+#    The measurement itself is acceptance/a06-reflink.sh, and it runs as a transient unit in
+#    workpod-work.slice rather than here. Two gigabytes of page cache charged to system.slice sit
+#    inside SP-RC-4's reservation, where the kernel is forbidden to reclaim them; that file's header
+#    carries the run that proved it. Here the row only starts it and reads back what it saw.
 # -------------------------------------------------------------------------------------------------
 check_reflink() {
-  local disk=/dev/disk/by-id/virtio-workpod-scratch
-  [ -b "$disk" ] || disk=/dev/vdb
-  if [ ! -b "$disk" ]; then
-    note "no scratch disk — image/vm.sh --disk gives the machine one"
+  local script="${CREDENTIALS_DIRECTORY:-/run/credentials/@system}/a06-reflink.sh"
+  if [ ! -r "$script" ]; then
+    note "a06-reflink.sh did not arrive — image/vm.sh --file carries it"
     return 1
   fi
-  local mnt="$WORK/work"
-  mkdir -p "$mnt"
-  mkfs.btrfs -q -f -L a06work "$disk" 2>&1 | sed 's/^/              /' || { note "mkfs.btrfs failed"; return 1; }
-  mount "$disk" "$mnt" || { note "mounting btrfs failed — is the module in the image?"; return 1; }
+  # Out of the credential directory and into /run first, the way calibration-probe.sh stages its
+  # pod script: a transient unit is not the unit the credentials were passed to, and a check should
+  # not rest on how systemd happens to expose @system to a second one.
+  cp "$script" "$WORK/reflink.sh"
 
-  local ok=1 used0 used1 used2 t0 reflink_ms copy_ms
-  used() { sync; btrfs filesystem usage -b "$mnt" | awk '$1 == "Used:" { print $2; exit }'; }
-
-  dd if=/dev/zero of="$mnt/src" bs=1M count=1024 status=none
-  used0="$(used)"
-
-  t0=$(date +%s%N)
-  if cp --reflink=always "$mnt/src" "$mnt/snapshot"; then
-    reflink_ms=$(( ($(date +%s%N) - t0) / 1000000 ))
-    used1="$(used)"
-  else
-    note "$(stat -fc %T "$mnt") cannot reflink — btrfs or XFS is required (SP-A05-2)"
-    umount "$mnt"; return 1
-  fi
-
-  # --sparse=never, because the source is a gigabyte of zeroes and cp punches holes for those by
-  # default. A sparse copy would cost no disk either, and the control measurement — that the
-  # instrument can see a gigabyte arrive — would quietly measure nothing.
-  t0=$(date +%s%N)
-  cp --reflink=never --sparse=never "$mnt/src" "$mnt/full-copy"
-  copy_ms=$(( ($(date +%s%N) - t0) / 1000000 ))
-  used2="$(used)"
-
-  local snapshot_growth=$(( (used1 - used0) / 1048576 )) copy_growth=$(( (used2 - used1) / 1048576 ))
-  note "reflink: ${reflink_ms} ms, +${snapshot_growth} MB — a real copy of the same file: ${copy_ms} ms, +${copy_growth} MB"
-  note "$(btrfs filesystem du -s --raw "$mnt/snapshot" | tail -1)"
-
-  # 64 MB of slack for the metadata the copy does write; a gigabyte of data would not fit in it.
-  [ "$snapshot_growth" -lt 64 ] || { note "the snapshot cost ${snapshot_growth} MB — that is a copy"; ok=0; }
-  [ "$copy_growth" -gt 900 ]    || { note "a real copy cost only ${copy_growth} MB — the measurement cannot see a gigabyte"; ok=0; }
-  [ "$reflink_ms" -lt 1000 ] || { note "${reflink_ms} ms is not O(1)"; ok=0; }
-  # An order of magnitude faster than the copy it replaces, or fast enough that the comparison is
-  # measuring process startup rather than the filesystem. Without the second clause an emulated
-  # runner could fail this by being uniformly slow, which is not a fact about reflink.
-  [ "$reflink_ms" -lt 200 ] || [ $(( reflink_ms * 10 )) -lt "$copy_ms" ] \
-    || { note "the snapshot is not an order of magnitude faster than the copy it replaces"; ok=0; }
-
-  umount "$mnt"
-  return $(( ! ok ))
+  # --collect so a failed run leaves no unit behind; --pipe to get its lines back; --wait so the
+  # exit status is the measurement's and not systemd-run's.
+  local out rc
+  out="$(systemd-run --quiet --wait --pipe --collect \
+           --unit=a06-reflink --slice=workpod-work.slice \
+           /usr/bin/bash "$WORK/reflink.sh" "$WORK/reflink" 2>&1)"
+  rc=$?
+  while IFS= read -r line; do [ -n "$line" ] && note "$line"; done <<< "$out"
+  return "$rc"
 }
 if check_reflink; then
   verdict AB-A06-2 PASS "btrfs: a 1 GB snapshot is metadata only"
