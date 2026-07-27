@@ -26,11 +26,13 @@ acceptance/  registry.py · registry.tsv — the 212 checks and their state (AP-
              a06-acceptance.sh — thirteen checks, written before the image
              calibration.sh · calibration-probe.sh — the fleet, and the five constants (AP-1.3)
              e05-constants.tsv — those constants, given and measured; R-D computes with them
+             t04-runner.sh — pods on a node: the contract, the lifecycle, the reaper (AP-3.3)
 skills/      SKILL.template.md — template for a catalog entry (F-01, F-07)
 tracker/     issues.json · issues.csv · gh-import.{sh,py} · issue-map.json
 decisions/   eleven rulings E-01…E-11, ten open points OP-1…OP-10, and the rulings taken here (AP-0.1)
 image/       mkosi configuration, the units a role activates, build · seal · verify · vm (AP-1.1 ff.)
-platform/    the one Go binary: the A-04 start sequence and SP-E02-1's seven entry points (AP-3.1)
+platform/    the one Go binary: the A-04 start sequence and SP-E02-1's seven entry points (AP-3.1),
+             the runner contract and the workpod behind it (AP-3.3)
 ```
 
 All three started empty. Each was filled by the work package that owns it — AP-0.1, AP-1.1, AP-3.1 —

@@ -25,15 +25,19 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | base | `internal/cgroup` | — | anything |
 | base | `internal/ids` | — | anything |
 | base | `internal/attachment` | — | anything |
+| base | `internal/allocation` | — | anything |
+| base | `internal/runner` | — | anything |
 | step | `internal/disk` | `internal/boot` | another step, a role, `cmd` |
 | step | `internal/selftest` | `internal/boot`, `internal/cgroup` | another step, a role, `cmd` |
 | step | `internal/statedb` | `internal/boot`, `internal/ids` | another step, a role, `cmd` |
+| step | `internal/workpod` | `api/workpodv1`, `internal/allocation`, `internal/cgroup`, `internal/runner` | another step, a role, `cmd` |
 | role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids` | another role, a step, `cmd` |
 | role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
-| role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup` | another role, a step, `cmd` |
+| role | `internal/harness` | `api/workpodv1`, `internal/runner` | another role, a step, `cmd` |
+| role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/workpod` | another role, a step, `cmd` |
 | entry | `cmd/workpod` | every module above | — |
 
-Four of those "may not" lines carry the weight and are worth saying in prose:
+Five of those "may not" lines carry the weight and are worth saying in prose:
 
 - **The judge does not depend on the mechanism it judges.** `internal/selftest` may not import
   `internal/disk`. SP-A04-2 splits the two on purpose — the disk step mounts what it finds, the
@@ -47,6 +51,12 @@ Four of those "may not" lines carry the weight and are worth saying in prose:
   deployment.
 - **The contract does not reach back.** `api/workpodv1` is generated from `contract/platform.proto`
   (E-10) and imports nothing of this program. A schema that depends on its implementation is not one.
+- **The runner contract is a base module and its implementation is not.** SP-T04-4 says the
+  abstraction is over `Runner`, not over `Workpod`, and the table is that sentence: `internal/runner`
+  holds the contract and imports nothing, `internal/workpod` is one implementation of it and imports
+  runc, cgroups and btrfs, and `internal/harness` — which runs *inside* a pod — sees the contract and
+  never the implementation. The day `windows`, `macos` or `remote` arrives (AP-8.3) it is a second
+  step beside `internal/workpod`, not a change to anything above it.
 - **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
   and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
   contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so
@@ -88,10 +98,11 @@ drift between matrix and registry. Silence is not the same as permission.
   scripts are trigger paths of the image leg — a check that does not re-run rests on a run of the
   old program. A change that breaks the contract then fails the leg that owns the contract, not the
   one that owns the image.
-- The scheduler, both gates and the harness are entry points that refuse until their work packages
-  build them (AP-3.3, AP-3.5, AP-3.7). Each arrives as a module and a row in this table, added in
-  the commit that builds it — as `internal/adapter`, `internal/attachment` and `internal/ids` did
-  in AP-3.2's.
+- The scheduler and both gates are entry points that refuse until their work packages build them
+  (AP-3.5, AP-3.7). Each arrives as a module and a row in this table, added in the commit that builds
+  it — as `internal/adapter`, `internal/attachment` and `internal/ids` did in AP-3.2's, and as
+  `internal/runner`, `internal/allocation`, `internal/workpod` and `internal/harness` did in
+  AP-3.3's, which is the commit the harness stopped refusing in.
 
 ## Overturned by
 

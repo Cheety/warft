@@ -22,6 +22,7 @@ import (
 	workpodv1 "github.com/Cheety/warft/platform/api/workpodv1"
 	"github.com/Cheety/warft/platform/internal/boot"
 	"github.com/Cheety/warft/platform/internal/cgroup"
+	"github.com/Cheety/warft/platform/internal/workpod"
 )
 
 // WorkSlice is where the work layer lives on every node (SP-V01-1); the pressure reported with
@@ -45,6 +46,24 @@ func Run(v boot.Values) error {
 		return err
 	}
 
+	// The reaper, before anything else on this node runs. SP-T04-5 puts it on the worker and not in
+	// the control plane (V-02), and its first sweep is the one that matters: every pod on this node
+	// was supervised by the worker that is no longer running, so every one of them is an orphan.
+	// Doing it before registering means the node does not ask for capacity while holding subvolumes
+	// nobody will collect (AB-T04-5).
+	reaper := &workpod.Reaper{
+		Pod: workpod.New(workpod.Default()),
+		Log: func(format string, a ...any) { fmt.Printf(format+"\n", a...) },
+	}
+	if reaped, err := reaper.Sweep(); err != nil {
+		fmt.Printf("the reaper's first sweep did not complete: %v\n", err)
+	} else {
+		fmt.Printf("reaper: %d orphaned pod(s) from before this worker (SP-T04-5)\n", len(reaped))
+	}
+	ctx, stopReaper := context.WithCancel(context.Background())
+	defer stopReaper()
+	go reaper.Run(ctx)
+
 	stream, closeConn, err := register(v, nodeID)
 	if err != nil {
 		return err
@@ -57,8 +76,10 @@ func Run(v boot.Values) error {
 		if _, err := stream.Recv(); err != nil {
 			return fmt.Errorf("the pull stream ended: %w", err)
 		}
-		// A lease before a runner exists would be a job nothing can execute.
-		return fmt.Errorf("received a lease, but nothing can run one before AP-3.3 — refusing it")
+		// The runner exists since AP-3.3, but a lease is not yet a job: turning one into an order
+		// with its authority, its budget and its working copy is AP-6.2's, and executing a job the
+		// worker had to invent the fields of would be worse than refusing one.
+		return fmt.Errorf("received a lease; turning it into a job is AP-6.2's work — refusing it")
 	}
 }
 

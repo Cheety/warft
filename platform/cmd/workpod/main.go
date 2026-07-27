@@ -19,9 +19,11 @@ import (
 	"github.com/Cheety/warft/platform/internal/cgroup"
 	"github.com/Cheety/warft/platform/internal/controlplane"
 	"github.com/Cheety/warft/platform/internal/disk"
+	"github.com/Cheety/warft/platform/internal/harness"
 	"github.com/Cheety/warft/platform/internal/selftest"
 	"github.com/Cheety/warft/platform/internal/statedb"
 	"github.com/Cheety/warft/platform/internal/worker"
+	"github.com/Cheety/warft/platform/internal/workpod"
 )
 
 // revision is stamped by the image build; "development" outside one.
@@ -40,7 +42,7 @@ var components = [][3]string{
 	{"adapter", "serving", "AP-3.2"},
 	{"git-gate", "refusing-until", "AP-3.5"},
 	{"egress-gate", "refusing-until", "AP-3.5"},
-	{"harness", "refusing-until", "AP-3.3"},
+	{"harness", "serving", "AP-3.3"},
 }
 
 func usage() {
@@ -48,6 +50,7 @@ func usage() {
 
 components   control · scheduler · worker · adapter · git-gate · egress-gate · harness
 adapter      adapter submit · adapter identity · adapter capabilities (T-01)
+pod          pod run · pod resolve · pod image import · pod base · pod list · pod reap (T-04)
 node         disk [reinstall] · selftest · podslice arm <slice> · db-init · ping
 about        components · version
 `)
@@ -97,7 +100,16 @@ func main() {
 	case "egress-gate":
 		refuse("egress-gate", "the gate that holds the allowlist per job and inserts keys (B-02)", "AP-3.5")
 	case "harness":
-		refuse("harness", "the agent harness on the pod's Unix socket (T-04, SP-E02-4)", "AP-3.3")
+		// The pod's own init process. It runs nowhere else: outside a pod there is no job at
+		// /run/workpod/job.json and the entry point says so rather than inventing one.
+		if err := harness.Run(); err != nil {
+			fail(err)
+		}
+
+	case "pod":
+		if err := workpod.Command(os.Args[2:], os.Stdout); err != nil {
+			fail(err)
+		}
 
 	case "disk":
 		if len(os.Args) > 2 && os.Args[2] == "reinstall" {

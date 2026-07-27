@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot decisions proto help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot runner decisions proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -22,6 +22,7 @@ help:
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
 	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
+	@echo "make runner           pods on a node: the contract, no network, the lifecycle, the reaper — AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 (AP-3.3)"
 	@echo "make decisions        the decision store, and the module contract against the imports — AB-G01-5 (AP-0.1, AP-3.1)"
 	@echo "make proto            regenerate platform/api/workpodv1 from contract/platform.proto"
 	@echo
@@ -96,6 +97,13 @@ intake:
 # the failed selftest that must not register.
 boot:
 	@acceptance/a04-boot.sh
+
+# AP-3.3. The runner and the workpod against the image `make image` built: the four classes read
+# back out of the pods' own cgroups, a pod with no network and no keys, the lifecycle to the CRIU
+# dump, and three orphans that do not survive a worker restart. The two tables are checked on the
+# host first — a boot that measured a program the ruling does not describe would measure nothing.
+runner:
+	@acceptance/t04-runner.sh
 
 # AP-0.1 and AP-3.1. The store is a property of the repository; the module contract is a decision
 # (decisions/module-dependencies.md) held against the imports of platform/. CI runs the same script

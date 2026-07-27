@@ -1,0 +1,25 @@
+# ra1-classes.tsv — the four resource classes of SP-RA-1, as the runner writes them.
+#
+# Two sources meet in this file and acceptance/t04-runner.sh holds it against both:
+#
+#   the four `*_requested` / `*_limit` columns  are SP-RA-1's own table in 01-specification.md
+#   cpu_weight, pids_max, io_latency_ms         are ruled in decisions/resource-contract.md
+#
+# A number that moves in one place and not in the other is drift, and the run fails — the same rule
+# op5-policy.tsv lives by. It is embedded into the binary (go:embed) because a worker allocates
+# without asking anything: R-A is a constant of the platform, not configuration of a node.
+#
+# The mapping, ruled in decisions/resource-contract.md §2:
+#
+#   cpu_requested   -> cpu.weight       (SP-RA-3: weights, never cpu.max)
+#   cpu_limit       -> the concurrency variables of SP-RC-5, in whole cores
+#   ram_requested   -> memory.min       (the one memory knob that guarantees)
+#   ram_limit       -> memory.high      (SP-RA-2: throttled, not shot)
+#
+# memory.max and cpu.max appear nowhere on purpose. MB and GB in the panel are read as binary.
+#
+#   class  cpu_requested_milli  cpu_limit_milli  ram_requested_bytes  ram_limit_bytes  cpu_weight  pids_max  io_latency_ms
+tiny	100	1000	134217728	536870912	10	128	100
+small	300	2000	402653184	1610612736	30	256	100
+medium	1000	4000	1073741824	3221225472	100	1024	100
+large	2000	8000	3221225472	8589934592	200	4096	100

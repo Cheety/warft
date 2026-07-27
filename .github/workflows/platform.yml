@@ -26,6 +26,8 @@ on:
       - 'decisions/OP-5.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
+      - 'decisions/pod-runtime.md'
+      - 'decisions/resource-contract.md'
       - '.github/workflows/platform.yml'
   pull_request:
     paths:
@@ -37,6 +39,8 @@ on:
       - 'decisions/OP-5.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
+      - 'decisions/pod-runtime.md'
+      - 'decisions/resource-contract.md'
       - '.github/workflows/platform.yml'
   workflow_dispatch:
 

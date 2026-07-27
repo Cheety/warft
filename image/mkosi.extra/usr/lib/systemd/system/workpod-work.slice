@@ -1,7 +1,8 @@
 # The work layer as a slice (SP-V01-1): workpods, snapshots, caches. The worker agent runs here,
-# and every pod slice (AP-3.3) nests beneath it by its dashed name — workpod-work-<pod>.slice —
-# which is where `workpod podslice arm` sets memory.oom.group=1 (SP-RC-4): a pod is one workload
-# to the OOM killer, never a survivor of its own siblings.
+# and every pod (AP-3.3) is a transient scope beneath it — workpod-<pod id>.scope — where the
+# runner writes R-A's contract and sets memory.oom.group=1 (SP-RC-4): a pod is one workload to the
+# OOM killer, never a survivor of its own siblings. `workpod podslice arm` sets the same bit on a
+# slice named by hand, which is what AB-RC-4's pressure drama uses.
 #
 # Deliberately without memory.min: under pressure this layer is where the kernel reclaims, so
 # that the system slice's reservation has somewhere to reclaim from.
@@ -9,3 +10,10 @@
 [Unit]
 Description=Workpod work layer
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+
+[Slice]
+# SP-RA-4 asks for io.latency on every pod, and a cgroup only has an io.latency file when the io
+# controller is enabled in its parent. systemd's default for IOAccounting is off, so without this
+# line a pod below this slice would carry four of R-A's five knobs and have no file to write the
+# fifth into. Accounting is also what R-B's io tokens will read (SP-RB-1, AP-3.7).
+IOAccounting=yes

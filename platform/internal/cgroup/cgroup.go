@@ -53,21 +53,110 @@ func MemoryMin(unit string) (uint64, error) {
 // terminal, and K-02 has no state for that.
 //
 // systemd exposes no directive for this cgroup attribute, which is why the platform binary owns
-// it: the runner (AP-3.3) arms every pod slice it creates through this same call.
+// it: the runner (AP-3.3) arms every pod slice it creates through ArmOOMGroupPath below.
 func ArmOOMGroup(unit string) error {
 	p, err := UnitPath(unit)
 	if err != nil {
 		return err
 	}
-	f := filepath.Join(p, "memory.oom.group")
-	if err := os.WriteFile(f, []byte("1\n"), 0o644); err != nil {
-		return fmt.Errorf("arming %s: %w", f, err)
+	return ArmOOMGroupPath(p)
+}
+
+// ArmOOMGroupPath is the same by cgroup path rather than by unit name. The runner knows the path —
+// it read it out of the container's own /proc entry — and asking systemd to translate a unit name
+// it already resolved would be a round trip for an answer it holds.
+func ArmOOMGroupPath(path string) error {
+	return Write(path, "memory.oom.group", "1")
+}
+
+// Write sets one cgroup attribute and reads it back. Reading back is the point: a cgroup file that
+// takes a value the controller then ignores — because the controller is not enabled in the parent,
+// or because the value is out of range — fails silently on the write and would leave a pod running
+// under a contract nobody applied (SP-RA-1).
+//
+// The comparison is exact. Every attribute the runner writes reads back verbatim — a byte count as
+// the same byte count, an io.latency line as the same line — so anything else means the value did
+// not land, and a contract that did not land is worse than none because it looks like one.
+func Write(path, file, value string) error {
+	f := filepath.Join(path, file)
+	if err := os.WriteFile(f, []byte(value+"\n"), 0o644); err != nil {
+		return fmt.Errorf("writing %s to %s: %w", value, f, err)
 	}
-	b, err := os.ReadFile(f)
-	if err != nil || strings.TrimSpace(string(b)) != "1" {
-		return fmt.Errorf("%s did not hold the value 1 after writing it", f)
+	got, err := Read(path, file)
+	if err != nil {
+		return err
+	}
+	if got != value {
+		return fmt.Errorf("%s reads %q after writing %q — the controller did not take it", f, got, value)
 	}
 	return nil
+}
+
+// Read is one cgroup attribute, trimmed.
+func Read(path, file string) (string, error) {
+	b, err := os.ReadFile(filepath.Join(path, file))
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(b)), nil
+}
+
+// OfPID is the cgroup of a running process, as an absolute path under the cgroup mount. On the
+// unified hierarchy /proc/<pid>/cgroup has exactly one line and it begins with `0::`.
+//
+// This is how the runner finds a pod's cgroup: the container's init process is created and stopped
+// before it runs anything (`runc create`), and where that process sits is the one authoritative
+// answer — assembling the path from a unit name is what the calibration run already found to be
+// wrong (AP-1.3, run 27).
+func OfPID(pid int) (string, error) {
+	b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if rel, ok := strings.CutPrefix(line, "0::"); ok {
+			return filepath.Join(mountPoint, strings.TrimSpace(rel)), nil
+		}
+	}
+	return "", fmt.Errorf("process %d has no unified cgroup — is cgroup v2 mounted?", pid)
+}
+
+// CPUMicros is the CPU time a cgroup has consumed, in microseconds. The quiet detector of SP-T04-3
+// reads it: a pod that has not spent CPU is a pod in which nothing is happening.
+func CPUMicros(path string) (uint64, error) {
+	b, err := os.ReadFile(filepath.Join(path, "cpu.stat"))
+	if err != nil {
+		return 0, err
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if v, ok := strings.CutPrefix(line, "usage_usec "); ok {
+			return strconv.ParseUint(strings.TrimSpace(v), 10, 64)
+		}
+	}
+	return 0, fmt.Errorf("no usage_usec in %s/cpu.stat", path)
+}
+
+// MemoryEvents is the memory.events map of a cgroup: `high`, `max`, `oom`, `oom_kill`. AB-RA-2
+// rests on two of them — a pod above memory.high has a rising `high` count and an `oom_kill` of
+// zero, which is throttled rather than shot (SP-RA-2).
+func MemoryEvents(path string) (map[string]uint64, error) {
+	b, err := os.ReadFile(filepath.Join(path, "memory.events"))
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]uint64{}
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) != 2 {
+			continue
+		}
+		n, err := strconv.ParseUint(f[1], 10, 64)
+		if err != nil {
+			continue
+		}
+		out[f[0]] = n
+	}
+	return out, nil
 }
 
 // PSI carries the three pressure numbers CapacityRequest reports (R-C reads pressure, not
