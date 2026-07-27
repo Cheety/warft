@@ -145,7 +145,10 @@ else
   fail "E10-3e a reserved death is accepted" "the linter rejects the lawful path"
 fi
 
-if mutate 's/  string thread = 11;/  string thread = 11;\n  string probe_note = 15;/' additive.proto \
+# The probe's field number is far above the contract's own so that the next lawful addition to
+# Envelope cannot collide with it — a control probe that fails because the schema grew would say
+# nothing about the linter.
+if mutate 's/  string thread = 11;/  string thread = 11;\n  string probe_note = 900;/' additive.proto \
    && "$LINT" "$PROTO" "$SCRATCH/additive.proto" > /dev/null 2>&1; then
   pass "E10-3f an added field is accepted"
 else

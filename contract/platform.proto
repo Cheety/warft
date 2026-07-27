@@ -122,6 +122,20 @@ message Envelope {                 // lives minutes
   google.protobuf.Timestamp received_at = 12;
   string idempotency = 13;         // mandatory (SP-T01-7)
   string platform = 14;            // runner pool: alpine · windows · macos · remote (SP-T04-4)
+  HandWrittenJob by_hand = 15;     // E-11 step 3, decisions/jobs-by-hand.md; empty = no job yet
+}
+
+// E-11's third step runs "without a captain, jobs by hand": what T-02 would decide and what Q-01
+// would derive are stated by a human instead. Optional on purpose — an envelope without it is an
+// envelope, and produces no job (SP-Q01-6). AP-5.1 and AP-5.5 leave it with no sender.
+message HandWrittenJob {
+  Spec spec = 1;                   // goal, acceptance, assumptions, bounds, budget, reversibility
+  ResourceClass class = 2;         // the captain's `size` step (SP-T02-1)
+  string image_hash = 3;           // T-03, until the requirement hash resolves it (AP-4.2)
+  string pipeline_version = 4;
+  string locality_group = 5;
+  Priority priority = 6;
+  Budget budget_share = 7;
 }
 
 message Acceptance {               // Q-01: how you recognize it
