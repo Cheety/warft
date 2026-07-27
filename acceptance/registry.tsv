@@ -7,10 +7,10 @@ AB-A03-3	P	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A03-4	P	red	AP-6.4	
 AB-A03-6	S	red	AP-6.4	
 AB-A03-7	S	green	AP-0.2	https://github.com/Cheety/warft/actions/runs/30176317960
-AB-A04-1	P	red	AP-3.1	
-AB-A04-3	P	red	AP-3.1	
+AB-A04-1	P	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
+AB-A04-3	P	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
 AB-A04-4	P	red	AP-6.3	
-AB-A05-1	P	red	AP-3.1	
+AB-A05-1	P	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
 AB-A05-2	S	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A05-4	P	red	AP-6.1	
 AB-A05-5	S	red	AP-3.8	
@@ -50,7 +50,7 @@ AB-B04-4	P	red	AP-7.5
 AB-B04-5	D	red	AP-7.5	
 AB-E01-1	S	green	AP-1.1	https://github.com/Cheety/warft/actions/runs/30181410890
 AB-E01-2	S	green	AP-0.2	https://github.com/Cheety/warft/actions/runs/30176317960
-AB-E02-1	S	red	AP-3.1	
+AB-E02-1	S	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
 AB-E02-2	P	red	AP-3.7	
 AB-E02-3	P	red	AP-5.7	
 AB-E02-4	S	red	AP-3.3	
@@ -94,7 +94,7 @@ AB-F07-4	D	red	AP-4.2
 AB-G01-2	P	red	AP-4.1	
 AB-G01-3	P	red	AP-4.1	
 AB-G01-4	S	red	AP-4.1	
-AB-G01-5	S	open	AP-0.1	decisions/module-contract.md
+AB-G01-5	S	green	AP-0.1	https://github.com/Cheety/warft/actions/runs/30295919018
 AB-G02-1	P	red	AP-8.2	
 AB-G02-2	P	red	AP-8.2	
 AB-G02-3	P	red	AP-8.2	
@@ -164,7 +164,7 @@ AB-RB-4	P	red	AP-3.7
 AB-RB-5	S	red	AP-3.7	
 AB-RC-1	P	red	AP-3.7	
 AB-RC-3	S	red	AP-3.7	
-AB-RC-4	P	red	AP-3.1	
+AB-RC-4	P	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
 AB-RC-5	P	red	AP-3.3	
 AB-RC-6	M	red	AP-3.7	
 AB-RD-2	S	red	AP-3.8	
@@ -191,7 +191,7 @@ AB-T04-5	S	red	AP-3.3
 AB-T05-1	S	red	AP-3.4	
 AB-T05-2	P	red	AP-3.4	
 AB-T05-3	S	red	AP-3.4	
-AB-V01-1	S	red	AP-3.1	
+AB-V01-1	S	green	AP-3.1	https://github.com/Cheety/warft/actions/runs/30295919685
 AB-V01-2	D	red	AP-6.5	
 AB-V01-3	P	red	AP-5.5	
 AB-V01-4	M	red	AP-3.7	
