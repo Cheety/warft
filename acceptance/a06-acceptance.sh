@@ -671,7 +671,11 @@ fi
 # -------------------------------------------------------------------------------------------------
 # 9–13  the rows that need the platform binary, not another image.
 # -------------------------------------------------------------------------------------------------
-verdict AB-A06-9  SKIP "one job from envelope to patch — turns green in AP-3.8"
+# The chain itself is driven by acceptance/b03-observation.sh (AP-3.8), which runs it end to end
+# against a real state database and a real gate. What that script cannot do without a machine is the
+# pod — btrfs for the working copy in O(1), runc for the pod itself — so this row waits for a boot
+# with `role = all`, which is the machine the row names in the first place.
+verdict AB-A06-9  SKIP "one job from envelope to patch — the chain is acceptance/b03-observation.sh; the pod needs this machine (AP-3.8)"
 verdict AB-A06-10 SKIP "intake, lease, heartbeat, expiry, return — turns green in AP-6.2"
 verdict AB-A06-11 SKIP "the same job twice, one push — turns green in AP-3.5"
 verdict AB-A06-12 SKIP "two versions at once, no job lost — turns green in AP-6.4"

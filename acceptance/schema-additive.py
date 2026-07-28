@@ -56,6 +56,9 @@ EXEMPT_CELL = {
                         "by the schema itself; its rows are rules, not objects",
     "lease_parameter": "OP-4's ruled constants for SP-V02-1's pull model, identical in every cell "
                        "and seeded by the schema itself; its rows are rules, not objects",
+    "alert": "SP-B03-3's four waking alerts and the displays beside them (decisions/alerts.md), "
+             "identical in every cell and seeded by the schema itself; its rows are rules, not "
+             "objects",
 }
 
 # Tables that cannot carry a NOT NULL `project` while the rest of the specification holds.
@@ -84,6 +87,10 @@ EXEMPT_PROJECT = {
                      "hash, it does not own it",
     "container_image": "T-03: content-addressed and shared by every project whose pods run on it",
     "pipeline_version": "T-05: the spine is versioned per cell; projects pin a version",
+    "alert": "SP-B03-3: what may wake a human is a property of the platform, not of anyone's "
+             "work; its rows are rules, not objects",
+    "queue_sample": "decisions/alerts.md, slot 2: the queue is a property of the cell, and its "
+                    "depth is the number of jobs of every project waiting in it",
 }
 
 # SP-K01-1 and SP-K01-8: the objects, and the table that carries each.

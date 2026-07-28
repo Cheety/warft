@@ -1,0 +1,34 @@
+# e05-constants.tsv — the five constants of E-05, given and measured (AP-1.3).
+#
+# The machine-readable half of decisions/E-05.md. The ruling is the file in decisions/; this is the
+# same numbers in the shape R-D reads them in, so the occupancy table computes with the measured
+# values instead of carrying its own copy of them. acceptance/calibration.sh holds the two against
+# each other on every run: a number here that is not in the ruling is drift, and a number here that
+# is more than a factor of two from a fresh measurement stops the run.
+#
+# Seven rows for five constants: "host and runtime" is given per role and "active pod" is two
+# numbers.
+#
+# `adopted` is what R-D computes with. Four constants are marked "measured in A-06" by the panel
+# itself and take this run's number. The active pod is marked "three runs per repository (R-C)".
+# AP-3.7 built the instrument that produces those runs — `phase_profile` in contract/schema.sql and
+# SP-RC-6's mechanical admission over it — but not the runs themselves: a repository has to be built
+# three times before it has a peak, and in stage 3 the jobs are still stated by hand
+# (decisions/jobs-by-hand.md). So the table keeps the given value and now names what will replace it.
+# The reason stands in decisions/E-05.md, with the condition that voids it.
+#
+# Nothing on this list is read by admission. SP-RD-3 makes the five planning values, and AP-3.7's
+# boundary says so from the other side: the scheduler decides on PSI and on measured peak RSS, and
+# acceptance/rb-scheduler.sh probes that no module of the decision path so much as names one of
+# these keys (AB-RD-3, AB-E05-2).
+#
+# `evidence` names the run each measured number came from. A number without one is an assumption
+# wearing the colour of a measurement (Q-02).
+key	given	measured	unit	adopted	evidence
+host_runtime_control	12288	334	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+host_runtime_work	6144	328	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+page_cache_base	8192	60	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+frozen_pod	24	0.37	MB	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+zram_factor	1.6	4.41	x	measured	https://github.com/Cheety/warft/actions/runs/30204671464
+active_pod_cores	0.8	0.190	cores	given until three runs (SP-RC-6)	https://github.com/Cheety/warft/actions/runs/30204671464
+active_pod_ram	960	122.5	MB	given until three runs (SP-RC-6)	https://github.com/Cheety/warft/actions/runs/30204671464

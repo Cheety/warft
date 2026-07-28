@@ -219,6 +219,7 @@ EGRESS_SOCK="$WORK/run/egress-gate.sock"
   --ledger "$GATE_VAR/git" --credential "$CREDS/git-signing-key" >"$WORK/git-gate.log" 2>&1 &
 GIT_GATE_PID=$!
 "$BIN" egress-gate --socket "$EGRESS_SOCK" --grants "$GRANTS" \
+  --journal "$GATE_VAR/egress/rejections.jsonl" \
   --credentials "$CREDS/egress" >"$WORK/egress-gate.log" 2>&1 &
 EGRESS_PID=$!
 

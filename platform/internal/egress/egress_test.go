@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -128,7 +129,7 @@ func TestTheAllowlistIsPerJobAndNotPerNode(t *testing.T) {
 	if err := Grant(dir, "order-wide", wide); err != nil {
 		t.Fatal(err)
 	}
-	g := &Gate{Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) { return response(200, "ok"), nil }}
+	g := &Gate{Journal: filepath.Join(t.TempDir(), "rejections.jsonl"), Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) { return response(200, "ok"), nil }}
 
 	// A target only the wide job may reach. Both jobs ask for it, on the same node, in the same
 	// process — and only one of them gets it.
@@ -160,7 +161,7 @@ func TestTheAllowlistIsPerJobAndNotPerNode(t *testing.T) {
 
 // A job nobody granted anything reaches nothing. Default deny stated as the absence of a grant.
 func TestAJobWithNoGrantReachesNothing(t *testing.T) {
-	g := &Gate{Grants: t.TempDir(), Do: func(*http.Request) (*http.Response, error) {
+	g := &Gate{Journal: filepath.Join(t.TempDir(), "rejections.jsonl"), Grants: t.TempDir(), Do: func(*http.Request) (*http.Response, error) {
 		t.Fatal("a job with no allowlist reached the network")
 		return nil, nil
 	}}
@@ -197,6 +198,7 @@ func TestTheGateInsertsTheKey(t *testing.T) {
 	}
 	var sent *http.Request
 	g := &Gate{
+		Journal: filepath.Join(t.TempDir(), "rejections.jsonl"),
 		Grants:  dir,
 		Resolve: resolves,
 		Keys:    func(host string) (string, error) { return "secret-for-" + host, nil },
@@ -220,7 +222,7 @@ func TestTheSizeLimitIsEnforcedOnWhatArrives(t *testing.T) {
 	if err := Grant(dir, "o1", Allowance{Targets: []string{"proxy.golang.org"}, Methods: []string{"GET"}, SizeLimit: 8}); err != nil {
 		t.Fatal(err)
 	}
-	g := &Gate{Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) {
+	g := &Gate{Journal: filepath.Join(t.TempDir(), "rejections.jsonl"), Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) {
 		// A target that lies about its length: the header says 1, the body is 40 bytes.
 		r := response(200, strings.Repeat("x", 40))
 		r.Header.Set("Content-Length", "1")
@@ -242,7 +244,7 @@ func TestAResponseAtTheLimitPasses(t *testing.T) {
 	if err := Grant(dir, "o1", Allowance{Targets: []string{"proxy.golang.org"}, Methods: []string{"GET"}, SizeLimit: 8}); err != nil {
 		t.Fatal(err)
 	}
-	g := &Gate{Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) { return response(200, "12345678"), nil }}
+	g := &Gate{Journal: filepath.Join(t.TempDir(), "rejections.jsonl"), Grants: dir, Resolve: resolves, Do: func(*http.Request) (*http.Response, error) { return response(200, "12345678"), nil }}
 	res, err := g.Forward(context.Background(), &workpodv1.EgressRequest{
 		OrderId: "o1", Target: "https://proxy.golang.org/x", Method: "GET"})
 	if err != nil {

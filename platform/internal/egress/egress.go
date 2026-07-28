@@ -18,6 +18,7 @@ package egress
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -50,6 +51,13 @@ const AllowlistFile = "b02-allowlist.tsv"
 // GrantsDir is where a node keeps what each job is allowed to reach. One file per order, written
 // when the job is admitted; the gate reads it and holds no state of its own.
 const GrantsDir = "/var/lib/workpod/egress-grants"
+
+// JournalFile is where refused targets are written down (SP-B02-5, AP-3.8). The gate stands on the
+// work node and may not reach the state database (SP-B02-2, decisions/module-dependencies.md), and
+// a list kept only in memory is a list that dies with the process that refused something — so each
+// refusal is appended here as one JSON object, and `workpod observe rejections --journal` folds the
+// file into the cell's display.
+const JournalFile = "/var/lib/workpod/egress/rejections.jsonl"
 
 // Allowance is what one job may reach: SP-B02-4's three, and nothing else. There is no "everything
 // below this" flag and no escape value — a field that could mean "unbounded" is a field that will.
@@ -293,6 +301,11 @@ type Gate struct {
 	Resolve func(ctx context.Context, host string) ([]string, error)
 	Logf    func(string, ...any)
 
+	// Journal is where refusals are appended so they outlive this process (SP-B02-5). Empty means
+	// JournalFile; a gate whose journal cannot be written says so in its log and keeps serving —
+	// refusing to refuse would be worse than losing the record of one refusal.
+	Journal string
+
 	// Rejected is SP-B02-5: rejected targets belong in the display, not only in the log — "the
 	// best early warning signal for injection this system has". The gate keeps the last ones so
 	// the console can show them without parsing a journal.
@@ -320,10 +333,14 @@ func (g *Gate) Forward(ctx context.Context, req *workpodv1.EgressRequest) (*work
 	}
 	deny := func(format string, a ...any) (*workpodv1.EgressResponse, error) {
 		reason := fmt.Sprintf(format, a...)
-		g.rejected = append(g.rejected, Rejection{
+		r := Rejection{
 			OrderID: req.GetOrderId(), Target: req.GetTarget(), Method: req.GetMethod(),
 			Reason: reason, At: time.Now().UTC(),
-		})
+		}
+		g.rejected = append(g.rejected, r)
+		if err := g.journal(r); err != nil {
+			g.Logf("egress-gate: the refusal could not be journalled: %v", err)
+		}
 		g.Logf("egress-gate: refused %s for order %s: %s", req.GetTarget(), req.GetOrderId(), reason)
 		return &workpodv1.EgressResponse{Denied: true, DeniedReason: reason}, nil
 	}
@@ -389,6 +406,30 @@ func (g *Gate) Forward(ctx context.Context, req *workpodv1.EgressRequest) (*work
 		return deny("the response exceeds this job's size limit of %d bytes (SP-B02-4)", allowance.SizeLimit)
 	}
 	return &workpodv1.EgressResponse{Status: uint32(res.StatusCode), BodyRef: body}, nil
+}
+
+// journal appends one refusal to the file a display reads. One JSON object per line, opened and
+// closed per refusal: a gate refuses rarely, and a file handle held open across a node's lifetime
+// would be one more thing to lose on a crash than the record it protects.
+func (g *Gate) journal(r Rejection) error {
+	path := g.Journal
+	if path == "" {
+		path = JournalFile
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	body, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(append(body, '\n'))
+	return err
 }
 
 func (g *Gate) grantsDir() string {

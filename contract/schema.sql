@@ -564,6 +564,131 @@ CREATE RULE audit_no_update AS ON UPDATE TO audit DO INSTEAD NOTHING;
 CREATE RULE audit_no_delete AS ON DELETE TO audit DO INSTEAD NOTHING;
 
 -- ---------------------------------------------------------------------------
+-- B-03: the trace. The unit of observation is the job (SP-B03-1).
+-- ---------------------------------------------------------------------------
+
+-- There is no trace table: the job *is* the trace, and `order_id` with `attempt` is its identifier.
+-- A second identifier would be a second thing to join on and a second thing to lose — SP-B03-1 says
+-- "one trace from the envelope to the result", and the envelope and the result are already reachable
+-- from the order (SP-K01-7). What a span adds is the phase, and R-B's phases are T-05's spine.
+--
+-- The three columns SP-B03-1 names beside cost — attempt, evidence class, and the model, prompt and
+-- pipeline version — stand on the span rather than only on the order because a rework round may
+-- change the model between two `check` phases, and a trace that carried one version for the whole
+-- job would say something untrue about six of its seven phases. The order keeps the verdict of the
+-- attempt that ended it; the spans keep what each phase actually ran with (SP-Q04-4).
+CREATE TABLE job_span (
+  order_id    uuid NOT NULL REFERENCES "order"(id),
+  attempt     int  NOT NULL,
+  seq         int  NOT NULL,          -- the position in the trace, as the phases happened
+  cell        text NOT NULL REFERENCES cell(id),
+  project     uuid NOT NULL REFERENCES project(id),
+  phase       text NOT NULL,          -- one of T-05's seven (SP-T05-1)
+  outcome     text NOT NULL,          -- ran · skipped · refused · failed (runner.Outcome)
+  round       int  NOT NULL DEFAULT 0,-- the rework round `check` and `repair` belong to (T-05)
+  detail      text NOT NULL,
+  started_at  timestamptz NOT NULL,
+  duration_ms bigint NOT NULL CHECK (duration_ms >= 0),
+  cost_pod_minutes  bigint NOT NULL DEFAULT 0,
+  cost_tokens       bigint NOT NULL DEFAULT 0,
+  cost_money_micros bigint NOT NULL DEFAULT 0,
+  evidence         evidence_class,    -- empty until a phase produces one (Q-02)
+  model_version    text,
+  prompt_version   text,
+  pipeline_version text NOT NULL,
+  retain_until     timestamptz NOT NULL DEFAULT (now() + interval '90 days'),  -- SP-E07-2
+  PRIMARY KEY (order_id, attempt, seq),
+  -- a span belongs to an attempt that exists: the attempt is the unit of retry (SP-K02-2), and a
+  -- trace hanging off an order without one could not say which run it described
+  FOREIGN KEY (order_id, attempt) REFERENCES attempt (order_id, attempt)
+);
+
+-- SP-B03-4: the logs of the pods are evidence. The body stays on the node — it is written there
+-- immediately, content-addressed — and this row is what makes it the *job's* log rather than the
+-- pod's: the pod is gone half a second after the last line, and a log nobody can reach from the
+-- order is not evidence of anything.
+CREATE TABLE pod_log (
+  order_id     uuid NOT NULL REFERENCES "order"(id),
+  attempt      int  NOT NULL,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
+  node_id      text NOT NULL REFERENCES node(id),   -- where the body lies
+  content_hash text NOT NULL,
+  path         text NOT NULL,
+  bytes        bigint NOT NULL CHECK (bytes >= 0),
+  written_at   timestamptz NOT NULL DEFAULT now(),
+  retain_until timestamptz NOT NULL DEFAULT (now() + interval '90 days'),  -- SP-E07-2
+  PRIMARY KEY (order_id, attempt, content_hash),
+  FOREIGN KEY (order_id, attempt) REFERENCES attempt (order_id, attempt)
+);
+
+-- SP-B02-5: rejected targets belong in the display, not only in the log — "the best early warning
+-- signal for injection this system has".
+--
+-- The gate that refuses them stands on the work node (SP-B02-2) and may not reach the state
+-- database (decisions/module-dependencies.md); it appends each refusal to a journal beside its
+-- grants, and the control plane folds that journal in. The unique key is what makes folding the
+-- same journal twice harmless — the same refusal is one row, however often it is carried over.
+CREATE TABLE egress_rejection (
+  id           uuid PRIMARY KEY,
+  cell         text NOT NULL REFERENCES cell(id),
+  project      uuid NOT NULL REFERENCES project(id),
+  order_id     uuid NOT NULL REFERENCES "order"(id),
+  node_id      text NOT NULL REFERENCES node(id),
+  at           timestamptz NOT NULL,
+  target       text NOT NULL,
+  method       text NOT NULL,
+  reason       text NOT NULL,
+  retain_until timestamptz NOT NULL DEFAULT (now() + interval '90 days'),  -- SP-E07-2
+  UNIQUE (order_id, at, target, method)
+);
+
+CREATE INDEX egress_rejection_display_idx ON egress_rejection (cell, at DESC);
+
+-- decisions/alerts.md, slot 2: "the queue growing monotonically over twenty minutes" is a claim
+-- about a series, and a series has to be recorded before it can be read. One row per sample; the
+-- depth is what the queue holds, not what any node is doing with it.
+CREATE TABLE queue_sample (
+  cell  text NOT NULL REFERENCES cell(id),
+  at    timestamptz NOT NULL,
+  depth int NOT NULL CHECK (depth >= 0),
+  PRIMARY KEY (cell, at)
+);
+
+-- SP-B03-3: exactly four alerts may wake a human, and a fifth devalues the four. The count is a
+-- rule of the state contract rather than a habit of whoever adds the next check: `waking_slot` is
+-- one of four, unique, and present exactly when the alert wakes somebody. A fifth waking alert is
+-- a constraint violation — which is what makes AB-B03-3 a probe rather than an inspection.
+--
+-- The rows are rules and not objects, like `state_transition` and `lease_parameter`: identical in
+-- every cell, seeded by the schema itself, and therefore without `cell` and `project`
+-- (acceptance/schema-additive.py holds that exemption list).
+CREATE TABLE alert (
+  name        text PRIMARY KEY,
+  wakes       boolean NOT NULL,
+  waking_slot int UNIQUE CHECK (waking_slot BETWEEN 1 AND 4),
+  signal      text NOT NULL,      -- what it is measured from
+  condition   text NOT NULL,      -- the ruled threshold, in words (decisions/alerts.md)
+  CONSTRAINT alert_slot_iff_wakes CHECK ((waking_slot IS NOT NULL) = wakes)
+);
+
+INSERT INTO alert (name, wakes, waking_slot, signal, condition) VALUES
+  ('control_plane_unreachable',      true, 1, 'node.ping',
+   '3 failed pings in a row at the heartbeat interval (OP-4: 15 s)'),
+  ('queue_growing',                  true, 2, 'queue_sample',
+   '20 samples 1 minute apart, none below its predecessor, the last above the first'),
+  ('escapes_or_rejections_jumping',  true, 3, 'egress_rejection',
+   'the last hour >= 3x the mean of the 6 hours before it, and >= 10 rejections in absolute terms'),
+  ('cell_budget_exhausted_early',    true, 4, 'budget_pot',
+   'a daily pot at >= 90 % of a cap while less than 75 % of its day has passed'),
+  -- Everything else is a display. The disk is the first consumable that gets an alert (SP-A05-5)
+  -- and it is not a fifth waking one: a full disk stops jobs, it does not lose them.
+  ('disk_filling',                   false, NULL, 'node.disk',
+   'the work disk at >= 85 % full (SP-A05-5: the first consumable with an alert)'),
+  ('egress_rejections_clustered',    false, NULL, 'egress_rejection',
+   'refused targets per project and target, so a cluster is visible (SP-B02-5)');
+
+-- ---------------------------------------------------------------------------
 -- E-08: halt as a state with an expiry, not a command with an effect
 -- ---------------------------------------------------------------------------
 

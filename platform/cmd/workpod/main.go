@@ -24,6 +24,7 @@ import (
 	"github.com/Cheety/warft/platform/internal/egress"
 	"github.com/Cheety/warft/platform/internal/gitgate"
 	"github.com/Cheety/warft/platform/internal/harness"
+	"github.com/Cheety/warft/platform/internal/observation"
 	"github.com/Cheety/warft/platform/internal/outbox"
 	"github.com/Cheety/warft/platform/internal/scheduler"
 	"github.com/Cheety/warft/platform/internal/selftest"
@@ -59,6 +60,7 @@ control      control admit · control halt · control spend (V-04, E-08)
 scheduler    scheduler tokens · order · pressure · predict · queue · enqueue · freeze · record (R-B, R-C)
 adapter      adapter submit · adapter identity · adapter capabilities (T-01)
 outbox       outbox record · outbox list · outbox drain · outbox unanswered · outbox ask (K-03)
+observe      observe trace · import · provenance · cost · alerts · rejections · occupancy · audit (B-03)
 gates        git-gate --socket … · egress-gate --socket … (K-03, B-02)
 pod          pod run · pod resolve · pod pipeline · pod image import · pod base · pod list · pod reap (T-04, T-05)
 node         disk [reinstall] · selftest · podslice arm <slice> · db-init · ping
@@ -116,12 +118,14 @@ func serveEgressGate(args []string) error {
 	socket := fs.String("socket", outbox.EgressSocket, "the Unix socket the gate serves on — never a port (SP-B02-6)")
 	grants := fs.String("grants", egress.GrantsDir, "one allowlist per job, written when the job is admitted")
 	credentials := fs.String("credentials", "", "the key directory, one file per host, from the unit's credential directory")
+	journal := fs.String("journal", egress.JournalFile, "where refused targets are written down for the display (SP-B02-5)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	g := &egress.Gate{
-		Grants: *grants,
-		Logf:   func(format string, a ...any) { fmt.Printf(format+"\n", a...) },
+		Grants:  *grants,
+		Journal: *journal,
+		Logf:    func(format string, a ...any) { fmt.Printf(format+"\n", a...) },
 	}
 	if *credentials != "" {
 		g.Keys = egress.KeysFromCredential(*credentials)
@@ -196,6 +200,14 @@ func main() {
 
 	case "outbox":
 		if err := outbox.Command(os.Args[2:], os.Stdout); err != nil {
+			fail(err)
+		}
+
+	// B-03. Not a component of SP-E02-1 and not a role of V-01: observation is what the other
+	// seven leave behind, and its entry point is where a trace, a provenance chain, the four
+	// alerts and R-D's table are read back out of the platform (AP-3.8).
+	case "observe":
+		if err := observation.Command(os.Args[2:], os.Stdout); err != nil {
 			fail(err)
 		}
 	case "harness":

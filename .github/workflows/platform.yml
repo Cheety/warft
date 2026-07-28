@@ -26,12 +26,14 @@ on:
       - 'acceptance/k03-outbox.sh'
       - 'acceptance/v04-budget.sh'
       - 'acceptance/rb-scheduler.sh'
+      - 'acceptance/b03-observation.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/OP-6.md'
       - 'decisions/aging.md'
+      - 'decisions/alerts.md'
       - 'decisions/escalation-ladder.md'
       - 'decisions/gates-and-the-outbox.md'
       - 'decisions/halt-file.md'
@@ -51,12 +53,14 @@ on:
       - 'acceptance/k03-outbox.sh'
       - 'acceptance/v04-budget.sh'
       - 'acceptance/rb-scheduler.sh'
+      - 'acceptance/b03-observation.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/OP-6.md'
       - 'decisions/aging.md'
+      - 'decisions/alerts.md'
       - 'decisions/escalation-ladder.md'
       - 'decisions/gates-and-the-outbox.md'
       - 'decisions/halt-file.md'
@@ -125,3 +129,11 @@ jobs:
       # AB-V01-4, AB-E02-2 and AB-E02-5 turn green.
       - name: The scheduler — tokens per phase, aging, the ladder and the queue
         run: ./acceptance/rb-scheduler.sh
+
+      # AP-3.8. B-03, whole: the alert catalog held against its ruling and against the seed the cell
+      # carries, a fifth waking alert refused by the state contract, one job from the channel message
+      # to a pushed patch with its trace, its pod log and its refused targets, and the one query that
+      # puts the chain back together from either end. This is where AB-B03-1, AB-B03-3, AB-B03-4,
+      # AB-K01-7, AB-Q04-4, AB-RD-2, AB-B02-5 and AB-A05-5 turn green.
+      - name: One trace per job, four alerts, and the chain in one query
+        run: ./acceptance/b03-observation.sh

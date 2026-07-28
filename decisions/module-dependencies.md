@@ -40,6 +40,7 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/budget`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
 | role | `internal/harness` | `api/workpodv1`, `internal/runner` | another role, a step, `cmd` |
 | role | `internal/scheduler` | `internal/boot`, `internal/cgroup`, `internal/runner`, `internal/scheduling`, `internal/statedb` | another role, `cmd` |
+| role | `internal/observation` | `internal/cgroup`, `internal/outbox`, `internal/runner`, `internal/scheduling`, `internal/statedb` | another role, `cmd` |
 | role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/workpod` | another role, a step, `cmd` |
 | entry | `cmd/workpod` | every module above | — |
 
@@ -87,6 +88,18 @@ Five of those "may not" lines carry the weight and are worth saying in prose:
   `internal/runner` to get T-05's `Phase` type. It does not — `internal/scheduler`'s test holds the
   ruled table against `runner.Spine()` instead, so the join is checked rather than compiled, and the
   rules stay readable without a pipeline.
+- **Observation reads what the others left behind, and nothing reads observation.** `internal/observation`
+  holds B-03's rules — decisions/alerts.md's catalog with the four waking slots, SP-B03-2's service
+  levels, and R-D's occupancy table with its two sources — and it sits at the rank of a role even
+  though it is not one of SP-E02-1's seven components and not a layer of V-01. It reaches the state
+  contract, the cgroup files and the pipeline's phases because a trace is made of all three; nothing
+  above it but `cmd` reaches it, which is the property that matters: a scheduler that imported the
+  alert catalog would be a scheduler whose decisions could come to depend on what a display shows.
+  The rows a trace is made of are `internal/statedb`'s, for the same reason the queue is — a trace
+  is state, and state has one owner (K-02). And the egress gate does not import this module either:
+  it writes its refusals to a journal on the work node and the control plane folds them in, because
+  SP-B02-2 puts the gate on a machine the state database need not be on at all.
+
 - **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
   and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
   contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so

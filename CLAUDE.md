@@ -139,6 +139,9 @@ acceptance/              registry.py · registry.tsv — the 212 checks and thei
                          rb-scheduler.sh — R-B and R-C: the token a phase holds, the aging that
                          keeps a batch job from starving, the five rungs in order, and the queue
                          with SKIP LOCKED (AP-3.7)
+                         b03-observation.sh — B-03: one trace per job, the four alerts with no
+                         fifth, pod logs as evidence, the refused targets in a display, and the
+                         provenance chain in one query (AP-3.8)
                          e05-constants.tsv — those constants, given and measured; what R-D computes
                          with, and the machine-readable half of decisions/E-05.md
 Makefile                 make acceptance — the instrument; fails while anything is red
@@ -149,8 +152,9 @@ image/                   mkosi configuration, the units a role activates, build 
 platform/                the one Go binary: the A-04 start sequence, SP-E02-1's seven entry points,
                          the Runner contract (T-04), the pipeline (T-05) beside it, the workpod
                          that implements both, K-03's outbox with the two gates that drain it, and
-                         V-04's pots with the admission that reserves them, and R-B's tokens,
-                         priorities and PSI ladder over R-C's six signals
+                         V-04's pots with the admission that reserves them, R-B's tokens,
+                         priorities and PSI ladder over R-C's six signals, and B-03's trace,
+                         alert catalog and occupancy table
 ```
 
 All three started empty and were filled by the work package that owns them — AP-0.1, AP-1.1,

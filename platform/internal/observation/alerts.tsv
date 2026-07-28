@@ -1,0 +1,22 @@
+# alerts.tsv — the machine-readable half of decisions/alerts.md.
+#
+# The ruling is the source; this file is the same rows in the shape the program reads them in, and
+# the seed in contract/schema.sql is the same rows again in the shape a cell holds them.
+# acceptance/b03-observation.sh holds all three against each other on every run — a row in one and
+# not in another is drift, and drift is an error rather than a silent omission (the rule OP-1 and
+# OP-5 already stand under).
+#
+# `slot` is what SP-B03-3's "exactly four" is enforced with: one of four, unique, and present
+# exactly when the alert wakes somebody. An alert with no slot is a display, and a display never
+# wakes a human — which is the whole of the panel's closing sentence.
+#
+# `signal` names where the state comes from. `node.ping` and `node.disk` are properties of a
+# machine and not of the state database: an evaluation that has no node in front of it says it
+# cannot answer rather than reporting a green it did not measure (Q-02).
+name	wakes	slot	signal	condition
+control_plane_unreachable	true	1	node.ping	3 failed pings in a row at the heartbeat interval (OP-4: 15 s)
+queue_growing	true	2	queue_sample	20 samples 1 minute apart, none below its predecessor, the last above the first
+escapes_or_rejections_jumping	true	3	egress_rejection	the last hour >= 3x the mean of the 6 hours before it, and >= 10 rejections in absolute terms
+cell_budget_exhausted_early	true	4	budget_pot	a daily pot at >= 90 % of a cap while less than 75 % of its day has passed
+disk_filling	false	-	node.disk	the work disk at >= 85 % full (SP-A05-5: the first consumable with an alert)
+egress_rejections_clustered	false	-	egress_rejection	refused targets per project and target, so a cluster is visible (SP-B02-5)
