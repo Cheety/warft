@@ -24,18 +24,18 @@ AB-A06-7	P	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A06-8	P	red	AP-6.3	
 AB-A06-9	S	red	AP-3.8	
 AB-A06-10	S	red	AP-6.2	
-AB-A06-11	P	red	AP-3.5	
+AB-A06-11	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-A06-12	S	red	AP-6.4	
 AB-A06-13	M	green	AP-1.3	https://github.com/Cheety/warft/actions/runs/30205099512
 AB-B01-1	S	red	AP-6.1	
 AB-B01-2	P	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-B01-3	S	green	AP-2.5	https://github.com/Cheety/warft/actions/runs/30210712005
-AB-B01-4	P	red	AP-3.5	
+AB-B01-4	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-B01-5	S	red	AP-6.1	
 AB-B02-1	P	red	AP-6.3	
-AB-B02-2	S	red	AP-3.5	
+AB-B02-2	S	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-B02-3	P	green	AP-3.3	https://github.com/Cheety/warft/actions/runs/30311990661
-AB-B02-4	S	red	AP-3.5	
+AB-B02-4	S	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-B02-5	S	red	AP-3.8	
 AB-B02-6	P	red	AP-6.3	
 AB-B02-7	P	red	AP-6.3	
@@ -125,11 +125,11 @@ AB-K02-3	P	green	AP-2.3	https://github.com/Cheety/warft/actions/runs/30209124839
 AB-K02-4	S	red	AP-5.1	
 AB-K02-5	P	green	AP-2.3	https://github.com/Cheety/warft/actions/runs/30209124839
 AB-K02-7	S	red	AP-7.5	
-AB-K03-1	P	red	AP-3.5	
-AB-K03-2	P	red	AP-3.5	
-AB-K03-3	P	red	AP-3.5	
-AB-K03-4	P	red	AP-3.5	
-AB-K03-5	P	red	AP-3.5	
+AB-K03-1	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
+AB-K03-2	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
+AB-K03-3	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
+AB-K03-4	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
+AB-K03-5	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-K04-1	S	green	AP-2.4	https://github.com/Cheety/warft/actions/runs/30210012147
 AB-K04-2	P	green	AP-2.4	https://github.com/Cheety/warft/actions/runs/30210012147
 AB-K04-3	P	green	AP-2.4	https://github.com/Cheety/warft/actions/runs/30210012147
