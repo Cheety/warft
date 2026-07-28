@@ -53,13 +53,16 @@ func haltNow(ctx context.Context, pool *pgxpool.Pool, cell string, now time.Time
 func (s *server) admitAtIntake(ctx context.Context, pool *pgxpool.Pool, cell, orderID string, ack *workpodv1.EnvelopeAck) {
 	halt, err := haltNow(ctx, pool, cell, time.Now())
 	if err != nil {
-		ack.Refusal = err.Error()
+		// Not a refusal: nothing is exhausted and nobody halted anything. The job is not admitted
+		// because admission could not be decided, and the reply says that rather than blaming a
+		// pot — it carries no `cause`, because `budget.exhausted` would be the wrong one.
+		ack.Refusal = "admission could not be decided: " + err.Error()
 		logAdmission(orderID, ack)
 		return
 	}
 	d, err := statedb.Admit(ctx, pool, orderID, halt, time.Now())
 	if err != nil {
-		ack.Refusal = err.Error()
+		ack.Refusal = "admission could not be decided: " + err.Error()
 		logAdmission(orderID, ack)
 		return
 	}
@@ -139,7 +142,7 @@ func admitCommand(args []string, out io.Writer) error {
 	if *bottleneck <= 0 {
 		return fmt.Errorf("a share-out needs a bottleneck: --bottleneck is how many pod minutes are on offer")
 	}
-	decisions, err := statedb.AdmitPending(ctx, pool, *cell, *bottleneck, nil, halt, now)
+	decisions, err := statedb.AdmitPending(ctx, pool, *cell, *bottleneck, halt, now)
 	if err != nil {
 		return err
 	}
@@ -193,10 +196,64 @@ func haltCommand(args []string, out io.Writer) error {
 	clear := fs.Bool("clear", false, "lift the halt")
 	reason := fs.String("reason", "", "why — reported over all adapters")
 	by := fs.String("by", "", "who set it")
+	api := fs.Bool("api", false, "the first path: the halt row of the state database, not the file")
+	cell := fs.String("cell", "", "which cell the row belongs to (with --api)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	path := budget.HaltFilePath()
+
+	// SP-E08-3 names two paths, and both are written here. The row is the one an API reaches and a
+	// replica carries; the file is the one that works when the API does not. Setting either halts
+	// the cell — that is what "and" means in the requirement.
+	if *api {
+		if *cell == "" {
+			return fmt.Errorf("the row is per cell: --cell names which one")
+		}
+		ctx := context.Background()
+		pool, err := statedb.Open(ctx)
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+		switch {
+		case *set || *renew:
+			who := *by
+			if who == "" {
+				who = "unnamed"
+			}
+			// `halt.renew` is `halt.set` with the rationale it already carried: the halt is a state
+			// with an expiry, not a log of commands (E-08).
+			text := *reason
+			if text == "" && *renew {
+				existing, err := statedb.HaltState(ctx, pool, *cell)
+				if err != nil {
+					return err
+				}
+				text = existing.Reason
+			}
+			if err := statedb.SetHalt(ctx, pool, *cell, text, who, time.Now()); err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "halt set on the api path for cell %s; it expires in %s unless renewed (SP-E08-4)\n", *cell, budget.HaltExpiry)
+		case *clear:
+			if err := statedb.ClearHalt(ctx, pool, *cell); err != nil {
+				return err
+			}
+			fmt.Fprintf(out, "halt cleared on the api path for cell %s — a situation report belongs with it (SP-E08-2)\n", *cell)
+		}
+		row, err := statedb.HaltState(ctx, pool, *cell)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "api path: %s\n", describe(row, time.Now()))
+		file, err := budget.ReadHaltFile(path)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(out, "file path %s: %s\n", path, describe(file, time.Now()))
+		return nil
+	}
 
 	switch {
 	case *set:
@@ -243,12 +300,12 @@ func haltCommand(args []string, out io.Writer) error {
 		return nil
 	}
 	defer pool.Close()
-	api, err := statedb.HaltState(ctx, pool, "")
+	row, err := statedb.HaltState(ctx, pool, "")
 	if err != nil {
 		fmt.Fprintf(out, "api path: not readable (%v) — the file is what decides (SP-E08-3)\n", err)
 		return nil
 	}
-	fmt.Fprintf(out, "api path: %s\n", describe(api, now))
+	fmt.Fprintf(out, "api path: %s\n", describe(row, now))
 	return nil
 }
 

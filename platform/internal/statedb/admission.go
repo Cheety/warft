@@ -216,6 +216,13 @@ func readOrder(ctx context.Context, tx pgx.Tx, orderID string) (admissionRow, er
 		// SP-V04-3 exists to prevent.
 		return r, fmt.Errorf("order %s asks for %d pod minutes; a job reserves what it means to spend (SP-V04-3)", orderID, b.PodMinutes)
 	}
+	if b.Tokens < 0 || b.MoneyMicros < 0 {
+		// Reserving is an addition. A negative amount would subtract, and the pot's own CHECK only
+		// catches a reservation that grows past its cap — so one job asking for minus a million
+		// tokens would hand every other job in the pot a refund.
+		return r, fmt.Errorf("order %s asks for %d tokens and %d µ€; a budget is not a refund (SP-V04-3)",
+			orderID, b.Tokens, b.MoneyMicros)
+	}
 	r.demand = budget.Pots{PodMinutes: b.PodMinutes, Tokens: b.Tokens, MoneyMicros: b.MoneyMicros}
 	return r, nil
 }
@@ -234,7 +241,10 @@ func potFor(ctx context.Context, tx pgx.Tx, row admissionRow, scope budget.Scope
 	case budget.ScopeEnvelope:
 		project, envelope = &row.project, &row.envelope
 	case budget.ScopeProject:
-		project = &row.project
+		// A pot of one day, like the two daily scopes: what a job spends stays counted in the pot
+		// (SP-V04-3 releases only the unspent part), so a standing project pot would become a
+		// lifetime cap — which OP-1 does not rule and "against outliers" does not mean.
+		project, potDay = &row.project, &day
 	case budget.ScopePrincipalDay:
 		potDay = &day
 	case budget.ScopePrincipalChannelDay:
@@ -334,8 +344,8 @@ func checkDailyMoney(ctx context.Context, tx pgx.Tx, row admissionRow, day strin
 	var reserved int64
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(sum(money_reserved_micros), 0) FROM budget_pot
-		 WHERE scope = 'principal_day' AND principal = $1 AND day = $2::date`,
-		row.principal, day).Scan(&reserved); err != nil {
+		 WHERE scope = 'principal_day' AND cell = $3 AND principal = $1 AND day = $2::date`,
+		row.principal, day, row.cell).Scan(&reserved); err != nil {
 		return nil, err
 	}
 	if reserved <= row.dailyCap {
@@ -427,6 +437,28 @@ func HaltState(ctx context.Context, pool *pgxpool.Pool, cell string) (budget.Hal
 	return h, nil
 }
 
+// SetHalt writes the first path: the `halt` row E-08's `halt.set` and `halt.renew` go through. One
+// row per cell, rewritten rather than added to — the halt is a state, not a log of commands, and
+// renewing it is setting it again with a fresh expiry (SP-E08-4).
+func SetHalt(ctx context.Context, pool *pgxpool.Pool, cell, reason, by string, now time.Time) error {
+	if reason == "" {
+		return fmt.Errorf("a halt states a rationale — it is mandatory and reported over all adapters (SP-E08-2)")
+	}
+	_, err := pool.Exec(ctx, `
+		INSERT INTO halt (cell, reason, set_by, set_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (cell) DO UPDATE SET reason = $2, set_by = $3, set_at = $4, expires_at = $5`,
+		cell, reason, by, now, now.Add(budget.HaltExpiry))
+	return err
+}
+
+// ClearHalt is `halt.clear` on the first path. It is one person's to do and it is logged, like
+// setting it (SP-E08-2); what it must never be is silent.
+func ClearHalt(ctx context.Context, pool *pgxpool.Pool, cell string) error {
+	_, err := pool.Exec(ctx, `DELETE FROM halt WHERE cell = $1`, cell)
+	return err
+}
+
 // Pending is one job waiting for admission, as the fairness pass sees it.
 type Pending struct {
 	OrderID    string
@@ -445,11 +477,11 @@ type Pending struct {
 // is never starved behind it. Jobs are taken in the order they arrived within a principal, so
 // fairness between principals does not become unfairness inside one.
 //
-// Weights are per principal, defaulting to 1. Weighting across tenants is the second tenant's work
-// (the boundary of AP-3.6); the shape it will need is here, and nothing reads a weight from the
-// database yet.
+// Every principal carries the same weight here. Weighting across tenants is the second tenant's
+// work (the boundary of AP-3.6), and `budget.Share` already takes the weight the day one is ruled —
+// what is not in this signature is a weight nobody has decided.
 func AdmitPending(ctx context.Context, pool *pgxpool.Pool, cell string, bottleneck int64,
-	weights map[string]int64, halt budget.Halt, now time.Time) ([]Decision, error) {
+	halt budget.Halt, now time.Time) ([]Decision, error) {
 
 	pending, err := pendingOrders(ctx, pool, cell)
 	if err != nil {
@@ -461,11 +493,7 @@ func AdmitPending(ctx context.Context, pool *pgxpool.Pool, cell string, bottlene
 	}
 	claims := make([]budget.Claim, 0, len(wanted))
 	for principal, want := range wanted {
-		w := weights[principal]
-		if w < 1 {
-			w = 1
-		}
-		claims = append(claims, budget.Claim{Principal: principal, Weight: w, Want: want})
+		claims = append(claims, budget.Claim{Principal: principal, Weight: 1, Want: want})
 	}
 	share := map[string]int64{}
 	for _, g := range budget.Share(bottleneck, claims) {
@@ -519,15 +547,25 @@ func pendingOrders(ctx context.Context, pool *pgxpool.Pool, cell string) ([]Pend
 // much of the reservation was actually used. The release then hands back the difference — the trigger
 // in contract/schema.sql does it, so it happens whoever writes the terminal state (SP-K02-1).
 func RecordSpend(ctx context.Context, pool *pgxpool.Pool, orderID string, spent budget.Pots) error {
+	if spent.PodMinutes < 0 || spent.Tokens < 0 || spent.MoneyMicros < 0 {
+		return fmt.Errorf("a spend is what was used, and %+v is not that", spent)
+	}
+	// Only before the terminal state. The release happens at that write and hands back what these
+	// columns did not claim; a spend recorded afterwards would move a number the release already
+	// read, and the pot would never learn of it.
 	tag, err := pool.Exec(ctx, `
 		UPDATE "order" SET spent_pod_minutes = $2, spent_tokens = $3, spent_money_micros = $4
-		 WHERE id = $1`,
+		 WHERE id = $1 AND state NOT IN ('delivered','unproven','failed','cancelled')`,
 		orderID, spent.PodMinutes, spent.Tokens, spent.MoneyMicros)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("no order %s", orderID)
+		var state string
+		if err := pool.QueryRow(ctx, `SELECT state::text FROM "order" WHERE id = $1`, orderID).Scan(&state); err != nil {
+			return fmt.Errorf("no order %s", orderID)
+		}
+		return fmt.Errorf("order %s is %s: its reservation was released at that write, so a spend recorded now would be counted nowhere (SP-V04-3)", orderID, state)
 	}
 	return nil
 }

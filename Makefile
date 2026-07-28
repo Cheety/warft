@@ -21,7 +21,7 @@ help:
 	@echo "make contract         both schemas, their probes, the state machine, the authority token and the node identity, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-B01-3, AB-V05-2 (AP-2.1 through AP-2.5)"
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
 	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
-	@echo "make budget          the pots, the caps, the share-out and the halt with two paths — AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3 (AP-3.6)"
+	@echo "make budget           the pots, the caps, the share-out and the halt with two paths — AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3 (AP-3.6)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
 	@echo "make runner           pods on a node: the contract, no network, the lifecycle, the reaper — AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 (AP-3.3)"
 	@echo "make pipeline         the fixed spine, the seven places, the bounded loop — AB-T05-1, AB-T05-2, AB-T05-3 (AP-3.4)"

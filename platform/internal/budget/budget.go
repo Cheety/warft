@@ -216,15 +216,14 @@ func options(scope Scope, resource string) []string {
 	return nil
 }
 
+// refill is OP-1's period, stated to the sender. Every pot but the envelope pot is a pot of one day;
+// what a running job holds comes back sooner, at its terminal state, but only the part it did not
+// spend (SP-V04-3).
 func refill(scope Scope) string {
-	switch scope {
-	case ScopePrincipalDay, ScopePrincipalChannelDay:
-		return "it refills at the turn of the day"
-	case ScopeEnvelope:
+	if scope == ScopeEnvelope {
 		return "a new message is a new envelope pot"
 	}
-	// The project pot refills only as the jobs holding it reach a terminal state (SP-V04-3).
-	return "it refills as this project's running jobs reach a terminal state"
+	return "it refills at the turn of the day, and partly sooner as this pot's running jobs end"
 }
 
 // Error makes a refusal usable where an error is expected. It names the pot, the numbers and the

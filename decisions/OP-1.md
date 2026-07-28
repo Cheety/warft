@@ -48,6 +48,15 @@ with it.
 against each other, the way `t01-intake.sh` holds OP-5 against the file the binary embeds. A number
 in one and not the other is drift, and drift is an error here.
 
+### How long a pot lasts
+
+**Every pot but the envelope pot is a pot of one day**, in the cell's own UTC day; the envelope pot
+is a pot of one envelope, which is shorter than a day and ends with the message. That has to be
+ruled, because SP-V04-3 releases only the *unspent* part at the terminal state: what a job actually
+spends stays counted in its pots, so a pot without a period would become a lifetime cap — a `public`
+project that had spent sixty pod minutes since it was created would never run again, which is not
+what "per project against outliers" means.
+
 ### The three rules the numbers obey
 
 The table is not twelve free numbers. Three rules generate it, and the acceptance script checks the

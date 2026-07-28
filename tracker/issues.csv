@@ -372,11 +372,11 @@ AP-3.6,work_package,"AP-3.6 · Budget pots, admission and the halt with two path
 Reserve in advance, do not count afterwards: a cost control that only strikes in the evaluation is none. And the halt must take effect even when the API no longer answers — the case in which you need it.
 
 ### Tasks
-- [ ] Three pots: pod_minutes, tokens, money — reservation at admission
-- [ ] An unspent reservation is released at the terminal state
-- [ ] Three caps: per envelope, per project, per principal and day (OP-1)
-- [ ] A limit in pod minutes per principal and channel, not in requests
-- [ ] halt as a field in admission AND as a file on the control node
+- [x] Three pots: pod_minutes, tokens, money — reservation at admission
+- [x] An unspent reservation is released at the terminal state
+- [x] Three caps: per envelope, per project, per principal and day (OP-1)
+- [x] A limit in pod minutes per principal and channel, not in requests
+- [x] halt as a field in admission AND as a file on the control node
 
 ### Done when
 - With the halt file set and the API switched off, no job is admitted, running ones run to completion.

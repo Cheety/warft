@@ -255,20 +255,23 @@ HEAVY='018f4242-0000-7000-8000-0000000000a2'
 LIGHT='018f4242-0000-7000-8000-0000000000a3'
 P='018f4242-0000-7000-8000-0000000000b1'
 P2='018f4242-0000-7000-8000-0000000000b4'
+P3='018f4242-0000-7000-8000-0000000000b5'
+DRAINER='018f4242-0000-7000-8000-0000000000a4'
 PH='018f4242-0000-7000-8000-0000000000b2'
 PL='018f4242-0000-7000-8000-0000000000b3'
 FIXTURES="$(psql_c "
 INSERT INTO cell (id, tenant, retention) VALUES ('probe-c1', 'probe', '{}');
 INSERT INTO principal (id, cell, daily_money_cap_micros) VALUES
-  ('$PRIN', 'probe-c1', 230400000), ('$HEAVY', 'probe-c1', 38400000), ('$LIGHT', 'probe-c1', 38400000);
+  ('$PRIN', 'probe-c1', 230400000), ('$HEAVY', 'probe-c1', 38400000),
+  ('$LIGHT', 'probe-c1', 38400000), ('$DRAINER', 'probe-c1', 230400000);
 INSERT INTO project (id, cell, principal) VALUES
-  ('$P', 'probe-c1', '$PRIN'), ('$P2', 'probe-c1', '$PRIN'),
+  ('$P', 'probe-c1', '$PRIN'), ('$P2', 'probe-c1', '$PRIN'), ('$P3', 'probe-c1', '$DRAINER'),
   ('$PH', 'probe-c1', '$HEAVY'), ('$PL', 'probe-c1', '$LIGHT');
 INSERT INTO identity_link (external_id, principal, cell, confirmed_via, confirmed_at)
   VALUES ('$IDENT', '$PRIN', 'probe-c1', 'app', now());
 INSERT INTO locality_group (id, cell) VALUES ('lg-probe', 'probe-c1');")"
 if [ -z "$FIXTURES" ]; then
-  pass "V04-0c the fixtures stand" "one cell, three principals with a daily money cap, four projects"
+  pass "V04-0c the fixtures stand" "one cell, four principals with a daily money cap, five projects"
 else
   fail "V04-0c the fixtures stand" "$FIXTURES"
   result
@@ -462,6 +465,26 @@ else
   fail "V04-2c nothing was silently truncated" "spec says $KEPT of $ASKED, state $STATE2"
 fi
 
+# And a pot that genuinely runs out, rather than a request nothing could have carried. Twelve
+# one-minute jobs of forty thousand tokens each fill a `public` project's token pot exactly
+# (480000), while its pod minutes are only twelve of sixty — so the thirteenth is refused on tokens
+# with minutes to spare, which is "running out of tokens" and nothing else.
+DRAINED=0
+for i in $(seq 1 12); do
+  Di="$(order "$P3" "$DRAINER" irc public 1 40000 200000 "v04-2-drain-$i")"
+  grep -q '"admitted": true' <<< "$(admit "$Di")" && DRAINED=$((DRAINED+1))
+done
+TOKEN_POT="$(psql_c "SELECT tokens_reserved || '/' || tokens_cap || ' tokens, ' ||
+                            pod_minutes_reserved || '/' || pod_minutes_cap || ' pod minutes'
+                       FROM budget_pot WHERE scope='project' AND project='$P3'")"
+DLAST="$(order "$P3" "$DRAINER" irc public 1 40000 200000 v04-2-drained)"
+RDLAST="$(admit "$DLAST")"
+if [ "$DRAINED" = "12" ] && grep -q '"resource": "tokens"' <<< "$RDLAST" && grep -q '"pot": "project"' <<< "$RDLAST"; then
+  pass "V04-2e a pot that ran out refuses with room to spare" "$TOKEN_POT"
+else
+  fail "V04-2e a pot that ran out refuses with room to spare" "$DRAINED drained · $TOKEN_POT · $(tr '\n' ' ' <<< "$RDLAST")"
+fi
+
 # The refusal is a decision, and B-03 records decisions — with the cause the state contract knows.
 AUDITED="$(psql_c "SELECT detail->>'cause' FROM audit WHERE action='admission.refused'
                     ORDER BY at DESC LIMIT 1")"
@@ -514,6 +537,23 @@ fi
 # AB-E08-3 — the halt takes effect through the file
 # =================================================================================================
 banner "E-08 — the halt with two paths (AB-E08-3, probe)"
+
+# The first path on its own: a halt row, no file. SP-E08-3 asks for a field in admission AND a file,
+# and either one halts the cell.
+"$BIN" control halt --api --set --cell probe-c1 --reason "over the API" --by "the duty officer" >/dev/null
+HA="$(order "$P" "$PRIN" cli confidential 5 40000 200000 e083-api)"
+RHA="$(admit "$HA")"
+if grep -q '"halt_source": "api"' <<< "$RHA"; then
+  pass "E08-3i the field in admission halts on its own" "the halt row, with no file anywhere"
+else
+  fail "E08-3i the field in admission halts on its own" "$(tr '\n' ' ' <<< "$RHA")"
+fi
+"$BIN" control halt --api --clear --cell probe-c1 >/dev/null
+if grep -q '"admitted": true' <<< "$(admit "$HA")"; then
+  pass "E08-3j clearing the row lifts it" "one path set it, the same path cleared it"
+else
+  fail "E08-3j clearing the row lifts it" "the cell stayed halted after halt.clear"
+fi
 
 HALT_ROWS="$(psql_c "SELECT count(*) FROM halt")"
 "$BIN" control halt --set --reason "the model provider answers nonsense" --by "the duty officer" >/dev/null
