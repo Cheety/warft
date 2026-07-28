@@ -1,0 +1,31 @@
+# op1-pots.tsv — the machine-readable half of decisions/OP-1.md.
+#
+# The ruling is the source; this file is the same twelve rows in the shape admission reads them in,
+# and acceptance/v04-budget.sh holds the two against each other on every run. A number in one that
+# is not in the other is drift, and the run fails — the same rule OP-5 and op5-policy.tsv stand
+# under.
+#
+# The three rules the ruling states generate the table, and the script checks them too:
+#
+#   tokens       = 8000 * pod_minutes        (a pod minute is worth eight thousand tokens)
+#   money_micros = 5 * tokens                (5 EUR per million tokens)
+#   the principal_channel_day row binds pod minutes only — SP-T01-8 asks for a limit in pod
+#   minutes, so its token and money caps are the principal_day ones and can never refuse first.
+#
+# It is embedded into the binary (go:embed): admission runs where the halt file is read and the
+# state database answers, and a cap that had to be fetched would be a cap that is absent exactly
+# when the fetch fails.
+#
+#   pot  LEVEL         SCOPE                  POD_MINUTES  TOKENS     MONEY_MICROS
+pot	public	envelope	5	40000	200000
+pot	public	project	60	480000	2400000
+pot	public	principal_day	120	960000	4800000
+pot	public	principal_channel_day	60	960000	4800000
+pot	linked	envelope	30	240000	1200000
+pot	linked	project	480	3840000	19200000
+pot	linked	principal_day	960	7680000	38400000
+pot	linked	principal_channel_day	480	7680000	38400000
+pot	confidential	envelope	120	960000	4800000
+pot	confidential	project	2880	23040000	115200000
+pot	confidential	principal_day	5760	46080000	230400000
+pot	confidential	principal_channel_day	2880	46080000	230400000

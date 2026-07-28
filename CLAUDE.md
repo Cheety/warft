@@ -134,6 +134,8 @@ acceptance/              registry.py · registry.tsv — the 212 checks and thei
                          job that cannot be solved ending after OP-2's rounds (AP-3.4)
                          k03-outbox.sh — K-03's chain: both gates on their sockets, a job run twice
                          that pushes once, and the one refusal to retry (AP-3.5)
+                         v04-budget.sh — V-04: reservation at admission, release at the terminal
+                         state, the channel limit, and the halt file with the API off (AP-3.6)
                          e05-constants.tsv — those constants, given and measured; what R-D computes
                          with, and the machine-readable half of decisions/E-05.md
 Makefile                 make acceptance — the instrument; fails while anything is red
@@ -143,7 +145,8 @@ decisions/               rulings E-01…E-11, open points OP-1…OP-10, and the 
 image/                   mkosi configuration, the units a role activates, build · seal · verify · vm
 platform/                the one Go binary: the A-04 start sequence, SP-E02-1's seven entry points,
                          the Runner contract (T-04), the pipeline (T-05) beside it, the workpod
-                         that implements both, and K-03's outbox with the two gates that drain it
+                         that implements both, K-03's outbox with the two gates that drain it, and
+                         V-04's pots with the admission that reserves them
 ```
 
 All three started empty and were filled by the work package that owns them — AP-0.1, AP-1.1,

@@ -37,7 +37,14 @@ func (s *server) SubmitEnvelope(ctx context.Context, env *workpodv1.Envelope) (*
 		return nil, status.Errorf(codes.Internal, "intake: %v", err)
 	}
 	logIntake(e, res)
-	return &workpodv1.EnvelopeAck{OrderId: res.OrderID, Deduplicated: res.Deduplicated}, nil
+	ack := &workpodv1.EnvelopeAck{OrderId: res.OrderID, Deduplicated: res.Deduplicated}
+	if res.OrderID != "" {
+		// V-04: the pots are reserved at admission, and admission is here — the same call the job
+		// was created in. A redelivery finds its order already admitted and reserves nothing a
+		// second time (SP-T01-7).
+		s.admitAtIntake(ctx, pool, e.Cell, res.OrderID, ack)
+	}
+	return ack, nil
 }
 
 // toStateDB validates the envelope and translates it. The checks here are the ones the platform

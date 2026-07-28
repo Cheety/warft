@@ -25,6 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	workpodv1 "github.com/Cheety/warft/platform/api/workpodv1"
 	"github.com/Cheety/warft/platform/internal/attachment"
@@ -161,11 +162,32 @@ func (s *server) RequestCapacity(req *workpodv1.CapacityRequest, stream grpc.Ser
 	return nil
 }
 
-// SendHeartbeat accepts the worker's heartbeats. Halt notices ride the return stream once the
-// halt file exists (AP-3.6); until then there is nothing truthful to send.
+// SendHeartbeat accepts the worker's heartbeats and answers each with the halt as it stands
+// (SP-E08-3). Both paths are read per heartbeat rather than cached: a halt that a worker learned of
+// a minute late is a minute of pods it should not have started, and an expiry that a cache missed
+// is a cell that stayed halted after nobody was renewing it (SP-E08-4).
 func (s *server) SendHeartbeat(stream grpc.BidiStreamingServer[workpodv1.Heartbeat, workpodv1.HaltNotice]) error {
 	for {
-		if _, err := stream.Recv(); err != nil {
+		beat, err := stream.Recv()
+		if err != nil {
+			return nil
+		}
+		now := time.Now()
+		// A heartbeat names its node, not its cell (contract/platform.proto), and a plane serves one
+		// cell's state database anyway (E-02) — so the halt of "this cell" is the halt to send.
+		halt, err := haltNow(stream.Context(), s.pool(), "", now)
+		if err != nil {
+			// Neither path could be read. The worker is told nothing rather than "no halt": a
+			// heartbeat that answered "carry on" from an unreadable halt would be the one lie this
+			// stream must not tell.
+			log.Printf("heartbeat from %s: the halt could not be read (%v)", beat.GetNodeId(), err)
+			continue
+		}
+		notice := &workpodv1.HaltNotice{Halted: halt.Active(now), Reason: halt.Reason}
+		if halt.Active(now) {
+			notice.ExpiresAt = timestamppb.New(halt.ExpiresAt)
+		}
+		if err := stream.Send(notice); err != nil {
 			return nil
 		}
 	}

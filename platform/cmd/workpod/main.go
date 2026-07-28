@@ -54,6 +54,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, `workpod — the platform in one artifact (E-02)
 
 components   control · scheduler · worker · adapter · git-gate · egress-gate · harness
+control      control admit · control halt · control spend (V-04, E-08)
 adapter      adapter submit · adapter identity · adapter capabilities (T-01)
 outbox       outbox record · outbox list · outbox drain · outbox unanswered · outbox ask (K-03)
 gates        git-gate --socket … · egress-gate --socket … (K-03, B-02)
@@ -134,6 +135,15 @@ func main() {
 	switch os.Args[1] {
 
 	case "control":
+		// `workpod control` serves; `workpod control admit|halt|spend` are the operator's, and they
+		// run against the state database and the halt file without the plane — which is what makes
+		// a halt with the API switched off checkable at all (SP-E08-3).
+		if len(os.Args) > 2 {
+			if err := controlplane.Command(os.Args[2:], os.Stdout); err != nil {
+				fail(err)
+			}
+			return
+		}
 		v := boot.Read()
 		if err := v.Validate(); err != nil {
 			fail(err)

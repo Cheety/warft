@@ -27,15 +27,16 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | base | `internal/attachment` | — | anything |
 | base | `internal/allocation` | — | anything |
 | base | `internal/runner` | — | anything |
+| base | `internal/budget` | — | anything |
 | step | `internal/disk` | `internal/boot` | another step, a role, `cmd` |
 | step | `internal/selftest` | `internal/boot`, `internal/cgroup` | another step, a role, `cmd` |
-| step | `internal/statedb` | `internal/boot`, `internal/ids` | another step, a role, `cmd` |
+| step | `internal/statedb` | `internal/boot`, `internal/budget`, `internal/ids` | another step, a role, `cmd` |
 | step | `internal/outbox` | `api/workpodv1` | another step, a role, `cmd` |
 | step | `internal/workpod` | `api/workpodv1`, `internal/allocation`, `internal/cgroup`, `internal/outbox`, `internal/runner` | another step, a role, `cmd` |
 | role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids`, `internal/outbox` | another role, a step, `cmd` |
 | role | `internal/egress` | `api/workpodv1`, `internal/outbox` | another role, a step, `cmd` |
 | role | `internal/gitgate` | `api/workpodv1`, `internal/outbox` | another role, a step, `cmd` |
-| role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
+| role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/budget`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
 | role | `internal/harness` | `api/workpodv1`, `internal/runner` | another role, a step, `cmd` |
 | role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/workpod` | another role, a step, `cmd` |
 | entry | `cmd/workpod` | every module above | — |
@@ -66,6 +67,13 @@ Five of those "may not" lines carry the weight and are worth saying in prose:
   host side (`internal/workpod`) imports it to record an intent and never to execute one. Putting
   the key in either gate would make the other gate's idempotency a favour from the first, and
   putting it in the worker would put it above the two things that need it most.
+- **The budget is below the transaction that spends it.** `internal/budget` holds OP-1's caps, the
+  shape of a refusal and the halt as it is read from a file, and it imports nothing — not even the
+  database driver. The reservation itself is a transaction over `budget_pot` and belongs to
+  `internal/statedb`, and the answer the sender gets belongs to `internal/controlplane`; both import
+  the caps, neither owns them. The halt is the reason this matters: SP-E08-3's second path has to be
+  readable when the state database is the part that is broken, so the module that reads it may not
+  depend on the module that talks to it.
 - **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
   and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
   contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so

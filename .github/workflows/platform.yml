@@ -24,10 +24,13 @@ on:
       - 'acceptance/t01-intake.sh'
       - 'acceptance/t05-pipeline.sh'
       - 'acceptance/k03-outbox.sh'
+      - 'acceptance/v04-budget.sh'
       - 'acceptance/module-contract.py'
+      - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/gates-and-the-outbox.md'
+      - 'decisions/halt-file.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
       - 'decisions/pod-runtime.md'
@@ -41,10 +44,13 @@ on:
       - 'acceptance/t01-intake.sh'
       - 'acceptance/t05-pipeline.sh'
       - 'acceptance/k03-outbox.sh'
+      - 'acceptance/v04-budget.sh'
       - 'acceptance/module-contract.py'
+      - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
       - 'decisions/gates-and-the-outbox.md'
+      - 'decisions/halt-file.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
       - 'decisions/pod-runtime.md'
@@ -92,3 +98,11 @@ jobs:
       # state-machine leg of the contract workflow uses.
       - name: Intake, its idempotency and its attachments
         run: ./acceptance/t01-intake.sh
+
+      # AP-3.6. OP-1's caps against the file the binary embeds, and then the whole of V-04 against a
+      # real state database: the reservation at admission, the release at the terminal state, the
+      # channel limit in pod minutes, the refusal that answers with options, the share-out of the
+      # bottleneck, and the halt file deciding with the plane stopped. This is where AB-V04-1,
+      # AB-V04-2, AB-V04-4, AB-T01-8 and AB-E08-3 turn green.
+      - name: The pots, the caps, the share-out and the halt with two paths
+        run: ./acceptance/v04-budget.sh

@@ -186,10 +186,19 @@ func submit(args []string, v boot.Values, out io.Writer) error {
 	// respond(): what came back, rendered into the language of the channel. The detail carries
 	// the one fact this work package exists for — whether the message had been seen before.
 	detail := "envelope " + env.GetId()
-	if ack.GetDeduplicated() {
+	switch {
+	case ack.GetDeduplicated():
 		detail = "the same message was already delivered; this is the job it produced then (SP-T01-7)"
-	} else if ack.GetOrderId() == "" {
+	case ack.GetOrderId() == "":
 		detail = "envelope " + env.GetId() + " stored; no acceptance criterion, no job (SP-Q01-6)"
+	case !ack.GetAdmitted():
+		// V-04's refusal, rendered into the channel it came from. The options travel with it: a
+		// pot that ran out answers with what can be done about it, never with a truncated result
+		// (SP-V04-2).
+		detail = "not admitted — " + ack.GetRefusal()
+		for _, o := range ack.GetOptions() {
+			detail += "\n  · " + o
+		}
 	}
 	line, err := c.Respond(&workpodv1.Event{
 		Id:        ids.New(),

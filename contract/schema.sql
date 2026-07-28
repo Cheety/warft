@@ -165,6 +165,13 @@ CREATE TABLE "order" (
   prompt_version text,
   cause          cause_code,
   evidence       evidence_class,
+  -- V-04: what the job actually spent, against what it reserved at admission. The worker writes
+  -- these with its report, before it writes the terminal state; the release then hands back the
+  -- difference (release_reservation below). Zero means "nothing measured yet", which is the honest
+  -- state of a job that has not run.
+  spent_pod_minutes  bigint NOT NULL DEFAULT 0,
+  spent_tokens       bigint NOT NULL DEFAULT 0,
+  spent_money_micros bigint NOT NULL DEFAULT 0,
   created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (spec_id, spec_version) REFERENCES spec(id, version),
@@ -363,21 +370,93 @@ CREATE TABLE budget_pot (
   cell       text NOT NULL REFERENCES cell(id),
   project    uuid REFERENCES project(id),
   principal  uuid REFERENCES principal(id),
-  scope      text NOT NULL CHECK (scope IN ('envelope','project','principal_day')),
+  scope      text NOT NULL CHECK (scope IN ('envelope','project','principal_day',
+                                            'principal_channel_day')),
+  -- OP-1: the caps are ruled per authority level, so a pot is keyed by one. A stranger in an open
+  -- channel cannot spend the day a confidential channel was granted, even when both belong to the
+  -- same principal, because the two draw from different pots.
+  authority  authority_level NOT NULL DEFAULT 'public',
+  envelope   uuid REFERENCES envelope(id),   -- the envelope scope, SP-V04-5: against abuse
+  channel    text,                           -- SP-T01-8: pod minutes per principal and channel
+  day        date,                           -- the two daily scopes; UTC, the cell's own day
   pod_minutes_reserved bigint NOT NULL DEFAULT 0,
   pod_minutes_cap      bigint NOT NULL,
   tokens_reserved      bigint NOT NULL DEFAULT 0,
   tokens_cap           bigint NOT NULL,
   money_reserved_micros bigint NOT NULL DEFAULT 0,
   money_cap_micros      bigint NOT NULL,
-  -- SP-V04-5: three caps, three purposes. The principal-day pot is the one scope that spans
-  -- projects, and the only lawful reason for an empty project on this table.
-  CONSTRAINT pot_scope_project   CHECK ((scope = 'principal_day') = (project IS NULL)),
-  CONSTRAINT pot_scope_principal CHECK (scope <> 'principal_day' OR principal IS NOT NULL),
+  -- SP-V04-5: three caps, three purposes; SP-T01-8 adds the fourth. The two daily scopes are the
+  -- ones that span projects, and the only lawful reason for an empty project on this table.
+  CONSTRAINT pot_scope_project   CHECK ((scope IN ('principal_day','principal_channel_day'))
+                                        = (project IS NULL)),
+  CONSTRAINT pot_scope_principal CHECK (scope NOT IN ('principal_day','principal_channel_day')
+                                        OR (principal IS NOT NULL AND day IS NOT NULL)),
+  CONSTRAINT pot_scope_envelope  CHECK ((scope = 'envelope') = (envelope IS NOT NULL)),
+  CONSTRAINT pot_scope_channel   CHECK ((scope = 'principal_channel_day') = (channel IS NOT NULL)),
   CHECK (pod_minutes_reserved <= pod_minutes_cap),
   CHECK (tokens_reserved <= tokens_cap),
   CHECK (money_reserved_micros <= money_cap_micros)
 );
+
+-- One pot per key, or the reservation would be spread over pots nobody can find again. The keys
+-- are what OP-1 rules the caps by: the scope, the authority level, and what the scope is about.
+CREATE UNIQUE INDEX budget_pot_envelope_idx ON budget_pot (cell, envelope, authority)
+  WHERE scope = 'envelope';
+CREATE UNIQUE INDEX budget_pot_project_idx ON budget_pot (cell, project, authority)
+  WHERE scope = 'project';
+CREATE UNIQUE INDEX budget_pot_principal_day_idx ON budget_pot (cell, principal, day, authority)
+  WHERE scope = 'principal_day';
+CREATE UNIQUE INDEX budget_pot_channel_day_idx ON budget_pot (cell, principal, channel, day, authority)
+  WHERE scope = 'principal_channel_day';
+
+-- SP-V04-3: reserve in advance, do not count afterwards — and release what was not spent at the
+-- terminal state. This table is what makes the second half possible: it records which pots an
+-- admitted job holds and how much of each, so the release is arithmetic rather than a second guess
+-- at what the job was going to cost.
+CREATE TABLE budget_reservation (
+  order_id    uuid NOT NULL REFERENCES "order"(id),
+  pot         uuid NOT NULL REFERENCES budget_pot(id),
+  cell        text NOT NULL REFERENCES cell(id),
+  project     uuid NOT NULL REFERENCES project(id),
+  pod_minutes  bigint NOT NULL,
+  tokens       bigint NOT NULL,
+  money_micros bigint NOT NULL,
+  reserved_at timestamptz NOT NULL DEFAULT now(),
+  released_at timestamptz,
+  PRIMARY KEY (order_id, pot)
+);
+
+-- V-04: the release at the terminal state is a rule of the contract, not a courtesy of whoever
+-- writes the state. The worker writes `delivered`, `unproven` and `failed` (SP-K02-1) and the
+-- control plane writes `cancelled`; neither of them should have to remember the pots, and a job
+-- whose process died between the two writes would otherwise hold its reservation for ever.
+--
+-- What is released is the unspent part: the reservation minus what the job actually spent, which
+-- the worker records on the order before it ends it. A job that spent more than it reserved
+-- releases nothing — the overspend stays reserved until a human looks at it.
+CREATE OR REPLACE FUNCTION release_reservation() RETURNS trigger AS $$
+BEGIN
+  IF NEW.state IN ('delivered','unproven','failed','cancelled') AND NEW.state <> OLD.state THEN
+    UPDATE budget_pot p SET
+      pod_minutes_reserved  = p.pod_minutes_reserved
+                              - greatest(r.pod_minutes  - least(NEW.spent_pod_minutes,  r.pod_minutes),  0),
+      tokens_reserved       = p.tokens_reserved
+                              - greatest(r.tokens       - least(NEW.spent_tokens,       r.tokens),       0),
+      money_reserved_micros = p.money_reserved_micros
+                              - greatest(r.money_micros - least(NEW.spent_money_micros, r.money_micros), 0)
+      FROM budget_reservation r
+     WHERE r.pot = p.id AND r.order_id = NEW.id AND r.released_at IS NULL;
+
+    UPDATE budget_reservation SET released_at = now()
+     WHERE order_id = NEW.id AND released_at IS NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER order_release_budget
+  AFTER UPDATE ON "order"
+  FOR EACH ROW EXECUTE FUNCTION release_reservation();
 
 -- ---------------------------------------------------------------------------
 -- The versioned artifacts a job pins (SP-K01-8): capability, container image,

@@ -382,7 +382,12 @@ message EnrollRequest  { string enrollment_token = 1; string role = 2; string ce
 message EnrollResponse { bytes certificate = 1; google.protobuf.Timestamp expires_at = 2; }
 message HaltNotice     { bool halted = 1; string reason = 2; google.protobuf.Timestamp expires_at = 3; }
 message ReportAck      { bool accepted = 1; }
-message EnvelopeAck    { string order_id = 1; bool deduplicated = 2; }
+// V-04, E-08: admission happens while intake is still on the line, because SP-V04-3 reserves in
+// advance. `admitted` says whether the job may run; `refusal`, `options` and `cause` are SP-V04-2's
+// "a reply with options instead of a silent truncation", and they are fields rather than a status
+// message because the envelope itself was accepted — only the job was not.
+message EnvelopeAck    { string order_id = 1; bool deduplicated = 2; bool admitted = 3;
+                         string refusal = 4; repeated string options = 5; string cause = 6; }
 message EventAck       { bool accepted = 1; }
 message FactQuery      { string query = 1; repeated string build_targets = 2; }
 message FactResult     { bytes rows = 1; string indexer_version = 2; }

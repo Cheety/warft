@@ -21,6 +21,7 @@ help:
 	@echo "make contract         both schemas, their probes, the state machine, the authority token and the node identity, and the working tree against HEAD — AB-E10-*, AB-K01-*, AB-K02-*, AB-K04-*, AB-B01-3, AB-V05-2 (AP-2.1 through AP-2.5)"
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
 	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
+	@echo "make budget          the pots, the caps, the share-out and the halt with two paths — AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3 (AP-3.6)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
 	@echo "make runner           pods on a node: the contract, no network, the lifecycle, the reaper — AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 (AP-3.3)"
 	@echo "make pipeline         the fixed spine, the seven places, the bounded loop — AB-T05-1, AB-T05-2, AB-T05-3 (AP-3.4)"
@@ -93,6 +94,14 @@ platform:
 # and every attachment OP-5 refuses.
 intake:
 	@acceptance/t01-intake.sh
+
+# AP-3.6. V-04 and E-08 against a Postgres 16 the script spins itself: OP-1's caps against the file
+# the binary embeds, the reservation at admission and the release at the terminal state, the channel
+# limit that counts minutes rather than requests, the token pot answering with options, the
+# bottleneck shared out between a heavy and a light sender, and the halt file deciding with the
+# plane stopped. `acceptance/v04-budget.sh host` is the half that needs no machine.
+budget:
+	@acceptance/v04-budget.sh
 
 # AP-3.1. The A-04 start sequence against the image `make image` built: four boots — the sequence
 # to a registered node, the reinstall that only /data/db survives, the withheld boot value, and
