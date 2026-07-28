@@ -190,7 +190,8 @@ because otherwise the measurement from step 1 has nowhere to go.*
   query. → AB-K01-7
 
 **Measurement of this stage:** jobs per hour on one node; share of orphaned subvolumes after a restart
-(must be zero); double execution without double effect passed. → AB-A06-11, AB-A06-13
+(must be zero); double execution without double effect passed.
+→ AB-T04-5, AB-A06-11, `acceptance/stage3-measurement.sh` (`decisions/stage-3-measurement.md`)
 
 ---
 

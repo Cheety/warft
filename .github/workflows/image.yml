@@ -37,6 +37,9 @@ on:
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
+      - 'acceptance/stage3-measurement.sh'
+      - 'acceptance/stage3-measurement.tsv'
+      - 'decisions/stage-3-measurement.md'
       - 'decisions/E-05.md'
       - 'decisions/OP-2.md'
       - 'decisions/pod-runtime.md'
@@ -56,6 +59,9 @@ on:
       - 'acceptance/calibration.sh'
       - 'acceptance/calibration-probe.sh'
       - 'acceptance/e05-constants.tsv'
+      - 'acceptance/stage3-measurement.sh'
+      - 'acceptance/stage3-measurement.tsv'
+      - 'decisions/stage-3-measurement.md'
       - 'decisions/E-05.md'
       - 'decisions/OP-2.md'
       - 'decisions/pod-runtime.md'
@@ -183,6 +189,14 @@ jobs:
       # takes what it needs and no more — and every number the run prints carries the machine with it.
       - name: AB-A06-13, AB-A06-4, AB-E05-1 — the calibration run
         run: ./acceptance/calibration.sh
+
+      # The measurement stage 3 ends with (E-11). One more boot of the same artifact: twenty jobs
+      # through the whole of T-05's spine, in pods, on one node, timed — and the two numbers that
+      # are already acceptance rows read out of the registry rather than measured a second time.
+      # The ruling is decisions/stage-3-measurement.md and the table is
+      # acceptance/stage3-measurement.tsv.
+      - name: Stage 3's measurement — jobs per hour on one node
+        run: ./acceptance/stage3-measurement.sh
 
       - name: Collect the SBOM
         if: always()

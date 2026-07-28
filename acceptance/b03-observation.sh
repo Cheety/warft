@@ -17,13 +17,18 @@
 #   AB-B02-5  S  rejected targets in the display — a cluster is visible, not merely logged
 #   AB-A05-5  S  disk alert — the disk is the first consumable with an alert
 #
-# The ninth row of the work package, AB-A06-9 ("one job from envelope to patch, on one machine"),
-# needs a pod and therefore a machine: btrfs for the working copy in O(1) and runc for the pod
-# itself (SP-T04-1, decisions/pod-runtime.md). The chain is driven here as far as a runner without
-# those goes — envelope, intake, admission, queue, attempt, trace, patch, gate, receipt, and the one
-# query that puts them back together — and the pod half is run where it can be, reported as skipped
-# where it cannot. A row that claimed the pod ran on a machine that has no btrfs would be the kind
-# of green Q-02 exists to refuse.
+# The ninth row of the work package is AB-A06-9, "one job from envelope to patch, on one machine",
+# and it is the reason this script runs the whole chain rather than the trace alone: envelope,
+# intake, admission, queue, the pod, the trace, the patch, the gate, the receipt, and the one query
+# that puts them back together.
+#
+# The pod is the half that has requirements the others do not: btrfs for the working copy in O(1),
+# runc for the container, and the privilege to write the cgroup R-A's contract goes into (SP-T04-1,
+# decisions/pod-runtime.md). Where a machine has all three, the order this chain admitted is run as
+# a pod on it and AB-A06-9 is claimed; where it has not, the pod half is reported as skipped and the
+# row is not claimed. The leg in .github/workflows/platform.yml is what gives a build runner those
+# three, because a row that claimed the pod ran on a machine with no btrfs would be the kind of
+# green Q-02 exists to refuse.
 #
 # The rulings are checked first and against the files the binary embeds: decisions/alerts.md against
 # alerts.tsv against the seed in contract/schema.sql — three copies of one catalog, held against
@@ -372,15 +377,116 @@ else
   fail "A06-9b it was admitted and queued" "state=$STATE · $(tail -2 "$SCRATCH/admit.log" | tr '\n' ' ')"
 fi
 
-# The job runs. Where the machine carries btrfs and runc, that is a pod; where it does not, the
-# phase log is stated from the *program's own spine* rather than from this script's opinion of it,
-# and the difference is reported rather than papered over.
+# The job runs. Where the machine is laid out like a node, that is a pod — a runc container on a
+# btrfs snapshot of a base, which is what SP-T04-1 and decisions/pod-runtime.md say a pod is and
+# admits of no cheaper substitute. Where it is not, the phase log is stated from the *program's own
+# spine* rather than from this script's opinion of it, and the difference is reported rather than
+# papered over.
+#
+# The order that runs is the order this chain admitted — same identifier, same project — because
+# AB-A06-9 asks for *one* job from the envelope to the patch and a second job in the middle would
+# make it two.
 POD_RAN=0
+POD_WHY=""
 REPORT="$SCRATCH/report.json"
-if [ -n "${WORKPOD_POD_BASE:-}" ] && command -v runc >/dev/null 2>&1; then
-  if "$BIN" pod run --job "$SCRATCH/job.json" --base "$WORKPOD_POD_BASE" --reap report > "$REPORT" 2>&1; then
+
+# The pod commands run privileged and the rest of this script does not. On a node the worker is
+# root and the question does not arise; on a build runner it does, and the answer is *not* to run
+# the whole script as root — everything else here talks to a Postgres in docker and to a control
+# plane, both of which belong to the user whose session set them up. Elevating the four commands
+# that write a cgroup and a subvolume keeps the privilege where the requirement is.
+POD_AS=""
+if [ "$(id -u)" != "0" ] && sudo -n true 2>/dev/null; then
+  POD_AS="sudo -n"
+fi
+
+# pod_machine — whether a pod can run here at all. Three conditions, and none of them is a
+# convenience: btrfs because the working copy is a snapshot in O(1) (SP-T04-1, SP-A05-2), runc
+# because the pod is a container and containerd is deliberately not in the path
+# (decisions/pod-runtime.md §1), and the privilege to write the pod's cgroup, because R-A's
+# contract goes into it before the first instruction (SP-RA-1). /data/work is not configurable: the
+# binary takes no environment (SP-A04-4), so a machine that wants to run pods is laid out like a
+# node or is not one.
+pod_machine() {
+  command -v runc >/dev/null 2>&1 || { POD_WHY="no runc in the path"; return 1; }
+  [ "$(id -u)" = "0" ] || [ -n "$POD_AS" ] \
+    || { POD_WHY="neither root nor sudo, so R-A's contract cannot be written into a cgroup"; return 1; }
+  [ -d /data/work ] || { POD_WHY="no /data/work — this machine is not laid out like a node (SP-A05-1)"; return 1; }
+  [ "$(stat -f -c %T /data/work 2>/dev/null)" = "btrfs" ] \
+    || { POD_WHY="/data/work is not btrfs, so there is no snapshot in O(1)"; return 1; }
+  # The fifth knob of R-A, and the one a kernel can simply not have: io.latency comes from
+  # BLK_CGROUP_IOLATENCY, and a pod whose cgroup has no such file cannot be given the contract
+  # SP-RA-4 requires. Probed by looking for the file anywhere the io controller is already enabled,
+  # because before a pod exists there is no pod cgroup to ask. A build runner's kernel is where
+  # this fails; decisions/a06-9-one-machine.md is what it means for this row.
+  [ -n "$(find /sys/fs/cgroup -maxdepth 2 -name io.latency -print -quit 2>/dev/null)" ] \
+    || { POD_WHY="this kernel has no io.latency, so R-A's fifth knob cannot be written (SP-RA-4)"; return 1; }
+  return 0
+}
+
+if pod_machine; then
+  # An image in the index, so that T-03 resolves a hit rather than making a build job of it. The
+  # layer is this machine's own /usr: the pod needs a shell and coreutils, and on a node those come
+  # out of the container image the same way.
+  SKEL="$SCRATCH/skeleton"
+  mkdir -p "$SKEL"/{usr,proc,sys,dev,tmp,run,work,harness,etc,var}
+  ln -sf usr/bin "$SKEL/bin"; ln -sf usr/sbin "$SKEL/sbin"
+  ln -sf usr/lib "$SKEL/lib"; ln -sf usr/lib64 "$SKEL/lib64"
+  printf '{"language":"sh","language_version":"5","system_packages":["coreutils"]}' \
+    > "$SCRATCH/requirements.json"
+  $POD_AS "$BIN" pod image import --skeleton "$SKEL" --requirements "$SCRATCH/requirements.json" \
+    --layer /usr:/usr > "$SCRATCH/import.log" 2>&1
+
+  # The base the working copy is snapshotted off. Keyed by this run so that two runs on one machine
+  # do not share a subvolume — the reaper sweeps working copies, not bases.
+  BASE_SRC="$SCRATCH/repo-base"
+  mkdir -p "$BASE_SRC"
+  printf 'def parse(s):\n    return s.strip()\n' > "$BASE_SRC/parser.py"
+  POD_BASE="${WORKPOD_POD_BASE:-$($POD_AS "$BIN" pod base "b03-$$" --from "$BASE_SRC" 2>"$SCRATCH/base.log" \
+    | awk -F'\t' '$1 == "base" {print $2}')}"
+
+  # The job, stated by hand — which is what stage 3 is (E-11 step 3, decisions/jobs-by-hand.md).
+  # It carries the order's own identifier, one blocking check, and the evidence class the delivery
+  # claims (Q-02): the pod has to make the check pass before `deliver` may name it.
+  cat > "$SCRATCH/job.json" <<EOF
+{
+  "order_id": "$ORDER",
+  "attempt": 1,
+  "cell": "probe-c1",
+  "project": "$PROJ",
+  "platform": "alpine",
+  "class": "small",
+  "requirements": {"language": "sh", "language_version": "5", "system_packages": ["coreutils"]},
+  "command": ["/bin/sh", "-c", "printf 'def parse(s):\\\\n    return s.strip().lower()\\\\n' > parser.py"],
+  "places": {"checks": [{"name": "deterministic",
+                         "command": ["/bin/sh", "-c", "grep -q lower parser.py"],
+                         "blocks": true}],
+             "acceptance": "tests.new"}
+}
+EOF
+
+  if [ -n "$POD_BASE" ] \
+     && $POD_AS "$BIN" pod run --job "$SCRATCH/job.json" --base "$POD_BASE" --reap report > "$REPORT" 2>&1; then
     POD_RAN=1
   fi
+fi
+
+# What the pod did, said as a row of its own — because the row underneath (AB-A06-9) may only be
+# claimed where this one passed. A machine that could run a pod and did not is a failure; a machine
+# that cannot is a skip, and says which of the three conditions it fails.
+if pod_machine; then
+  if [ "$POD_RAN" = "1" ]; then
+    POD_FINAL="$(json "
+import json
+r = json.load(open('$REPORT'))
+print('%s/%s %d phases' % (r['final_state'], r.get('evidence') or 'none', len(r['phases'])))" 2>/dev/null)"
+    pass "A06-9c the admitted order ran as a pod on this machine" "${POD_FINAL:-a report} · base $POD_BASE"
+  else
+    fail "A06-9c the admitted order ran as a pod on this machine" "$(tail -3 "$REPORT" 2>/dev/null | tr '\n' ' ')"
+    POD_WHY="the pod did not run on a machine that can run one — see A06-9c"
+  fi
+else
+  skip "A06-9c the admitted order ran as a pod on this machine" "$POD_WHY"
 fi
 if [ "$POD_RAN" = "0" ]; then
   SPINE="$("$BIN" pod pipeline | json "
@@ -405,12 +511,21 @@ json.dump({"order_id": "", "attempt": 1, "final_state": "delivered", "evidence":
 PY
 fi
 
-# The pod's console, on the node, immediately (SP-B03-4). Where a pod ran it wrote one; here it is
-# written where a pod would have left it, so the row measures what happens to a log rather than
-# who produced it.
+# The pod's console, on the node, immediately (SP-B03-4). Where a pod ran and its console is still
+# on the disk, that file is the evidence; where it is not — no pod, or a console that went with the
+# pod's /run directory when the reaper swept it — one is written where a pod would have left it, so
+# that the row measures what happens to a log rather than who produced it.
 POD_LOG="$SCRATCH/var/logs/$ORDER-1.log"
 mkdir -p "$(dirname "$POD_LOG")"
-printf 'harness: prepare\nharness: check — 1 failing\nharness: repair\nharness: deliver\n' > "$POD_LOG"
+if [ "$POD_RAN" = "1" ]; then
+  FROM_POD="$(json "
+import json
+print(json.load(open('$REPORT')).get('log_path') or '')" 2>/dev/null)"
+  [ -n "$FROM_POD" ] && [ -s "$FROM_POD" ] && POD_LOG="$FROM_POD" && POD_LOG_IS_THE_PODS=1
+fi
+if [ -z "${POD_LOG_IS_THE_PODS:-}" ]; then
+  printf 'harness: prepare\nharness: check — 1 failing\nharness: repair\nharness: deliver\n' > "$POD_LOG"
+fi
 
 # =================================================================================================
 # AB-B03-1, AB-Q04-4 — the trace
@@ -566,9 +681,9 @@ TARGET="git+$BARE#main"
 "$BIN" outbox drain --dir "$OUTBOX_DIR" --git-gate "$GIT_SOCK" > "$SCRATCH/drain.log" 2>&1
 COMMITS="$(git -C "$BARE" rev-list --count main 2>/dev/null || echo 0)"
 if [ "$COMMITS" = "2" ]; then
-  pass "A06-9c the patch reached the repository" "one push through the git gate (K-03)"
+  pass "A06-9d the patch reached the repository" "one push through the git gate (K-03)"
 else
-  fail "A06-9c the patch reached the repository" "$COMMITS commit(s) · $(tail -2 "$SCRATCH/drain.log" | tr '\n' ' ')"
+  fail "A06-9d the patch reached the repository" "$COMMITS commit(s) · $(tail -2 "$SCRATCH/drain.log" | tr '\n' ' ')"
 fi
 
 FOLDED="$("$BIN" observe effects --dir "$OUTBOX_DIR" --order "$ORDER" 2>&1)"
@@ -842,17 +957,40 @@ fi
 # =================================================================================================
 banner "AB-A06-9 — the whole chain, on one machine"
 
+# The patch of this row is the pod's own — `diff -ruN base working-copy`, written to the node's
+# patch directory and named in the report by its hash (SP-T04-3). It is not the payload the gate
+# pushed: the gate takes `git apply` form and a working-copy diff is not that yet, and turning one
+# into the other is nobody's work package in stage 3, where jobs are stated by hand
+# (decisions/jobs-by-hand.md). So the two halves are checked as what they are — the pod produced a
+# patch, the outbox pushed one exactly once — rather than asserted to be one file.
+PATCH_FROM_POD=""
+if [ "$POD_RAN" = "1" ]; then
+  PATCH_FROM_POD="$(json "
+import json
+r = json.load(open('$REPORT'))
+p = r.get('patch_path') or ''
+print('%s %s' % (r.get('patch_hash') or 'none', p))" 2>/dev/null)"
+  if [ -n "${PATCH_FROM_POD#* }" ] && [ -f "${PATCH_FROM_POD#* }" ] && [ "${PATCH_FROM_POD%% *}" != "none" ]; then
+    pass "A06-9e the pod left a patch, named by its hash" "$PATCH_FROM_POD"
+  else
+    fail "A06-9e the pod left a patch, named by its hash" "${PATCH_FROM_POD:-no report}"
+    PATCH_FROM_POD=""
+  fi
+fi
+
 CHAIN_OK=1
 grep -q "$MESSAGE_ID" <<< "$ONE_QUERY" || CHAIN_OK=0
 [ "$COMMITS" = "2" ] || CHAIN_OK=0
 [ "$N_SPANS" = "7" ] || CHAIN_OK=0
-if [ "$POD_RAN" = "1" ] && [ "$CHAIN_OK" = "1" ]; then
-  pass "A06-9d envelope to patch, through T-01 to T-05" "one machine, one job, one query back"
+if [ "$POD_RAN" = "1" ] && [ -n "$PATCH_FROM_POD" ] && [ "$CHAIN_OK" = "1" ]; then
+  pass "A06-9f envelope to patch, through T-01 to T-05" "one machine, one job, one query back"
+elif [ "$POD_RAN" = "1" ]; then
+  fail "A06-9f envelope to patch, through T-01 to T-05" "the pod ran and the chain broke — see the rows above"
 elif [ "$CHAIN_OK" = "1" ]; then
-  skip "A06-9d envelope to patch, through T-01 to T-05" \
-    "everything but the pod: this machine has no btrfs working copy, so T-04 was not run (the boot in image.yml is where it is)"
+  skip "A06-9f envelope to patch, through T-01 to T-05" \
+    "everything but the pod: $POD_WHY (the leg in .github/workflows/platform.yml lays a node's work disk out for it)"
 else
-  fail "A06-9d envelope to patch, through T-01 to T-05" "the chain broke — see the rows above"
+  fail "A06-9f envelope to patch, through T-01 to T-05" "the chain broke — see the rows above"
 fi
 
 result

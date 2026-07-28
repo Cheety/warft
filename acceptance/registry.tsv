@@ -22,7 +22,7 @@ AB-A06-5	S	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A06-6	S	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A06-7	P	green	AP-1.2	https://github.com/Cheety/warft/actions/runs/30200758783
 AB-A06-8	P	red	AP-6.3	
-AB-A06-9	S	red	AP-3.8	
+AB-A06-9	S	open	AP-3.8	decisions/a06-9-one-machine.md
 AB-A06-10	S	red	AP-6.2	
 AB-A06-11	P	green	AP-3.5	https://github.com/Cheety/warft/actions/runs/30387089788
 AB-A06-12	S	red	AP-6.4	

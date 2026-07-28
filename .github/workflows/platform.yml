@@ -130,10 +130,72 @@ jobs:
       - name: The scheduler — tokens per phase, aging, the ladder and the queue
         run: ./acceptance/rb-scheduler.sh
 
+      # AB-A06-9 asks for one job from the envelope to the patch *on one machine*, and the machine
+      # it asks for is a node: the pod is a runc container on a btrfs snapshot and SP-T04-1 admits
+      # of no cheaper substitute. A build runner is not a node, but it can be laid out like one —
+      # a loopback btrfs where /data/work belongs (SP-A05-1) and runc in the path — and then the
+      # pod half of the chain is a real pod rather than a skipped row.
+      #
+      # user_subvol_rm_allowed is there for the reaper: it deletes the working copy's subvolume at
+      # the end of every pod (SP-T04-5), and without the mount option that deletion is root-only in
+      # a way that also refuses the pod directory's owner.
+      #
+      # Nothing is installed that is already there, and the reason is not thrift. `apt-get install
+      # runc` on a runner that has docker *removes docker*: containerd depends on its own runc, apt
+      # resolves the conflict by taking containerd out, and the next step then found no docker,
+      # skipped every check that needs a database, and reported success having measured half of
+      # what it measures. The assertion at the end is what makes that mistake fail instead of pass.
+      - name: A node's work disk on the runner, so the pod can be a pod
+        run: |
+          set -eu
+          command -v runc       >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y -qq runc; }
+          command -v mkfs.btrfs >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y -qq btrfs-progs; }
+          sudo mkdir -p /data /etc/systemd/system.conf.d
+          sudo truncate -s 8G /data/work.img
+          sudo mkfs.btrfs -q /data/work.img
+          sudo mkdir -p /data/work
+          sudo mount -o loop,user_subvol_rm_allowed /data/work.img /data/work
+          runc --version
+          stat -f -c '/data/work is %T' /data/work
+          docker info >/dev/null 2>&1 || { echo "::error::docker is gone — the database half would skip"; exit 1; }
+
+          # The node's own slice units, not a copy of their contents. A pod is a scope under
+          # workpod-work.slice, and that slice carries IOAccounting=yes for one reason: a cgroup only
+          # has an io.latency file when the io controller is enabled in its parent, so without the
+          # slice the pod would carry four of R-A's five knobs and fail writing the fifth (SP-RA-4).
+          # That is what the first run of this leg did.
+          sudo cp image/mkosi.extra/usr/lib/systemd/system/workpod*.slice /etc/systemd/system/
+
+          # A pod's cgroup is a transient scope, and it only has an io.latency file when the io
+          # controller is enabled in workpod-work.slice's subtree_control. The slice's own
+          # IOAccounting=yes enables io one level higher — in workpod.slice, so that the work slice
+          # can be accounted — and this runner's systemd does not carry it further down for a
+          # transient scope that asks for nothing. Accounting every unit does, and it is a property
+          # of the machine rather than of the platform, which is why it is set here and not in a unit.
+          printf '[Manager]\nDefaultIOAccounting=yes\n' \
+            | sudo tee /etc/systemd/system.conf.d/10-workpod-io.conf >/dev/null
+          sudo systemctl daemon-reload
+          sudo systemctl daemon-reexec
+
+          # What this leg still cannot give the pod is a kernel with io.latency: a GitHub runner's
+          # kernel is built without BLK_CGROUP_IOLATENCY, so the scope gets io.max, io.weight and
+          # io.stat and no io.latency, and R-A's fifth knob has nowhere to go (SP-RA-4). Everything
+          # above is what a node needs and this machine can have; the ruling in
+          # decisions/a06-9-one-machine.md is what the missing knob means for AB-A06-9, and the day
+          # this leg runs on a machine whose kernel carries it, the row turns green with no change
+          # here.
+          echo "io.latency in this kernel: $(find /sys/fs/cgroup -maxdepth 2 -name io.latency -print -quit 2>/dev/null || echo none)"
+
       # AP-3.8. B-03, whole: the alert catalog held against its ruling and against the seed the cell
       # carries, a fifth waking alert refused by the state contract, one job from the channel message
       # to a pushed patch with its trace, its pod log and its refused targets, and the one query that
       # puts the chain back together from either end. This is where AB-B03-1, AB-B03-3, AB-B03-4,
-      # AB-K01-7, AB-Q04-4, AB-RD-2, AB-B02-5 and AB-A05-5 turn green.
+      # AB-K01-7, AB-Q04-4, AB-RD-2, AB-B02-5, AB-A05-5 and AB-A06-9 turn green.
+      #
+      # Not run as root: the script elevates the four pod commands itself and leaves the rest — the
+      # Postgres in docker, the control plane, the gates — with the user whose session set them up.
+      # A first attempt ran the whole script under sudo and root could not reach the runner's docker,
+      # so the database half skipped and the run went green having measured less. That is the failure
+      # mode Q-02 is about, and it is why the privilege is where the requirement is and nowhere else.
       - name: One trace per job, four alerts, and the chain in one query
         run: ./acceptance/b03-observation.sh

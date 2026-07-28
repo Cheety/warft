@@ -1,0 +1,29 @@
+# stage3-measurement.tsv — the three numbers stage 3 ends with (E-11, 02-work-packages.md).
+#
+# The machine-readable half of decisions/stage-3-measurement.md. Two of the three numbers are
+# acceptance rows and live in acceptance/registry.tsv; they stand here as references to that
+# instrument and not as copies of it, because a number copied into a second file is a number that
+# can drift from the run that made it.
+#
+# The third, jobs per hour, is not a row and is not going to become one: the acceptance matrix
+# decides whether the platform was hit, and a throughput figure describes rather than decides. It is
+# measured by acceptance/stage3-measurement.sh on one node and recorded here with the run that
+# produced it. A later run more than a factor of two away from the recorded number stops — either
+# the machine or the platform has changed, and both are worth stopping for.
+#
+# The number is a floor, and its conditions travel with it: the jobs are stated by hand, on one
+# node, with no captain sizing them and no model writing the edit (E-11 step 3,
+# decisions/jobs-by-hand.md). Stage 5 replaces all three of those conditions, and the ruling names
+# that as what voids this row.
+#
+# `evidence` names the run each number came from. A number without one is an assumption wearing the
+# colour of a measurement (Q-02).
+#
+# The first measurement: 20 of 20 jobs delivered on a 4-core node, 1293 ms each, with the first pod
+# on the node starting outside the measurement and nothing left on the disk afterwards. Two runs of
+# the same tree measured 2794.9 and 2783.7 — the number recorded is the second, because that is the
+# run that measured this tree, and the pair is what the factor-of-two window is calibrated against.
+key	value	unit	evidence
+jobs_per_hour	2783.7	jobs/h	https://github.com/Cheety/warft/actions/runs/30406688211
+orphaned_subvolumes_after_restart	AB-T04-5	registry row	https://github.com/Cheety/warft/actions/runs/30311990661
+double_execution_without_double_effect	AB-A06-11	registry row	https://github.com/Cheety/warft/actions/runs/30387089788
