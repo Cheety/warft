@@ -8,7 +8,7 @@
 # normalizes any recipe failure to 2, so `make acceptance` exits 2 rather than 1. Both are
 # non-zero and both fail a build; where the exact code matters, call the script directly.
 
-.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake boot runner pipeline outbox decisions proto help
+.PHONY: acceptance acceptance-sync image verify image-acceptance calibration contract platform intake budget scheduler boot runner pipeline outbox decisions proto help
 
 help:
 	@echo "make acceptance       report the state of the 212 checks; fails while anything is red"
@@ -22,6 +22,7 @@ help:
 	@echo "make platform         the one Go binary, its seven entry points, its honest refusals — AB-E02-1 (AP-3.1)"
 	@echo "make intake           the CLI adapter and intake against a real database — AB-T01-7, AB-K01-6 (AP-3.2)"
 	@echo "make budget           the pots, the caps, the share-out and the halt with two paths — AB-V04-1, AB-V04-2, AB-V04-4, AB-T01-8, AB-E08-3 (AP-3.6)"
+	@echo "make scheduler        tokens per phase, aging, the PSI ladder and the queue with SKIP LOCKED — AB-RB-*, AB-RC-1, AB-RC-3, AB-RC-6, AB-RD-3, AB-E05-2, AB-V01-4, AB-E02-2, AB-E02-5 (AP-3.7)"
 	@echo "make boot             four boots along A-04: sequence, layers, pressure, reinstall — AB-A04-1, AB-A04-3, AB-A05-1, AB-RC-4, AB-V01-1 (AP-3.1)"
 	@echo "make runner           pods on a node: the contract, no network, the lifecycle, the reaper — AB-T03-1, AB-T04-*, AB-RA-*, AB-RC-5, AB-B02-3, AB-E02-4 (AP-3.3)"
 	@echo "make pipeline         the fixed spine, the seven places, the bounded loop — AB-T05-1, AB-T05-2, AB-T05-3 (AP-3.4)"
@@ -102,6 +103,15 @@ intake:
 # plane stopped. `acceptance/v04-budget.sh host` is the half that needs no machine.
 budget:
 	@acceptance/v04-budget.sh
+
+# AP-3.7. R-B and R-C against the program and against a Postgres 16 the script spins itself: the
+# phase-to-token ruling against the file the binary embeds, SP-RB-2's four bounds and SP-RC-2's six
+# signals against the tables the program prints, OP-6's four numbers per signal, a replayed pressure
+# series climbing all five rungs in order, three recorded runs turning admission mechanical, two
+# concurrent claims that skip each other's rows, and a job frozen and thawed with its attempt and
+# its spend intact. `acceptance/rb-scheduler.sh host` is the half that needs no database.
+scheduler:
+	@acceptance/rb-scheduler.sh
 
 # AP-3.1. The A-04 start sequence against the image `make image` built: four boots — the sequence
 # to a registered node, the reinstall that only /data/db survives, the withheld boot value, and

@@ -28,9 +28,10 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | base | `internal/allocation` | — | anything |
 | base | `internal/runner` | — | anything |
 | base | `internal/budget` | — | anything |
+| base | `internal/scheduling` | — | anything |
 | step | `internal/disk` | `internal/boot` | another step, a role, `cmd` |
 | step | `internal/selftest` | `internal/boot`, `internal/cgroup` | another step, a role, `cmd` |
-| step | `internal/statedb` | `internal/boot`, `internal/budget`, `internal/ids` | another step, a role, `cmd` |
+| step | `internal/statedb` | `internal/boot`, `internal/budget`, `internal/ids`, `internal/scheduling` | another step, a role, `cmd` |
 | step | `internal/outbox` | `api/workpodv1` | another step, a role, `cmd` |
 | step | `internal/workpod` | `api/workpodv1`, `internal/allocation`, `internal/cgroup`, `internal/outbox`, `internal/runner` | another step, a role, `cmd` |
 | role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids`, `internal/outbox` | another role, a step, `cmd` |
@@ -38,6 +39,7 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | role | `internal/gitgate` | `api/workpodv1`, `internal/outbox` | another role, a step, `cmd` |
 | role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/budget`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
 | role | `internal/harness` | `api/workpodv1`, `internal/runner` | another role, a step, `cmd` |
+| role | `internal/scheduler` | `internal/boot`, `internal/cgroup`, `internal/runner`, `internal/scheduling`, `internal/statedb` | another role, `cmd` |
 | role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/workpod` | another role, a step, `cmd` |
 | entry | `cmd/workpod` | every module above | — |
 
@@ -74,6 +76,17 @@ Five of those "may not" lines carry the weight and are worth saying in prose:
   the caps, neither owns them. The halt is the reason this matters: SP-E08-3's second path has to be
   readable when the state database is the part that is broken, so the module that reads it may not
   depend on the module that talks to it.
+- **The scheduling rules are below the transaction that orders the queue, for the same reason the
+  budget is.** `internal/scheduling` holds the phase-to-token table of decisions/phase-tokens.md, the
+  aging rule of decisions/aging.md, SP-RB-2's four bounds, SP-RC-2's six signals with OP-6's
+  hysteresis and SP-RC-3's five rungs — and it imports nothing, not even the runner whose seven
+  phases it keys on. The queue itself is `FOR UPDATE SKIP LOCKED` over `"order"` and belongs to
+  `internal/statedb`, which generates its ORDER BY out of those rules rather than writing them a
+  second time; the reader, the ladder and the four actions that touch the machine belong to
+  `internal/scheduler`. The one edge this forbids is the tempting one: a base module that imported
+  `internal/runner` to get T-05's `Phase` type. It does not — `internal/scheduler`'s test holds the
+  ruled table against `runner.Spine()` instead, so the join is checked rather than compiled, and the
+  rules stay readable without a pipeline.
 - **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
   and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
   contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so
@@ -115,11 +128,12 @@ drift between matrix and registry. Silence is not the same as permission.
   scripts are trigger paths of the image leg — a check that does not re-run rests on a run of the
   old program. A change that breaks the contract then fails the leg that owns the contract, not the
   one that owns the image.
-- The scheduler and both gates are entry points that refuse until their work packages build them
-  (AP-3.5, AP-3.7). Each arrives as a module and a row in this table, added in the commit that builds
-  it — as `internal/adapter`, `internal/attachment` and `internal/ids` did in AP-3.2's, and as
+- An entry point that refuses arrives as a module and a row in this table, added in the commit that
+  builds it — as `internal/adapter`, `internal/attachment` and `internal/ids` did in AP-3.2's, as
   `internal/runner`, `internal/allocation`, `internal/workpod` and `internal/harness` did in
-  AP-3.3's, which is the commit the harness stopped refusing in.
+  AP-3.3's, and as `internal/scheduling` and `internal/scheduler` did in AP-3.7's, which is the
+  commit the last refusing entry point stopped refusing in. All seven components of SP-E02-1 now
+  serve.
 
 ## Overturned by
 

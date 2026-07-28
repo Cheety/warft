@@ -25,6 +25,7 @@ import (
 	"github.com/Cheety/warft/platform/internal/gitgate"
 	"github.com/Cheety/warft/platform/internal/harness"
 	"github.com/Cheety/warft/platform/internal/outbox"
+	"github.com/Cheety/warft/platform/internal/scheduler"
 	"github.com/Cheety/warft/platform/internal/selftest"
 	"github.com/Cheety/warft/platform/internal/statedb"
 	"github.com/Cheety/warft/platform/internal/worker"
@@ -42,7 +43,7 @@ const exUnavailable = 69
 // package or refusing until one.
 var components = [][3]string{
 	{"control-plane", "serving", "AP-3.1"},
-	{"scheduler", "refusing-until", "AP-3.7"},
+	{"scheduler", "serving", "AP-3.7"},
 	{"worker", "serving", "AP-3.1"},
 	{"adapter", "serving", "AP-3.2"},
 	{"git-gate", "serving", "AP-3.5"},
@@ -55,6 +56,7 @@ func usage() {
 
 components   control · scheduler · worker · adapter · git-gate · egress-gate · harness
 control      control admit · control halt · control spend (V-04, E-08)
+scheduler    scheduler tokens · order · pressure · predict · queue · enqueue · freeze · record (R-B, R-C)
 adapter      adapter submit · adapter identity · adapter capabilities (T-01)
 outbox       outbox record · outbox list · outbox drain · outbox unanswered · outbox ask (K-03)
 gates        git-gate --socket … · egress-gate --socket … (K-03, B-02)
@@ -163,7 +165,22 @@ func main() {
 		}
 
 	case "scheduler":
-		refuse("scheduler", "tokens per phase, four priorities, the PSI ladder (R-B, R-C)", "AP-3.7")
+		// `workpod scheduler` reads the pods slice and climbs the ladder; the subcommands are what
+		// a duty officer and a check reach the same rules through, without a live cell under
+		// pressure (R-B, R-C).
+		if len(os.Args) > 2 {
+			if err := scheduler.Command(os.Args[2:], os.Stdout); err != nil {
+				fail(err)
+			}
+			return
+		}
+		v := boot.Read()
+		if err := v.Validate(); err != nil {
+			fail(err)
+		}
+		if err := scheduler.Serve(v, 0); err != nil {
+			fail(err)
+		}
 
 	// The two gates of SP-K03-3, and there is no third. Each one listens on a Unix socket and
 	// never on a port (SP-B02-6); which node runs which is the role's business, and SP-B02-2 puts

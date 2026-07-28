@@ -1,0 +1,22 @@
+# phase-tokens.tsv — which of SP-RB-1's three tokens each of T-05's seven phases holds.
+#
+# The machine-readable half of decisions/phase-tokens.md. The ruling is the file in decisions/; this
+# is the same table in the shape the scheduler reads it in, so a phase cannot change its token in
+# the program without changing it in the ruling. acceptance/rb-scheduler.sh holds the two against
+# each other on every run: a row here that is not in the ruling is drift, and so is the reverse.
+#
+# Five of the seven tokens are SP-RB-1's own words (preparing, planning, checking, reworking,
+# clearing up). `edit` and `deliver` are the two the panel does not name, and both follow from the
+# sentence that closes SP-RB-1 — whoever waits for a model response returns its CPU token.
+#
+# The phases are T-05's spine (SP-T05-1) and this table covers all seven of them. A spine that grew
+# an eighth phase and left this file alone would be a phase the scheduler has no token for, and the
+# program refuses to schedule it rather than inventing one.
+phase	token
+prepare	io
+plan	net
+edit	net
+check	cpu·ram
+repair	net
+deliver	io
+reap	io

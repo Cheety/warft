@@ -25,14 +25,19 @@ on:
       - 'acceptance/t05-pipeline.sh'
       - 'acceptance/k03-outbox.sh'
       - 'acceptance/v04-budget.sh'
+      - 'acceptance/rb-scheduler.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
+      - 'decisions/OP-6.md'
+      - 'decisions/aging.md'
+      - 'decisions/escalation-ladder.md'
       - 'decisions/gates-and-the-outbox.md'
       - 'decisions/halt-file.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
+      - 'decisions/phase-tokens.md'
       - 'decisions/pod-runtime.md'
       - 'decisions/resource-contract.md'
       - '.github/workflows/platform.yml'
@@ -45,14 +50,19 @@ on:
       - 'acceptance/t05-pipeline.sh'
       - 'acceptance/k03-outbox.sh'
       - 'acceptance/v04-budget.sh'
+      - 'acceptance/rb-scheduler.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-1.md'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
+      - 'decisions/OP-6.md'
+      - 'decisions/aging.md'
+      - 'decisions/escalation-ladder.md'
       - 'decisions/gates-and-the-outbox.md'
       - 'decisions/halt-file.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
+      - 'decisions/phase-tokens.md'
       - 'decisions/pod-runtime.md'
       - 'decisions/resource-contract.md'
       - '.github/workflows/platform.yml'
@@ -106,3 +116,12 @@ jobs:
       # AB-V04-2, AB-V04-4, AB-T01-8 and AB-E08-3 turn green.
       - name: The pots, the caps, the share-out and the halt with two paths
         run: ./acceptance/v04-budget.sh
+
+      # AP-3.7. R-B and R-C, whole: the rulings against the tables the binary carries, a replayed
+      # pressure series that climbs all five rungs in order without aborting anything, and then the
+      # queue against a real Postgres — two claims that skip each other's rows, a job frozen and
+      # thawed with everything but its slot, and three recorded runs that make admission mechanical.
+      # This is where AB-RB-1 through AB-RB-5, AB-RC-1, AB-RC-3, AB-RC-6, AB-RD-3, AB-E05-2,
+      # AB-V01-4, AB-E02-2 and AB-E02-5 turn green.
+      - name: The scheduler — tokens per phase, aging, the ladder and the queue
+        run: ./acceptance/rb-scheduler.sh

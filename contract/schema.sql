@@ -328,6 +328,39 @@ CREATE TABLE locality_group (
 --    WHERE state='queued' AND cell=$1 AND locality_group=$2
 --    ORDER BY priority, created_at
 --    FOR UPDATE SKIP LOCKED LIMIT $3;
+--
+-- The ORDER BY the scheduler actually issues carries decisions/aging.md's three keys in front of
+-- the priority column — overdue first, then the largest wait/bound ratio — and it is generated from
+-- SP-RB-2's bounds in `internal/statedb`, never written out here. The shape above is the one that
+-- matters to the state contract: one table, SKIP LOCKED, no second broker (SP-RB-7, SP-E02-2).
+
+-- ---------------------------------------------------------------------------
+-- R-C: predict instead of clean up (SP-RC-6)
+-- ---------------------------------------------------------------------------
+
+-- Peak RSS and runtime per repository and phase. After three runs admission decides from these rows
+-- mechanically; below three it decides on pressure alone, because two measurements of a phase are
+-- two anecdotes.
+--
+-- The repository is the order's `locality_group`: OP-8 makes that group the sticky assignment
+-- repository -> node, so it is the state contract's name for what SP-RC-6 calls a repository, and a
+-- second column holding the same string would be a second thing to keep true.
+--
+-- Both aggregates are maxima rather than averages. Admission asks whether a job fits, and a mean
+-- answers a different question — half the runs of a repository whose mean fits do not fit. This is
+-- also why the five constants of E-05 are not here: they are planning values for the occupancy
+-- table (SP-RD-3), and these are measurements.
+CREATE TABLE phase_profile (
+  cell           text NOT NULL REFERENCES cell(id),
+  project        uuid NOT NULL REFERENCES project(id),
+  repository     text NOT NULL,
+  phase          text NOT NULL,        -- one of T-05's seven (SP-T05-1); the spine is the program's
+  runs           int NOT NULL DEFAULT 0 CHECK (runs >= 0),
+  peak_rss_bytes bigint NOT NULL DEFAULT 0 CHECK (peak_rss_bytes >= 0),
+  runtime_ms     bigint NOT NULL DEFAULT 0 CHECK (runtime_ms >= 0),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (cell, project, repository, phase)
+);
 
 -- ---------------------------------------------------------------------------
 -- K-03: outbox and receipts
