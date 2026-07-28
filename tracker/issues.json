@@ -1086,7 +1086,7 @@
     "panels": "T-05",
     "spec": "§19",
     "acceptance": "",
-    "body": "**Due before:** AP-3.4 · **Panels:** T-05\n\n### To be decided\nThe number n of rework rounds per pipeline\n\n### Proposed ruling\n3, overridable per job class\n\n### Done when\n- decisions/OP-2.md lies in Git, with ruling, rationale and “overturned by”.\n- AP-3.4 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
+    "body": "**Due before:** AP-3.4 · **Panels:** T-05\n\n### To be decided\nThe number n of rework rounds per pipeline\n\n### Proposed ruling\n3, overridable per job class\n\n### Done when\n- [x] decisions/OP-2.md lies in Git, with ruling, rationale and “overturned by”.\n- [x] AP-3.4 is unblocked.\n\n### Boundary of this issue\nThe value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
   },
   {
     "id": "OP-3",

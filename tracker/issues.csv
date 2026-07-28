@@ -969,8 +969,8 @@ The number n of rework rounds per pipeline
 3, overridable per job class
 
 ### Done when
-- decisions/OP-2.md lies in Git, with ruling, rationale and “overturned by”.
-- AP-3.4 is unblocked.
+- [x] decisions/OP-2.md lies in Git, with ruling, rationale and “overturned by”.
+- [x] AP-3.4 is unblocked.
 
 ### Boundary of this issue
 The value is decided and filed, not implemented. It is never guessed anywhere in the code — that is the reason this issue exists."
