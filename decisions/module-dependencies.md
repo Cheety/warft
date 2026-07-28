@@ -30,8 +30,11 @@ rank.** No edge exists that this table does not permit, and no package exists th
 | step | `internal/disk` | `internal/boot` | another step, a role, `cmd` |
 | step | `internal/selftest` | `internal/boot`, `internal/cgroup` | another step, a role, `cmd` |
 | step | `internal/statedb` | `internal/boot`, `internal/ids` | another step, a role, `cmd` |
-| step | `internal/workpod` | `api/workpodv1`, `internal/allocation`, `internal/cgroup`, `internal/runner` | another step, a role, `cmd` |
-| role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids` | another role, a step, `cmd` |
+| step | `internal/outbox` | `api/workpodv1` | another step, a role, `cmd` |
+| step | `internal/workpod` | `api/workpodv1`, `internal/allocation`, `internal/cgroup`, `internal/outbox`, `internal/runner` | another step, a role, `cmd` |
+| role | `internal/adapter` | `api/workpodv1`, `internal/boot`, `internal/attachment`, `internal/ids`, `internal/outbox` | another role, a step, `cmd` |
+| role | `internal/egress` | `api/workpodv1`, `internal/outbox` | another role, a step, `cmd` |
+| role | `internal/gitgate` | `api/workpodv1`, `internal/outbox` | another role, a step, `cmd` |
 | role | `internal/controlplane` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/statedb`, `internal/attachment` | another role, a step, `cmd` |
 | role | `internal/harness` | `api/workpodv1`, `internal/runner` | another role, a step, `cmd` |
 | role | `internal/worker` | `api/workpodv1`, `internal/boot`, `internal/cgroup`, `internal/workpod` | another role, a step, `cmd` |
@@ -57,6 +60,12 @@ Five of those "may not" lines carry the weight and are worth saying in prose:
   runc, cgroups and btrfs, and `internal/harness` — which runs *inside* a pod — sees the contract and
   never the implementation. The day `windows`, `macos` or `remote` arrives (AP-8.3) it is a second
   step beside `internal/workpod`, not a change to anything above it.
+- **The outbox is below both gates, and neither gate owns it.** `internal/outbox` holds the domain
+  key, the states an effect moves through and the register of SP-K03-4; `internal/gitgate` and
+  `internal/egress` are two implementations of "a gate executes one" and import it, while the pod's
+  host side (`internal/workpod`) imports it to record an intent and never to execute one. Putting
+  the key in either gate would make the other gate's idempotency a favour from the first, and
+  putting it in the worker would put it above the two things that need it most.
 - **What two roles must agree on is a module, not a favour from one of them.** `internal/adapter`
   and `internal/controlplane` both enforce OP-5, and `internal/statedb` speaks only the state
   contract's words while `api/workpodv1` speaks the wire's. Neither role may import the other, so

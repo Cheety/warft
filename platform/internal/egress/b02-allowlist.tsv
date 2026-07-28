@@ -1,0 +1,33 @@
+# SP-B02-4 — an allowlist per job, not per node: target, method, size limit, derived from the
+# authority (K-04). This file is the derivation, and decisions/gates-and-the-outbox.md §3 is the
+# ruling that makes it one: until AP-6.2 mints a Biscuit through the lease, the authority a job
+# carries is the level the channel decided (SP-T01-4), and the level is what this table is keyed by.
+#
+# Three properties are ruled with it and checked against it by acceptance/k03-outbox.sh:
+#
+#   default deny     a level not named here reaches nothing — so a level added to
+#                    contract/schema.sql's authority_level enum and forgotten here fails closed
+#   per job          the lookup happens per order at every single forward, never per node
+#   names, not addresses   the pod sends a name and the gate resolves it (SP-B02-3); a target that
+#                    is already an address is refused, because an address is what a resolver
+#                    produces and a pod has none
+#
+# The levels are contract/schema.sql's `authority_level`, widest last. A level permits the targets
+# of every level below it — the ordering is the only place that relation lives, and the program
+# reads it from the order of the rows here.
+#
+# targets      comma-separated host names. One wildcard is permitted, at the front: `*.example.org`.
+#              Never an address and never a bare `*`: a gate whose allowlist matches everything is
+#              not an allowlist, it is a route.
+# methods      comma-separated HTTP methods. GET alone is a read-only job.
+# size_limit   the largest response the gate will pass back, in bytes. A limit rather than none,
+#              because SP-B02-4 names it beside target and method: a job permitted to read a host
+#              is not thereby permitted to drag a disk image through the gate.
+#
+# When AP-6.2 grants the first lease, the allowlist comes from the token's `targets` block instead
+# and this table describes nothing. The lookup keyed by order_id does not change; only what fills it.
+#
+level	targets	methods	size_limit
+public	proxy.golang.org,registry.npmjs.org,pypi.org,files.pythonhosted.org	GET	33554432
+linked	*.github.com,api.github.com	GET,HEAD	67108864
+confidential	*.internal.invalid	GET,HEAD,POST	134217728

@@ -23,9 +23,11 @@ on:
       - 'contract/platform.proto'
       - 'acceptance/t01-intake.sh'
       - 'acceptance/t05-pipeline.sh'
+      - 'acceptance/k03-outbox.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
+      - 'decisions/gates-and-the-outbox.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
       - 'decisions/pod-runtime.md'
@@ -38,9 +40,11 @@ on:
       - 'contract/platform.proto'
       - 'acceptance/t01-intake.sh'
       - 'acceptance/t05-pipeline.sh'
+      - 'acceptance/k03-outbox.sh'
       - 'acceptance/module-contract.py'
       - 'decisions/OP-2.md'
       - 'decisions/OP-5.md'
+      - 'decisions/gates-and-the-outbox.md'
       - 'decisions/jobs-by-hand.md'
       - 'decisions/module-dependencies.md'
       - 'decisions/pod-runtime.md'
@@ -77,6 +81,12 @@ jobs:
       # where AB-T05-* turn green, is in image.yml.
       - name: T-05's four sources against the program
         run: ./acceptance/t05-pipeline.sh host
+
+      # AP-3.5. The whole of K-03's chain, and it needs no machine: the gates are processes on
+      # Unix sockets, the repository is a bare one this runner creates, and the pushes are counted
+      # with git. This is where AB-K03-*, AB-A06-11, AB-B01-4 and AB-B02-* turn green.
+      - name: The outbox, both gates, and one push out of two attempts
+        run: ./acceptance/k03-outbox.sh
 
       # ubuntu-latest carries docker; the script spins its own Postgres, the same shape the
       # state-machine leg of the contract workflow uses.

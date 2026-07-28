@@ -14,3 +14,6 @@ Description=Workpod node role: work
 Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
 Wants=workpod-work.slice
 Wants=workpod-disk.service workpod-selftest.service workpod-worker.service
+# SP-B02-2: the egress proxy stands on the work node, not centrally. It is a unit of this role and
+# of no other — one gate per work node is what makes it not a central throughput bottleneck.
+Wants=workpod-egress-gate.service

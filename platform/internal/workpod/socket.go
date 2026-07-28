@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	workpodv1 "github.com/Cheety/warft/platform/api/workpodv1"
+	"github.com/Cheety/warft/platform/internal/outbox"
 	"github.com/Cheety/warft/platform/internal/runner"
 )
 
@@ -31,6 +32,7 @@ type harnessSocket struct {
 
 	job     runner.Job
 	gapsDir string
+	outbox  *outbox.Store
 	srv     *grpc.Server
 	lis     net.Listener
 
@@ -45,7 +47,14 @@ func (w *Workpod) serveHarness(podID string, job runner.Job, path string) (*harn
 	if err != nil {
 		return nil, fmt.Errorf("the pod's only way out could not be opened at %s: %w", path, err)
 	}
-	h := &harnessSocket{job: job, gapsDir: filepath.Join(w.Store.Var, "gaps"), lis: lis}
+	h := &harnessSocket{
+		job:     job,
+		gapsDir: filepath.Join(w.Store.Var, "gaps"),
+		// On /var beside the gaps, not on /run and not in the working copy: the outbox has to
+		// survive the pod that wrote into it and the restart of the worker (SP-K03-6).
+		outbox: outbox.New(filepath.Join(w.Store.Var, "outbox")),
+		lis:    lis,
+	}
 	h.srv = grpc.NewServer()
 	workpodv1.RegisterHarnessServer(h.srv, h)
 	go func() {
@@ -90,13 +99,30 @@ func (h *harnessSocket) QueryFacts(ctx context.Context, q *workpodv1.FactQuery) 
 		"the fact store is AP-4.1's — SCIP, Parquet and DuckDB in the harness (E-09, SP-E09-3)")
 }
 
-// EnqueueEffect is K-03's outbox. The pod never acts itself, and until the outbox and the two gates
-// exist (AP-3.5) there is nothing to hand an effect to. Refusing is the honest answer; accepting and
-// dropping it would be the double-push this platform has a whole panel about.
+// EnqueueEffect is the first link of K-03's chain: the pod produces an intent to act, and it is
+// written into the outbox on /var (SP-K03-1, SP-K03-6). The pod never acts itself — nothing here
+// calls a gate, and the pod could not, because it has no network at all (T-04).
+//
+// The order id comes from the job this socket belongs to and never from the message. Same rule as
+// intake's (SP-T01-9): the authority comes from the channel, and here the channel is which socket
+// the connection arrived on. A pod that names another job's order enqueues into its own anyway.
+//
+// A second enqueue of the same domain key is accepted and does not produce a second entry: the
+// answer is the same either way, because the pod has no business knowing whether it was the first
+// to ask (SP-K03-2).
 func (h *harnessSocket) EnqueueEffect(ctx context.Context, e *workpodv1.OutboxEntry) (*workpodv1.EffectAck, error) {
 	h.touch()
-	return nil, status.Errorf(codes.Unimplemented,
-		"the outbox and both gates are AP-3.5's — a pod's effect is recorded before it is executed (K-03)")
+	entry := outbox.Entry{
+		Order:            h.job.OrderID,
+		Target:           e.GetTarget(),
+		ContentHash:      e.GetContentHash(),
+		PayloadRef:       string(e.GetPayloadRef()),
+		RequiresRegister: e.GetRequiresRegister(),
+	}
+	if _, _, err := h.outbox.Record(entry); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	return &workpodv1.EffectAck{Accepted: true}, nil
 }
 
 // ReportGap is F-05's "stopping is a usable result", and it works. It is written to /var on the

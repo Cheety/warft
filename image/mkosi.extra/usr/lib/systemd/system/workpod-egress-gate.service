@@ -1,0 +1,55 @@
+# The second of SP-K03-3's two gates: the egress proxy. SP-B02-2 puts it on the **work node** and
+# not centrally — one per node, so there is no single hop every outbound byte of the fleet passes
+# through, and so the socket a pod's effect leaves by is a file on the same machine.
+#
+# It runs in the *control* slice although it lives on a work node, and that is not a contradiction:
+# R-C makes the work layer reclaimable under pressure (SP-RC-4), and a gate that a memory spike can
+# reclaim would take the node's only way out with it. The pods are what may be reclaimed here; the
+# thing that lets them reach anything is not.
+#
+# decisions/gates-and-the-outbox.md §4 is why a credential may be on this machine at all: SP-B01-4's
+# operative word is *exclusively*, and the protections below are what make it true — the gate has
+# its own identity, its keys are in a directory only that identity can read, and the work layer's
+# areas are inaccessible to it in the same breath that its credentials are inaccessible to them.
+
+[Unit]
+Description=Workpod egress gate (allowlist per job, resolves names, inserts keys)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-selftest.service
+After=workpod-selftest.service
+# The worker's pods have no other way out, so the gate is up before anything can want it.
+Before=workpod-worker.service
+
+[Service]
+Slice=workpod-control.slice
+DynamicUser=yes
+StateDirectory=workpod-gate/egress
+LoadCredential=egress-keys
+ExecStart=/usr/bin/workpod egress-gate \
+  --socket /run/workpod/egress-gate.sock \
+  --grants /var/lib/workpod/egress-grants \
+  --credentials ${CREDENTIALS_DIRECTORY}
+Restart=on-failure
+
+# The grants are the one thing the gate shares with the work layer, and it only reads them: what a
+# job may reach is written when the job is admitted, and a gate that could write its own allowlist
+# would be a gate that grants itself targets.
+ReadOnlyPaths=/var/lib/workpod/egress-grants
+InaccessiblePaths=/var/lib/workpod/outbox /data/work
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=workpod-work.target

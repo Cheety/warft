@@ -1,9 +1,12 @@
 # One of the four roles from SP-A02-1. Which one a node takes is the boot value `role`, read from
 # a credential by workpod-role-generator; the image is the same artifact either way (AB-A02-1).
 #
-# `control` is the control layer: the plane, the scheduler, both gates and the state database, which
-# E-02 rules is the only one. It is also the only role whose disk keeps something across a
-# reinstall (`/data/db`, SP-A05-1) and the only one that needs no enrollment token (SP-A04-1).
+# `control` is the control layer: the plane, the scheduler, the Git gate and the state database,
+# which E-02 rules is the only one. Only the *Git* gate — SP-B02-2 puts the egress proxy on the work
+# node, so the two gates of SP-K03-3 are split across two roles rather than sitting here together.
+#
+# It is also the only role whose disk keeps something across a reinstall (`/data/db`, SP-A05-1) and
+# the only one that needs no enrollment token (SP-A04-1).
 #
 # Wants=, not Requires=: the role names what belongs to it, and the sequence's own Requires-chain
 # (disk → selftest → serve) is what enforces A-04.
@@ -14,3 +17,4 @@ Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
 Wants=workpod-control.slice
 Wants=workpod-disk.service workpod-db.service workpod-selftest.service
 Wants=workpod-control.service
+Wants=workpod-git-gate.service

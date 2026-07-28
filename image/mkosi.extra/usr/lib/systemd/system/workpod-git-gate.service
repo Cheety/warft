@@ -1,0 +1,55 @@
+# One of SP-K03-3's two gates: the Git proxy. It checks policy, it signs itself, and it holds the
+# credential — the pod has no token and no network at all (T-04, SP-B01-4).
+#
+# It belongs to the control role. Unlike the egress proxy, which SP-B02-2 puts on the work node,
+# there is nothing about a push that has to happen near the pod: the outbox carries the intent, and
+# the gate is where the patch becomes a push.
+#
+# The unit is what makes SP-B01-4's "exclusively" true. DynamicUser gives the gate an identity of
+# its own, LoadCredential puts the signing key in a directory only that identity can read, and the
+# protections below take away everything the gate has no business seeing — including the work
+# layer's own areas. A credential in a gate is a credential the worker cannot read, and these lines
+# are the difference between that sentence being enforced and being asserted.
+#
+# ListenStream is deliberately absent: the gate opens its own Unix socket and never a port
+# (SP-B02-6), and a socket unit would be a second place where that decision lives.
+
+[Unit]
+Description=Workpod Git gate (checks policy, signs itself, holds the credential)
+Documentation=https://github.com/Cheety/warft/blob/main/01-specification.md
+Requires=workpod-selftest.service
+After=workpod-selftest.service
+
+[Service]
+Slice=workpod-control.slice
+DynamicUser=yes
+StateDirectory=workpod-gate/git
+LoadCredential=git-signing-key
+ExecStart=/usr/bin/workpod git-gate \
+  --socket /run/workpod/git-gate.sock \
+  --policy /etc/workpod/git-gate-policy.tsv \
+  --ledger /var/lib/workpod-gate/git \
+  --credential ${CREDENTIALS_DIRECTORY}/git-signing-key
+Restart=on-failure
+
+# The gate sees nothing of the work layer. /var/lib/workpod is the worker's and the pods' — an
+# InaccessiblePaths line rather than a convention, so that a bug in the gate cannot read a working
+# copy and a bug in the worker cannot read this unit's credentials.
+InaccessiblePaths=/var/lib/workpod /data/work
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=workpod-control.target
