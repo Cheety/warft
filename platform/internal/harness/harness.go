@@ -61,7 +61,9 @@ func Run() error {
 		return err
 	}
 
-	rep := runPipeline(job, pipe, runner.PodWorkDir, []string{"harness socket: " + socketState()})
+	// Descriptor 1 is the console, which redirectStdio pointed at the bind mount from the host: what
+	// the pipeline narrates is on the node as it is said, not after the pod is over (SP-T04-2).
+	rep := runPipeline(job, pipe, runner.PodWorkDir, os.Stdout, []string{"harness socket: " + socketState()})
 	if err := writeReport(rep); err != nil {
 		return err
 	}

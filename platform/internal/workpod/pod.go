@@ -125,7 +125,14 @@ func (w *Workpod) Run(ctx context.Context, base string, job runner.Job) (rep run
 	if err != nil {
 		return rep, err
 	}
-	rep.PipelineVersion, rep.PipelineHash = pipe.Ref(), pipe.ContentHash()
+	// The definition's hash rather than the effective pipeline's: `pipeline_version.content_hash`
+	// names what the human filed, and two jobs that moved different places still ran under one
+	// definition (SP-T05-4).
+	def, err := job.Definition()
+	if err != nil {
+		return rep, err
+	}
+	rep.PipelineVersion, rep.PipelineHash = def.Ref(), def.ContentHash()
 	rep.RoundsAllowed = pipe.Places.ReworkRounds
 	reapAfter := w.Reap
 	if reapAfter == "" {

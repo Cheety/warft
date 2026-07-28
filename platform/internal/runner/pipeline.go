@@ -349,6 +349,21 @@ func RoundCeiling(class string) (int, error) {
 // What a job actually runs under
 // -------------------------------------------------------------------------------------------------
 
+// Definition is the pipeline a job pinned, exactly as the human filed it — before the job moved
+// anything.
+//
+// It is what a report has to name, and it is deliberately not the effective pipeline below.
+// `pipeline_version.content_hash` is the identity of a definition; hashing the effective one would
+// give two jobs that moved different places two different `pipeline@version`, and then the version
+// would name the job rather than the pipeline — which is the opposite of SP-T05-4.
+func (j Job) Definition() (Pipeline, error) {
+	ref := j.PipelineVersion
+	if ref == "" {
+		ref = DefaultPipeline
+	}
+	return PipelineByRef(ref)
+}
+
 // Effective is the pipeline a job runs under: the definition it pinned, moved at the places it moves
 // and nowhere else.
 //
@@ -356,11 +371,7 @@ func RoundCeiling(class string) (int, error) {
 // order records and what the report has to name — a job's moves are a job's, and calling the result
 // something else would lose the join to `pipeline_version.content_hash`.
 func (j Job) Effective() (Pipeline, error) {
-	ref := j.PipelineVersion
-	if ref == "" {
-		ref = DefaultPipeline
-	}
-	def, err := PipelineByRef(ref)
+	def, err := j.Definition()
 	if err != nil {
 		return Pipeline{}, err
 	}
@@ -413,11 +424,7 @@ func (j Job) Effective() (Pipeline, error) {
 // It is what `workpod pod pipeline --job` prints and what AB-T05-2 reads: the answer is always a
 // subset of the seven, because there is nowhere else for a job to differ.
 func (j Job) Moved() ([]string, error) {
-	ref := j.PipelineVersion
-	if ref == "" {
-		ref = DefaultPipeline
-	}
-	def, err := PipelineByRef(ref)
+	def, err := j.Definition()
 	if err != nil {
 		return nil, err
 	}

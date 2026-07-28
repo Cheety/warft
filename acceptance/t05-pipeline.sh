@@ -435,10 +435,13 @@ if [ -s "$PATCHFILE" ] && grep -q '^+round$' "$PATCHFILE"; then
 else
   fail "T05-3d the reply carries a diff" "${PATCHFILE:-none}"
 fi
-if [ -s "$LOGFILE" ]; then
-  pass "T05-3e the reply carries the logs" "$LOGFILE, $(wc -c < "$LOGFILE") bytes"
+# Not only that the file is there: that it carries the last round. The console is written while the
+# loop runs, so a log that stops before round 3 is a log of a different pod than the one that replied.
+if [ -s "$LOGFILE" ] && grep -q 'check 3/impossible' "$LOGFILE" && grep -q 'repair 3 of 3' "$LOGFILE"; then
+  pass "T05-3e the reply carries the logs" "$LOGFILE, $(wc -c < "$LOGFILE") bytes, through round 3"
 else
-  fail "T05-3e the reply carries the logs" "${LOGFILE:-none} — the console is on /run and dies with the pod"
+  fail "T05-3e the reply carries the logs" "${LOGFILE:-none} — $( [ -f "$LOGFILE" ] && wc -c < "$LOGFILE" || echo 'no file') bytes"
+  [ -f "$LOGFILE" ] && sed 's/^/        /' "$LOGFILE" | head -20
 fi
 ASSESSMENT="$(sed -n 's/^  "assessment": "\(.*\)",\{0,1\}$/\1/p' "$WORK/unsolvable.log")"
 if grep -q 'impossible' <<< "$ASSESSMENT" && grep -q 'OP-2' <<< "$ASSESSMENT"; then

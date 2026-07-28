@@ -16,6 +16,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -47,19 +48,37 @@ type round struct {
 // phases. A phase that had nothing to do says so and says why: a spine with holes in it cannot be
 // told from one that was never followed, which is the difference AB-T05-1 measures.
 //
+// `console` is where the run is narrated as it happens. In a pod it is descriptor 1, which is a bind
+// mount from the host — so SP-T05-3's "logs" are on the node while the loop is still running rather
+// than at the end of it, and SP-T04-2's "no logs in the pod" holds without a second mechanism. B-03
+// gives that stream a job id and a trace in AP-3.8; here it is a file beside the pod, copied onto
+// /var by the deliver phase because the pod's own directory does not survive the reaper.
+//
 // `notes` is what the caller already knows about the pod it is running in — the state of the socket,
-// which is a fact about the pod and not about the pipeline. It is passed in rather than gathered
-// here so that the loop can be run against a directory without one, which is what its tests do.
-func runPipeline(job runner.Job, pipe runner.Pipeline, dir string, notes []string) runner.Report {
+// which is a fact about the pod and not about the pipeline. Both are passed in rather than gathered
+// here so that the loop can be run against a directory without a pod, which is what its tests do.
+func runPipeline(job runner.Job, pipe runner.Pipeline, dir string, console io.Writer, notes []string) runner.Report {
+	// The definition's hash, not the effective pipeline's: `pipeline_version.content_hash` is the
+	// identity of what the human filed, and two jobs that moved different places ran under one
+	// definition (SP-T05-4).
+	def, err := job.Definition()
+	if err != nil {
+		// Unreachable in a pod — the host refuses such a job before it creates anything — but a
+		// report that named no pipeline would be worse than one that says why.
+		def = pipe
+	}
 	rep := runner.Report{
 		OrderID:         job.OrderID,
 		Attempt:         job.Attempt,
-		PipelineVersion: pipe.Ref(),
-		PipelineHash:    pipe.ContentHash(),
+		PipelineVersion: def.Ref(),
+		PipelineHash:    def.ContentHash(),
 		RoundsAllowed:   pipe.Places.ReworkRounds,
 	}
 	var log runner.PhaseLog
-	notes = append([]string{"pipeline: " + pipe.Ref() + " " + pipe.ContentHash()}, notes...)
+	notes = append([]string{"pipeline: " + def.Ref() + " " + def.ContentHash()}, notes...)
+	for _, n := range notes {
+		fmt.Fprintln(console, n)
+	}
 
 	// ---- plan ------------------------------------------------------------------------------
 	if pipe.Places.PlanRequired {
@@ -83,8 +102,10 @@ func runPipeline(job runner.Job, pipe runner.Pipeline, dir string, notes []strin
 
 	// ---- edit ------------------------------------------------------------------------------
 	start := time.Now()
+	narrate(console, "edit", job.Command)
 	editOut, editCode, editErr := runCommand(job.Command, dir)
 	editTook := time.Since(start)
+	said(console, editOut, editCode)
 	rep.ExitCode = editCode
 	switch {
 	case editErr != nil && editCode < 0:
@@ -111,7 +132,7 @@ func runPipeline(job runner.Job, pipe runner.Pipeline, dir string, notes []strin
 	spent := 0
 	for {
 		start = time.Now()
-		results := runChecks(pipe.Places.Checks, dir)
+		results := runChecks(pipe.Places.Checks, dir, console, spent)
 		took := time.Since(start)
 		failed := failedBlocking(results)
 
@@ -132,8 +153,10 @@ func runPipeline(job runner.Job, pipe runner.Pipeline, dir string, notes []strin
 
 		spent++
 		start = time.Now()
+		narrate(console, fmt.Sprintf("repair %d of %d", spent, pipe.Places.ReworkRounds), job.Command)
 		repairOut, repairCode, repairErr := runCommand(job.Command, dir)
 		took = time.Since(start)
+		said(console, repairOut, repairCode)
 		if repairErr != nil && repairCode < 0 {
 			log.Add(runner.PhaseRepair, runner.Failed, spent, took, "the command could not be started: %v", repairErr)
 		} else {
@@ -199,10 +222,12 @@ func whyNoRepair(pipe runner.Pipeline, blocking int, rounds []round) string {
 // runChecks runs place four in the working copy, in the order the pipeline states them. Every check
 // runs, including the ones after a failure: a reply that named the first failure and stopped would
 // cost a round to discover the second.
-func runChecks(checks []runner.Check, dir string) []checkResult {
+func runChecks(checks []runner.Check, dir string, console io.Writer, round int) []checkResult {
 	out := make([]checkResult, 0, len(checks))
 	for _, c := range checks {
+		narrate(console, fmt.Sprintf("check %d/%s", round, c.Name), c.Command)
 		body, code, err := runCommand(c.Command, dir)
+		said(console, body, code)
 		r := checkResult{check: c, exitCode: code, output: body}
 		if err != nil && code < 0 {
 			r.startErr = err
@@ -210,6 +235,23 @@ func runChecks(checks []runner.Check, dir string) []checkResult {
 		out = append(out, r)
 	}
 	return out
+}
+
+// narrate and said are the two halves of one line in the pod's console: what is about to run, and
+// what it said. They are written as the run happens rather than collected at the end, because a job
+// that never finishes is exactly the job whose log someone needs (SP-T04-2, B-03).
+func narrate(console io.Writer, phase string, argv []string) {
+	fmt.Fprintf(console, "\n=== %s: %s ===\n", phase, strings.Join(argv, " "))
+}
+
+func said(console io.Writer, output []byte, code int) {
+	if len(output) > 0 {
+		console.Write(output)
+		if output[len(output)-1] != '\n' {
+			fmt.Fprintln(console)
+		}
+	}
+	fmt.Fprintf(console, "--- exit %d ---\n", code)
 }
 
 func failedBlocking(rs []checkResult) []checkResult {

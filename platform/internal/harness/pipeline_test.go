@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,7 +94,7 @@ func TestAnUnsolvableJobEndsAfterTheRuledRounds(t *testing.T) {
 		t.Fatalf("a medium pod runs %d rounds; decisions/OP-2.md rules 3", pipe.Places.ReworkRounds)
 	}
 
-	rep := runPipeline(job, pipe, dir, nil)
+	rep := runPipeline(job, pipe, dir, io.Discard, nil)
 
 	if rep.FinalState != "unproven" || rep.Cause != "unsolvable" {
 		t.Errorf("the job ended %q/%q, not unproven/unsolvable (SP-T05-3)", rep.FinalState, rep.Cause)
@@ -127,7 +128,7 @@ func TestTheBoundIsTheClasss(t *testing.T) {
 	checks := []runner.Check{blocking("impossible", "/bin/sh", "-c", "exit 1")}
 	for class, want := range map[string]int{"tiny": 1, "small": 3, "medium": 3, "large": 2} {
 		job, pipe := withPlaces(t, aJob(class, "/usr/bin/true"), &runner.PlaceMoves{Checks: &checks})
-		rep := runPipeline(job, pipe, t.TempDir(), nil)
+		rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 		if rep.Rounds != want {
 			t.Errorf("%s spent %d rounds, the ruling allows %d", class, rep.Rounds, want)
 		}
@@ -141,7 +142,7 @@ func TestZeroRoundsChecksOnceAndNeverRepairs(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/usr/bin/true"),
 		&runner.PlaceMoves{Checks: &checks, ReworkRounds: &none})
 
-	rep := runPipeline(job, pipe, t.TempDir(), nil)
+	rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 	if rep.Rounds != 0 {
 		t.Errorf("%d rounds were spent on a job that allows none", rep.Rounds)
 	}
@@ -171,7 +172,7 @@ func TestAPassingBlockingCheckDelivers(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/bin/sh", "-c", "echo one > note.txt"),
 		&runner.PlaceMoves{Checks: &checks, Acceptance: &acceptance})
 
-	rep := runPipeline(job, pipe, dir, nil)
+	rep := runPipeline(job, pipe, dir, io.Discard, nil)
 	if rep.FinalState != "delivered" {
 		t.Fatalf("the job ended %q/%q:\n%s", rep.FinalState, rep.Cause, rep.Assessment)
 	}
@@ -197,7 +198,7 @@ func TestARepairThatWorksEndsTheLoop(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/bin/sh", "-c", "echo line >> log.txt"),
 		&runner.PlaceMoves{Checks: &checks})
 
-	rep := runPipeline(job, pipe, dir, nil)
+	rep := runPipeline(job, pipe, dir, io.Discard, nil)
 	if rep.FinalState != "delivered" {
 		t.Fatalf("the job ended %q/%q:\n%s", rep.FinalState, rep.Cause, rep.Assessment)
 	}
@@ -218,7 +219,7 @@ func TestARepairThatWorksEndsTheLoop(t *testing.T) {
 // did: nothing measured anything, so there is no evidence class (Q-02).
 func TestNoCheckMeansNoEvidence(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/usr/bin/true"), nil)
-	rep := runPipeline(job, pipe, t.TempDir(), nil)
+	rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 	if rep.FinalState != "unproven" || rep.Cause != "skill.missing" {
 		t.Errorf("a job with no check ended %q/%q, not unproven/skill.missing", rep.FinalState, rep.Cause)
 	}
@@ -232,7 +233,7 @@ func TestNoCheckMeansNoEvidence(t *testing.T) {
 // the exit code is the only signal there is.
 func TestNoCheckAndAFailedEditIsAToolFailure(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/bin/sh", "-c", "exit 3"), nil)
-	rep := runPipeline(job, pipe, t.TempDir(), nil)
+	rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 	if rep.FinalState != "failed" || rep.Cause != "tool.failure" {
 		t.Errorf("the job ended %q/%q, not failed/tool.failure", rep.FinalState, rep.Cause)
 	}
@@ -247,7 +248,7 @@ func TestNoCheckAndAFailedEditIsAToolFailure(t *testing.T) {
 func TestACheckThatDoesNotBlockDoesNotDeliver(t *testing.T) {
 	checks := []runner.Check{{Name: "advisory", Command: []string{"/usr/bin/true"}, Blocks: false}}
 	job, pipe := withPlaces(t, aJob("medium", "/usr/bin/true"), &runner.PlaceMoves{Checks: &checks})
-	rep := runPipeline(job, pipe, t.TempDir(), nil)
+	rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 	if rep.FinalState != "unproven" || rep.Cause != "skill.missing" {
 		t.Errorf("a job whose only check does not block ended %q/%q", rep.FinalState, rep.Cause)
 	}
@@ -265,7 +266,7 @@ func TestADemandedPlanIsRefusedRatherThanInvented(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/bin/sh", "-c", "echo edited > file.txt"),
 		&runner.PlaceMoves{PlanRequired: &plan})
 
-	rep := runPipeline(job, pipe, dir, nil)
+	rep := runPipeline(job, pipe, dir, io.Discard, nil)
 	if rep.FinalState != "unproven" || rep.Cause != "skill.missing" {
 		t.Errorf("the job ended %q/%q, not unproven/skill.missing", rep.FinalState, rep.Cause)
 	}
@@ -296,7 +297,7 @@ func TestEveryCheckRunsInARound(t *testing.T) {
 	job, pipe := withPlaces(t, aJob("medium", "/usr/bin/true"),
 		&runner.PlaceMoves{Checks: &checks, ReworkRounds: &none})
 
-	rep := runPipeline(job, pipe, dir, nil)
+	rep := runPipeline(job, pipe, dir, io.Discard, nil)
 	if _, err := os.Stat(filepath.Join(dir, "ran.txt")); err != nil {
 		t.Error("the second check did not run after the first one failed")
 	}
@@ -310,12 +311,63 @@ func TestEveryCheckRunsInARound(t *testing.T) {
 // The report names the definition it ran under and its content hash — the two halves of
 // `pipeline_version` in contract/schema.sql (SP-T05-4).
 func TestTheReportNamesThePipelineItRanUnder(t *testing.T) {
+	def, err := runner.PipelineByRef(runner.DefaultPipeline)
+	if err != nil {
+		t.Fatal(err)
+	}
 	job, pipe := withPlaces(t, aJob("medium", "/usr/bin/true"), nil)
-	rep := runPipeline(job, pipe, t.TempDir(), nil)
+	rep := runPipeline(job, pipe, t.TempDir(), io.Discard, nil)
 	if rep.PipelineVersion != runner.DefaultPipeline {
 		t.Errorf("the report names %q, the job ran under %s", rep.PipelineVersion, runner.DefaultPipeline)
 	}
-	if rep.PipelineHash != pipe.ContentHash() {
-		t.Errorf("the report's hash %q is not the definition's %q", rep.PipelineHash, pipe.ContentHash())
+	if rep.PipelineHash != def.ContentHash() {
+		t.Errorf("the report's hash %q is not the definition's %q", rep.PipelineHash, def.ContentHash())
+	}
+}
+
+// And it names the *definition*, not the job's arrangement of it. Two jobs that move different
+// places ran under one pipeline; a hash that differed between them would make `pipeline@version`
+// name the job instead of the pipeline, which is the opposite of what SP-T05-4 asks for.
+func TestTwoJobsThatMoveDifferentPlacesShareOnePipeline(t *testing.T) {
+	checks := []runner.Check{blocking("exists", "/bin/sh", "-c", "test -f note.txt")}
+	acceptance := "types.lint"
+	one := 1
+
+	a, pipeA := withPlaces(t, aJob("medium", "/bin/sh", "-c", "echo one > note.txt"),
+		&runner.PlaceMoves{Checks: &checks})
+	b, pipeB := withPlaces(t, aJob("small", "/bin/sh", "-c", "echo one > note.txt"),
+		&runner.PlaceMoves{Checks: &checks, Acceptance: &acceptance, ReworkRounds: &one})
+
+	repA := runPipeline(a, pipeA, t.TempDir(), io.Discard, nil)
+	repB := runPipeline(b, pipeB, t.TempDir(), io.Discard, nil)
+
+	if repA.PipelineHash != repB.PipelineHash {
+		t.Errorf("two jobs under %s reported two content hashes:\n  %s\n  %s",
+			runner.DefaultPipeline, repA.PipelineHash, repB.PipelineHash)
+	}
+	if repA.PipelineVersion != repB.PipelineVersion {
+		t.Errorf("%q and %q are the same pipeline", repA.PipelineVersion, repB.PipelineVersion)
+	}
+	// What differs is what the job asked for, and it is in the report where a reply can read it.
+	if repA.RoundsAllowed == repB.RoundsAllowed {
+		t.Errorf("both jobs were allowed %d rounds; one of them moved place five", repA.RoundsAllowed)
+	}
+}
+
+// The console is the logs half of SP-T05-3's reply, and it is written while the loop runs rather
+// than after it: a job that never finishes is exactly the job whose log someone needs.
+func TestTheRunIsNarratedToTheConsole(t *testing.T) {
+	var console strings.Builder
+	checks := []runner.Check{blocking("impossible", "/bin/sh", "-c", "echo the-check-spoke; exit 1")}
+	none := 0
+	job, pipe := withPlaces(t, aJob("medium", "/bin/sh", "-c", "echo the-edit-spoke"),
+		&runner.PlaceMoves{Checks: &checks, ReworkRounds: &none})
+
+	runPipeline(job, pipe, t.TempDir(), &console, nil)
+
+	for _, want := range []string{"=== edit:", "the-edit-spoke", "=== check 0/impossible:", "the-check-spoke", "--- exit 1 ---"} {
+		if !strings.Contains(console.String(), want) {
+			t.Errorf("the console does not carry %q:\n%s", want, console.String())
+		}
 	}
 }
